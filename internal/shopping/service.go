@@ -51,6 +51,9 @@ func invalid(format string, a ...any) error {
 }
 
 func (in ItemInput) validate() (name, unit string, err error) {
+	if domain.HasControl(in.Name) || domain.HasControl(in.Unit) {
+		return "", "", invalid("name and unit must not contain control characters")
+	}
 	name = strings.TrimSpace(in.Name)
 	unit = units.CanonUnit(in.Unit)
 	if n := utf8.RuneCountInString(name); n == 0 || n > maxName {

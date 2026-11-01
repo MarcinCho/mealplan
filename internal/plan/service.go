@@ -68,6 +68,9 @@ func (s *Service) entry(ctx context.Context, householdID, week string, in EntryI
 	if !in.Slot.Valid() {
 		return domain.PlanEntry{}, invalid("slot must be breakfast, lunch, dinner or snack")
 	}
+	if domain.HasControl(in.FreeText) {
+		return domain.PlanEntry{}, invalid("freeText must not contain control characters")
+	}
 	text := strings.TrimSpace(in.FreeText)
 	if (in.RecipeID == "") == (text == "") {
 		return domain.PlanEntry{}, invalid("provide exactly one of recipeId and freeText")

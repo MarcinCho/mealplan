@@ -118,3 +118,28 @@ func TestUpdateAndDeleteScopedToHousehold(t *testing.T) {
 		t.Fatalf("delete foreign: %v", err)
 	}
 }
+
+func TestRejectsControlCharacters(t *testing.T) {
+	svc, hid := newSvc(t)
+	cases := map[string]func(in *recipe.Input){
+		"title":           func(in *recipe.Input) { in.Title = "Zu\x00pa" },
+		"ingredient name": func(in *recipe.Input) { in.Ingredients[0].Name = "Mar\x00chew" },
+		"ingredient unit": func(in *recipe.Input) { in.Ingredients[0].Unit = "sz\x00t" },
+		"step":            func(in *recipe.Input) { in.Steps[0] = "Got\x00uj" },
+		"tag":             func(in *recipe.Input) { in.Tags[0] = "ob\x00iad" },
+		"sourceUrl":       func(in *recipe.Input) { in.SourceURL = "https://example.com/\x00" },
+		"bell in title":   func(in *recipe.Input) { in.Title = "Zu\x07pa" },
+	}
+	for name, mut := range cases {
+		in := valid()
+		mut(&in)
+		if _, err := svc.Create(context.Background(), hid, in); !errors.Is(err, domain.ErrInvalid) {
+			t.Errorf("%s: expected ErrInvalid, got %v", name, err)
+		}
+	}
+	in := valid()
+	in.Steps = []string{"Linia 1\n\tLinia 2\r\nLinia 3"}
+	if _, err := svc.Create(context.Background(), hid, in); err != nil {
+		t.Fatalf("newlines and tabs in steps must stay allowed: %v", err)
+	}
+}

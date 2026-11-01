@@ -63,6 +63,8 @@ func TestAddValidation(t *testing.T) {
 		"both recipe and text":    {Date: "2026-11-04", Slot: domain.SlotLunch, RecipeID: f.recipe.ID, FreeText: "x"},
 		"negative servings":       {Date: "2026-11-04", Slot: domain.SlotLunch, FreeText: "x", Servings: -1},
 		"huge servings":           {Date: "2026-11-04", Slot: domain.SlotLunch, FreeText: "x", Servings: 101},
+		"nul in text":             {Date: "2026-11-04", Slot: domain.SlotLunch, FreeText: "a\x00b"},
+		"control in text":         {Date: "2026-11-04", Slot: domain.SlotLunch, FreeText: "a\x1bb"},
 		"long text":               {Date: "2026-11-04", Slot: domain.SlotLunch, FreeText: string(make([]byte, 301))},
 	}
 	for name, in := range cases {

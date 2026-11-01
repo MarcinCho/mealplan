@@ -163,6 +163,9 @@ func TestManualItemsAndEditing(t *testing.T) {
 		"empty name":    {Name: " "},
 		"zero quantity": {Name: "x", Quantity: q(0)},
 		"huge quantity": {Name: "x", Quantity: q(1e9)},
+		"nul in name":   {Name: "mle\x00ko"},
+		"nul in unit":   {Name: "x", Unit: "k\x00g"},
+		"bell in name":  {Name: "mle\x07ko"},
 	} {
 		if _, err := f.svc.AddManual(ctx, hid, wk, in); !errors.Is(err, domain.ErrInvalid) {
 			t.Errorf("%s: %v", name, err)

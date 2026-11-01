@@ -67,8 +67,29 @@ func invalid(format string, a ...any) error {
 	return fmt.Errorf("%w: "+format, append([]any{domain.ErrInvalid}, a...)...)
 }
 
+// checkText rejects NUL and other control characters (Postgres cannot store NUL) in every text field.
+func checkText(in Input) error {
+	bad := domain.HasControl(in.Title) || domain.HasControl(in.SourceURL)
+	for _, ing := range in.Ingredients {
+		bad = bad || domain.HasControl(ing.Name) || domain.HasControl(ing.Unit)
+	}
+	for _, st := range in.Steps {
+		bad = bad || domain.HasControl(st)
+	}
+	for _, tag := range in.Tags {
+		bad = bad || domain.HasControl(tag)
+	}
+	if bad {
+		return invalid("text must not contain control characters")
+	}
+	return nil
+}
+
 // build validates the input and returns a recipe with normalized fields (no ID, owner or times).
 func build(in Input) (domain.Recipe, error) {
+	if err := checkText(in); err != nil {
+		return domain.Recipe{}, err
+	}
 	r := domain.Recipe{Title: strings.TrimSpace(in.Title), BaseServings: in.BaseServings, SourceURL: strings.TrimSpace(in.SourceURL)}
 	if n := utf8.RuneCountInString(r.Title); n == 0 || n > maxTitle {
 		return r, invalid("title must be 1 to %d characters", maxTitle)
