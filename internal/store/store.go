@@ -13,11 +13,15 @@ var (
 	ErrConflict       = errors.New("store: conflict")
 	ErrSetupDone      = errors.New("store: setup already done")
 	ErrInviteUnusable = errors.New("store: invite unusable")
+	ErrInUse          = errors.New("store: in use")
 )
 
 type Store struct{ db *DB }
 
 func New(db *DB) *Store { return &Store{db: db} }
+
+// DB exposes the handle (for tests and maintenance code).
+func (s *Store) DB() *DB { return s.db }
 
 type execer interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)

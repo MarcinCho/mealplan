@@ -1,7 +1,10 @@
 // Package domain holds the core types shared across packages.
 package domain
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type Role string
 
@@ -59,4 +62,66 @@ type AuditEvent struct {
 	Type        string
 	Details     string
 	At          time.Time
+}
+
+// ErrInvalid marks input rejected by validation; wrap it with the reason.
+var ErrInvalid = errors.New("invalid input")
+
+type Ingredient struct {
+	Name           string
+	NormalizedName string
+	Quantity       *float64
+	Unit           string
+}
+
+type Recipe struct {
+	ID           string
+	HouseholdID  string
+	Title        string
+	BaseServings int
+	SourceURL    string
+	Tags         []string
+	Ingredients  []Ingredient
+	Steps        []string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+type Slot string
+
+const (
+	SlotBreakfast Slot = "breakfast"
+	SlotLunch     Slot = "lunch"
+	SlotDinner    Slot = "dinner"
+	SlotSnack     Slot = "snack"
+)
+
+func (s Slot) Valid() bool {
+	return s == SlotBreakfast || s == SlotLunch || s == SlotDinner || s == SlotSnack
+}
+
+// PlanEntry is one dish in the week grid. Date is YYYY-MM-DD. Exactly one of RecipeID and
+// FreeText is set; an empty CookUserID means nobody is assigned.
+type PlanEntry struct {
+	ID          string
+	HouseholdID string
+	Date        string
+	Slot        Slot
+	RecipeID    string
+	FreeText    string
+	Servings    int
+	CookUserID  string
+}
+
+// ShoppingItem belongs to the week starting on Week (YYYY-MM-DD, a Monday).
+type ShoppingItem struct {
+	ID             string
+	HouseholdID    string
+	Week           string
+	Name           string
+	NormalizedName string
+	Quantity       *float64
+	Unit           string
+	Checked        bool
+	Manual         bool
 }
