@@ -150,6 +150,8 @@ async function copyPrev() {
         <td v-for="d in dates" :key="d" class="align-top pa-1">
           <v-chip
             v-for="e in plan.entriesFor(d, s.value)"
+            color="primary"
+            variant="tonal"
             :key="e.id"
             class="mb-1 d-flex"
             style="height: auto; white-space: normal"
@@ -157,7 +159,7 @@ async function copyPrev() {
           >
             <span>{{ label(e) }}<template v-if="e.cookUserId"> · {{ memberName[e.cookUserId] }}</template></span>
           </v-chip>
-          <v-btn icon="mdi-plus" size="x-small" variant="text" :title="t.addEntry" @click="openNew(d, s.value)" />
+          <v-btn icon="mdi-plus" size="x-small" variant="text" color="primary" :title="t.addEntry" @click="openNew(d, s.value)" />
         </td>
       </tr>
     </tbody>

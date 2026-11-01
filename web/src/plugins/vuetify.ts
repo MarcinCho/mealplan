@@ -1,12 +1,10 @@
 import { createVuetify } from 'vuetify'
+import { loadChoice, themeName, VUETIFY_THEMES } from '../theme'
 
 export const vuetify = createVuetify({
   theme: {
-    defaultTheme: 'system',
-    themes: {
-      light: { colors: { primary: '#2E7D32', secondary: '#546E7A' } },
-      dark: { colors: { primary: '#81C784', secondary: '#90A4AE' } },
-    },
+    defaultTheme: themeName(loadChoice()),
+    themes: VUETIFY_THEMES,
   },
   defaults: {
     VBtn: { variant: 'flat' },
