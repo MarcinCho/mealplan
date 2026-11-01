@@ -2,10 +2,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { resolveRoute } from './guard'
 import { useSession } from './stores/session'
 import AppShell from './layouts/AppShell.vue'
-import HomeView from './views/HomeView.vue'
 import InviteAcceptView from './views/InviteAcceptView.vue'
 import LoginView from './views/LoginView.vue'
 import MembersView from './views/MembersView.vue'
+import PlanView from './views/PlanView.vue'
 import RecipeEditView from './views/RecipeEditView.vue'
 import RecipesView from './views/RecipesView.vue'
 import SetupView from './views/SetupView.vue'
@@ -20,7 +20,7 @@ export const router = createRouter({
       path: '/',
       component: AppShell,
       children: [
-        { path: '', name: 'home', component: HomeView },
+        { path: '', name: 'home', component: PlanView },
         { path: 'recipes', name: 'recipes', component: RecipesView },
         { path: 'recipes/new', name: 'recipe-new', component: RecipeEditView },
         { path: 'recipes/:id', name: 'recipe-edit', component: RecipeEditView },
