@@ -15,7 +15,7 @@ docker run -d --name mealplan --restart unless-stopped \
   -p 127.0.0.1:8080:8080 -v mealplan-data:/data mealplan
 ```
 
-Obraz działa jako użytkownik `nonroot` (uid 65532), a katalog `/data` jest w nim utworzony z tym właścicielem. Wolumen nazwany (`mealplan-data`) działa od razu. Jeśli zamiast wolumenu zamontujesz katalog z hosta (`-v ./data:/data`), musi on być zapisywalny dla uid 65532:
+Obraz działa jako użytkownik `nonroot` (uid 65532), a katalog `/data` jest w nim utworzony z tym właścicielem. Wolumen nazwany (`mealplan-data`) działa od razu. Jeśli zamiast wolumenu zamontujesz katalog z hosta (`-v "$PWD/data:/data"`), musi on być zapisywalny dla uid 65532:
 
 ```bash
 mkdir -p data && sudo chown 65532:65532 data
@@ -35,4 +35,12 @@ Otwórz adres aplikacji. Pierwsza osoba tworzy gospodarstwo i konto administrato
 
 ## Kopia zapasowa
 
-Zatrzymaj kontener i skopiuj plik `mealplan.db` (oraz `-wal` i `-shm`, jeśli istnieją) z wolumenu `/data`.
+Zatrzymaj kontener i skopiuj plik `mealplan.db` (oraz `-wal` i `-shm`, jeśli istnieją) z wolumenu `/data`. Dla wolumenu nazwanego:
+
+```sh
+docker stop <kontener>
+docker run --rm -v mealplan-data:/data -v "$PWD":/backup busybox sh -c 'cp /data/mealplan.db* /backup/'
+docker start <kontener>
+```
+
+Wzorzec `mealplan.db*` obejmuje też pliki `-wal` i `-shm`, jeśli istnieją.

@@ -7,11 +7,14 @@ import (
 	"testing"
 )
 
-var diagramTypes = []string{"flowchart", "sequenceDiagram", "erDiagram", "stateDiagram", "classDiagram", "graph"}
+var diagramTypes = []string{"flowchart", "sequenceDiagram", "erDiagram", "stateDiagram-v2", "stateDiagram", "classDiagram", "graph"}
 
 // Every ```mermaid fence in the documentation must be closed and start with a known diagram type.
 func TestMermaidBlocksAreWellFormed(t *testing.T) {
-	files, _ := filepath.Glob("*.md")
+	files, err := filepath.Glob("*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
 	files = append(files, "../README.md", "../CONTRIBUTING.md")
 	blocks := 0
 	for _, f := range files {
@@ -40,8 +43,9 @@ func TestMermaidBlocksAreWellFormed(t *testing.T) {
 				continue
 			}
 			ok := false
+			fields := strings.Fields(first)
 			for _, d := range diagramTypes {
-				if strings.HasPrefix(first, d) {
+				if len(fields) > 0 && fields[0] == d {
 					ok = true
 				}
 			}

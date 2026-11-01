@@ -13,7 +13,7 @@ docker run -d -p 127.0.0.1:8080:8080 -v mealplan-data:/data -e MEALPLAN_COOKIE_S
 
 Otwórz `http://localhost:8080` i utwórz konto administratora. Do codziennego użytku ustaw HTTPS (np. `tailscale serve`) i zostaw `MEALPLAN_COOKIE_SECURE=true`.
 
-Wolumen nazwany działa od razu. Przy montowaniu katalogu z hosta (`-v ./data:/data`) katalog musi być zapisywalny dla uid 65532 (`sudo chown 65532:65532 ./data`), bo obraz działa jako `nonroot`.
+Wolumen nazwany działa od razu. Przy montowaniu katalogu z hosta (`-v "$PWD/data:/data"`) katalog musi być zapisywalny dla uid 65532 (`sudo chown 65532:65532 ./data`), bo obraz działa jako `nonroot`.
 
 Z kodu źródłowego (Go 1.26, Node 22):
 

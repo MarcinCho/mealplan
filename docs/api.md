@@ -5,7 +5,7 @@ Kontrakt jest w [`api/openapi.yaml`](../api/openapi.yaml) i jest sprawdzany test
 Zasady ogólne:
 - JSON pod `/api/v1`, błędy w formacie `{"code","message","details"}`.
 - Sesja w ciastku `mealplan_session`. Żądania modyfikujące wymagają nagłówka `X-CSRF-Token` (wartość z `GET /auth/me` lub ciastka `mealplan_csrf`).
-- Zaproszenia: `GET /auth/invitations/{token}` (podgląd) i `POST /auth/invitations/{token}/accept` (przyjęcie) są publiczne; wystawianie i unieważnianie (`/auth/invites`) wymaga sesji.
+- Zaproszenia: `GET /auth/invitations/{token}` (podgląd) i `POST /auth/invitations/{token}/accept` (przyjęcie) nie wymagają sesji; wystawianie i unieważnianie (`/auth/invites`) wymaga sesji.
 
 ```mermaid
 sequenceDiagram
