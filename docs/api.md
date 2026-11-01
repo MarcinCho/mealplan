@@ -55,12 +55,15 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | Kod | HTTP | Kiedy |
 |---|---|---|
 | `invalid_input` | 422 | błędna walidacja (pola, `sourceUrl`, data tygodnia nie jest poniedziałkiem, edycja pozycji wygenerowanej, kopiowanie tygodnia na ten sam tydzień) |
+| `bad_request` | 400 | niepoprawny JSON w treści żądania |
 | `not_found` | 404 | zasób nie istnieje lub należy do innego gospodarstwa |
 | `conflict` | 409 | kopiowanie tygodnia na niepusty tydzień |
 | `in_use` | 409 | usunięcie przepisu użytego w planie |
 | `last_admin` | 409 | zmiana roli lub usunięcie ostatniego administratora |
 | `forbidden` | 403 | brak uprawnień (np. członek zarządza rolami) |
 | `csrf` | 403 | brak lub błędny nagłówek `X-CSRF-Token` w żądaniu modyfikującym |
+| `too_large` | 413 | treść żądania większa niż 1 MiB |
+| `unsupported_media_type` | 415 | brak nagłówka `Content-Type: application/json` (dotyczy tylko tras publicznych: logowanie, pierwsze uruchomienie, zaproszenia) |
 | `internal` | 500 | nieoczekiwany błąd serwera (szczegóły tylko w dzienniku) |
 
 Pozostałe kody (`unauthenticated`, `invalid_credentials`, `rate_limited`, `login_taken`, `invite_invalid`, `setup_done`, `password_length`) dotyczą kont i sesji z Etapu 1.

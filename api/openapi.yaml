@@ -125,6 +125,7 @@ paths:
                 role: { type: string, enum: [admin, member] }
       responses:
         "204": { description: Role changed }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/CsrfOrForbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -215,7 +216,6 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Csrf" }
         "413": { $ref: "#/components/responses/TooLarge" }
-        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
   /api/v1/recipes/{id}:
     parameters:
@@ -250,7 +250,6 @@ paths:
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
         "413": { $ref: "#/components/responses/TooLarge" }
-        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
     delete:
       summary: Delete a recipe
@@ -297,7 +296,6 @@ paths:
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
         "413": { $ref: "#/components/responses/TooLarge" }
-        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
   /api/v1/plan/{week}/entries/{id}:
     parameters:
@@ -322,7 +320,6 @@ paths:
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
         "413": { $ref: "#/components/responses/TooLarge" }
-        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
     delete:
       summary: Remove a plan entry
@@ -362,7 +359,6 @@ paths:
         "403": { $ref: "#/components/responses/Csrf" }
         "409": { $ref: "#/components/responses/Conflict" }
         "413": { $ref: "#/components/responses/TooLarge" }
-        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
   /api/v1/shopping:
     get:
@@ -402,9 +398,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Csrf" }
-        "404": { $ref: "#/components/responses/NotFound" }
         "413": { $ref: "#/components/responses/TooLarge" }
-        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
   /api/v1/shopping/items:
     post:
@@ -431,15 +425,17 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Csrf" }
-        "404": { $ref: "#/components/responses/NotFound" }
         "413": { $ref: "#/components/responses/TooLarge" }
-        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
   /api/v1/shopping/items/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
     patch:
       summary: Check or uncheck an item, or edit a manual item (name, quantity, unit)
+      description: >-
+        A body with only `checked` toggles the checkmark (allowed for any item). Sending `name` replaces the
+        name, quantity and unit together, so an omitted quantity clears it. Generated items cannot be edited
+        (422). A body with neither `checked` nor `name` is rejected with 422.
       security: [{ session: [], csrf: [] }]
       requestBody:
         required: true
@@ -459,7 +455,6 @@ paths:
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
         "413": { $ref: "#/components/responses/TooLarge" }
-        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
     delete:
       summary: Remove an item
@@ -520,7 +515,7 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
     Conflict:
-      description: Conflict (code setup_done, login_taken, in_use or conflict)
+      description: Conflict (code setup_done, login_taken, in_use, last_admin or conflict)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
@@ -667,7 +662,7 @@ components:
         slot: { type: string, enum: [breakfast, lunch, dinner, snack] }
         recipeId: { type: string, nullable: true }
         freeText: { type: string }
-        servings: { type: integer, description: Zero or omitted means the recipe base servings (or 4) }
+        servings: { type: integer, description: Zero or omitted means the recipe base servings, or 1 for free-text entries }
         cookUserId: { type: string, nullable: true }
     PlanEntry:
       type: object
