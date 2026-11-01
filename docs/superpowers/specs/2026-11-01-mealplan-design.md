@@ -11,9 +11,9 @@ Mealplan to lekka aplikacja webowa dla gospodarstwa domowego. Pozwala rozpisać 
 - Lista zakupów powstaje jednym kliknięciem, uwzględnia porcje i to, co jest w domu.
 - Aplikacja działa jako jeden plik binarny (lub kontener) bez zewnętrznych usług.
 - Dane są prywatne: konta z hasłem, dostęp przez Tailscale.
-- Architektura nie blokuje przyszłej wersji hostowanej (wielu najemców).
+- Dwa pełnoprawne tryby wdrożenia z jednej bazy kodu: `selfhost` (dom, Tailscale) oraz `hosted` (wielu najemców, własna domena autora). Tryb `selfhost` powstaje pierwszy, a architektura od początku obsługuje oba.
 
-**Poza zakresem (YAGNI):** skanowanie kodów kreskowych, integracje ze sklepami, powiadomienia push, aplikacje natywne, wersja hostowana (tylko przygotowanie architektury).
+**Poza zakresem (YAGNI):** skanowanie kodów kreskowych, integracje ze sklepami, powiadomienia push, aplikacje natywne, rozliczenia i płatności w trybie `hosted`.
 
 ## 2. Założenia i decyzje
 
@@ -22,9 +22,10 @@ Mealplan to lekka aplikacja webowa dla gospodarstwa domowego. Pozwala rozpisać 
 | Backend | Go, REST/JSON `/api/v1`, OpenAPI jako źródło prawdy |
 | Frontend | Vue 3 + Vite + Pinia + Vuetify 3 (Material Design), PWA |
 | Dystrybucja | Jeden plik binarny z frontendem w `go:embed`, obraz Docker |
-| Baza | SQLite (`modernc.org/sqlite`, bez CGO), repozytoria za interfejsami (możliwość Postgres) |
-| Konta | Hasła, role `admin`/`member`, zaproszenia jednorazowe, brak otwartej rejestracji |
-| Sieć | Dostęp przez Tailscale (`tailscale serve` zapewnia HTTPS) |
+| Tryby | `MEALPLAN_MODE=selfhost\|hosted`; pozostałe opcje (baza, storage, rejestracja, SMTP) konfigurowane niezależnie |
+| Baza | SQLite (`modernc.org/sqlite`, bez CGO) w `selfhost`, Postgres w `hosted`; repozytoria za interfejsami, CI testuje oba silniki |
+| Konta | Hasła, role `admin`/`member`, zaproszenia jednorazowe; w `selfhost` brak otwartej rejestracji, w `hosted` samodzielna rejestracja (Etap 5) |
+| Sieć | `selfhost`: Tailscale (`tailscale serve` zapewnia HTTPS); `hosted`: reverse proxy i HTTPS na własnej domenie |
 | Multi-tenancy | Gospodarstwo (`household`) jest tenantem od początku |
 | Konfiguracja | Wyłącznie zmienne środowiskowe, aplikacja bezstanowa |
 | Pliki | Interfejs `Storage` (dysk lokalny, później S3) |
@@ -50,8 +51,8 @@ flowchart LR
         STATS[stats]
         STORE[store: repozytoria + migracje]
     end
-    DB[(SQLite)]
-    FS[(Storage: dysk lokalny)]
+    DB[(SQLite lub Postgres)]
+    FS[(Storage: dysk lokalny lub S3)]
     NET[Strony z przepisami]
     SPA --> API
     SPA --> STATIC
@@ -269,21 +270,36 @@ Liczone zapytaniami z `plan_entry`, bez osobnych tabel: najczęściej używane p
 
 Material Design przez Vuetify 3, minimalistyczny, podejście mobile-first. Na telefonie nawigacja dolna, na komputerze boczny rail. Widok tygodnia na telefonie jest listą dni, na komputerze siatką. Jasny i ciemny motyw. PWA (instalacja na ekranie głównym). Importowanie tylko używanych komponentów Vuetify, by ograniczyć rozmiar bundle'a.
 
-## 9. Ścieżka do wersji hostowanej
+## 9. Dwa tryby wdrożenia
 
-Architektura przygotowuje grunt, ale nie implementuje wersji hostowanej:
+Jedna baza kodu, dwa tryby. Wersje 0.1 do 0.x działają w trybie `selfhost`. Architektura od początku jest dwusilnikowa, a funkcje specyficzne dla `hosted` wchodzą w Etapie 5.
+
+| Obszar | `selfhost` | `hosted` |
+|---|---|---|
+| Baza | SQLite | Postgres |
+| Pliki | dysk lokalny | S3 |
+| Rejestracja | zamknięta; pierwszy użytkownik zakłada gospodarstwo, resztę zapraszają admini | samodzielna; nowy użytkownik zakłada własne gospodarstwo i zaprasza domowników |
+| Reset hasła | admin lub CLI | e-mail (SMTP), potwierdzenie adresu |
+| Sieć | Tailscale, HTTPS przez `tailscale serve` | reverse proxy, własna domena, zaufane proxy i prawdziwe IP klienta dla limitów |
+| Limity zasobów | brak | na gospodarstwo (przepisy, członkowie, rozmiar obrazów) |
+| Nadużycia | niepotrzebne | limity rejestracji, opcjonalnie CAPTCHA |
+| Operator | CLI | CLI lub prosty panel: zarządzanie gospodarstwami i kontami, usuwanie danych na żądanie, eksport danych użytkownika |
+
+**Co robimy od początku (Etapy 1 do 4), żeby `hosted` nie wymagał przepisywania:**
 - tenancy przez `household_id` i członkostwo (relacja 1:1 teraz, schemat dopuszcza więcej),
-- tryb rejestracji konfigurowalny (zamknięta teraz, samodzielna później),
-- repozytoria za interfejsami (zamiana SQLite na Postgres),
-- `Storage` za interfejsem (S3),
+- interfejsy repozytoriów z implementacjami dla SQLite i Postgres, migracje działające na obu, SQL przenośny,
+- `Storage` za interfejsem (dysk teraz, S3 w Etapie 5),
+- polityka rejestracji jako konfigurowalny interfejs (zamknięta teraz, samodzielna w Etapie 5),
 - sesje w bazie, konfiguracja w środowisku, brak stanu w pamięci procesu.
 
-Poza obecnym zakresem pozostają: rozliczenia, e-mail (reset hasła), limity zasobów na najemcę, panel operatora.
+**Etap 5 dodaje:** samodzielną rejestrację, e-mail (SMTP) z potwierdzeniem i resetem hasła, storage S3, limity na gospodarstwo, ochronę przed nadużyciami, narzędzia operatora, dokumentację wdrożenia `hosted`.
+
+**Poza zakresem:** rozliczenia i płatności.
 
 ## 10. Testy
 
 - **Jednostkowe (Go):** skalowanie i sumowanie, normalizacja jednostek, parser ilości i `.md`, walidacja SSRF (tabela adresów).
-- **Integracyjne (Go):** API na tymczasowej SQLite; izolacja gospodarstw, CSRF, limity prób, wygasanie sesji i zaproszeń.
+- **Integracyjne (Go):** API w macierzy SQLite i Postgres (Postgres w kontenerze w CI); izolacja gospodarstw, CSRF, limity prób, wygasanie sesji i zaproszeń, zgodność migracji na obu silnikach.
 - **Frontend:** Vitest (logika, komponenty); Playwright dla ścieżek: logowanie, zaproszenie, planowanie tygodnia, lista zakupów, import, w widoku mobilnym i desktopowym.
 - **CI (GitHub Actions):** lint, testy, build binarki i obrazu Docker, `govulncheck`, audyt npm.
 - **Dokumentacja:** sprawdzenie zgodności `openapi.yaml` z implementacją, renderowania diagramów mermaid.
@@ -293,7 +309,9 @@ Poza obecnym zakresem pozostają: rozliczenia, e-mail (reset hasła), limity zas
 - `README.md`: opis, szybki start (binarka, Docker), konfiguracja.
 - `docs/architecture.md`: komponenty, diagram ER, przepływy.
 - `docs/security.md`: model zagrożeń i zabezpieczenia.
-- `docs/deployment.md`: Tailscale (`tailscale serve`), Docker, backup SQLite, ścieżka do wersji hostowanej.
+- `docs/deployment-selfhost.md`: Tailscale (`tailscale serve`), Docker, backup SQLite.
+- `docs/deployment-hosted.md`: Postgres, S3, SMTP, reverse proxy i domena, limity, narzędzia operatora, kopie zapasowe i RODO (Etap 5).
+- `docs/modes.md`: porównanie trybów `selfhost` i `hosted` oraz konfiguracja zmiennymi środowiskowymi.
 - `docs/api.md` i `api/openapi.yaml`.
 - `docs/import.md`: format Markdown z przykładami.
 - `CONTRIBUTING.md`, `LICENSE` (MIT), `CHANGELOG.md`.
@@ -305,6 +323,7 @@ Diagramy mermaid są utrzymywane w repozytorium obok kodu.
 1. **Fundament:** szkielet repozytorium, baza i migracje, auth, gospodarstwa i zaproszenia, powłoka UI z motywem Material.
 2. **Rdzeń:** przepisy (dodawanie ręczne), plan tygodnia z kucharzem i porcjami, lista zakupów.
 3. **Import i dane:** import z `.md` i URL, inwentarz zintegrowany z listą zakupów.
-4. **Statystyki i szlif:** statystyki, PWA, dokumentacja końcowa, wydanie 0.1.
+4. **Statystyki i szlif:** statystyki, PWA, dokumentacja `selfhost`, wydanie 0.1 (tryb `selfhost`).
+5. **Tryb `hosted`:** samodzielna rejestracja, e-mail, storage S3, limity na gospodarstwo, ochrona przed nadużyciami, narzędzia operatora, dokumentacja `hosted`.
 
 Każdy etap kończy się działającą, wydawalną wersją i ma własny plan wdrożenia.
