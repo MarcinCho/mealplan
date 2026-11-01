@@ -48,6 +48,27 @@ func TestLimiterLockoutIsCapped(t *testing.T) {
 	}
 }
 
+func TestLimiterLockoutReachesExactCap(t *testing.T) {
+	c := newClock()
+	l := NewLimiter(c.Now, 5)
+	var wait time.Duration
+	for i := 0; i < 40 && wait != 15*time.Minute; i++ {
+		l.Fail("k")
+		_, wait = l.Allow("k")
+		if wait > 15*time.Minute {
+			t.Fatalf("lock exceeds cap: %v", wait)
+		}
+		c.Advance(wait)
+	}
+	if wait != 15*time.Minute {
+		t.Fatalf("cap never reached, last wait %v", wait)
+	}
+	l.Fail("k") // further failures keep the lock at the cap
+	if _, wait := l.Allow("k"); wait != 15*time.Minute {
+		t.Fatalf("lock must stay at exactly 15m, got %v", wait)
+	}
+}
+
 func TestLimiterResetAndForget(t *testing.T) {
 	c := newClock()
 	l := NewLimiter(c.Now, 2)

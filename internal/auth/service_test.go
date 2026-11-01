@@ -3,8 +3,10 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -311,4 +313,192 @@ func TestHouseholdIsolation(t *testing.T) {
 	if len(members) != 1 || members[0].User.Login != "bob" {
 		t.Fatalf("B members: %+v", members)
 	}
+}
+
+func TestSetupAfterDoneDoesNotHash(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	setupAdmin(t, svc)
+	calls := 0
+	real := svc.hash
+	svc.hash = func(p string) (string, error) { calls++; return real(p) }
+	_, err := svc.Setup(context.Background(), SetupInput{HouseholdName: "X", Login: "eve", Password: goodPassword, DisplayName: "Eve"})
+	if !errors.Is(err, ErrSetupDone) {
+		t.Fatalf("second setup: %v", err)
+	}
+	if calls != 0 {
+		t.Fatalf("hash was called %d times after setup was done", calls)
+	}
+}
+
+func TestArgonConcurrencyIsBounded(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	size := cap(svc.sem)
+	if size < 1 || size > 4 {
+		t.Fatalf("semaphore size %d out of range", size)
+	}
+	var inflight, max atomic.Int32
+	release := make(chan struct{})
+	enter := func() {
+		n := inflight.Add(1)
+		for {
+			m := max.Load()
+			if n <= m || max.CompareAndSwap(m, n) {
+				break
+			}
+		}
+		<-release
+		inflight.Add(-1)
+	}
+	svc.hash = func(string) (string, error) { enter(); return "h", nil }
+	svc.verify = func(string, string) (bool, error) { enter(); return false, nil }
+
+	n := size + 3
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			if i%2 == 0 {
+				_, _ = svc.Login(context.Background(), "nobody", "wrong-password-123", "10.0.0.1")
+			} else {
+				_, _ = svc.hashPassword(context.Background(), goodPassword)
+			}
+		}(i)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for inflight.Load() < int32(size) && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	time.Sleep(50 * time.Millisecond) // give excess goroutines the chance to (wrongly) enter
+	if got := inflight.Load(); got != int32(size) {
+		t.Fatalf("in flight %d, want exactly %d", got, size)
+	}
+	close(release)
+	wg.Wait()
+	if got := max.Load(); got > int32(size) {
+		t.Fatalf("max concurrent %d exceeds bound %d", got, size)
+	}
+}
+
+func TestArgonSlotHonorsContext(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	for i := 0; i < cap(svc.sem); i++ {
+		svc.sem <- struct{}{}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := svc.hashPassword(ctx, goodPassword); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestLockedAccountDoesNotLockOtherAccountOnSameIP(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	ctx := context.Background()
+	setupAdmin(t, svc)
+	mustInvite(t, svc, ctx)
+	for i := 0; i < 5; i++ {
+		_, _ = svc.Login(ctx, "marc", "wrong-password-123", "10.0.0.9")
+	}
+	var rl *RateLimitedError
+	if _, err := svc.Login(ctx, "marc", goodPassword, "10.0.0.9"); !errors.As(err, &rl) {
+		t.Fatalf("account A must be locked, got %v", err)
+	}
+	if _, err := svc.Login(ctx, "anna", goodPassword, "10.0.0.9"); err != nil {
+		t.Fatalf("account B from the same IP must still log in: %v", err)
+	}
+}
+
+func TestIPLimiterLocksAfterManyDifferentLogins(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	ctx := context.Background()
+	setupAdmin(t, svc)
+	for i := 0; i < 30; i++ {
+		_, err := svc.Login(ctx, fmt.Sprintf("ghost%d", i), "wrong-password-123", "10.0.0.7")
+		if !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("attempt %d: %v", i, err)
+		}
+	}
+	var rl *RateLimitedError
+	if _, err := svc.Login(ctx, "marc", goodPassword, "10.0.0.7"); !errors.As(err, &rl) {
+		t.Fatalf("IP must be locked after 30 failures, got %v", err)
+	}
+	if _, err := svc.Login(ctx, "marc", goodPassword, "10.0.0.8"); err != nil {
+		t.Fatalf("other IP unaffected: %v", err)
+	}
+}
+
+func TestLoginLockoutReachesFifteenMinuteCap(t *testing.T) {
+	svc, _, clock := newTestService(t)
+	ctx := context.Background()
+	setupAdmin(t, svc)
+	var wait time.Duration
+	for i := 0; i < 60 && wait != 15*time.Minute; i++ {
+		clock.Advance(wait) // let the current lock expire; distinct IPs keep the IP limiter out of the way
+		_, _ = svc.Login(ctx, "marc", "wrong-password-123", fmt.Sprintf("10.2.0.%d", i))
+		_, wait = svc.loginLimiter.Allow("login:marc")
+	}
+	if wait != 15*time.Minute {
+		t.Fatalf("lock never reached the cap, last=%v", wait)
+	}
+	var rl *RateLimitedError
+	if _, err := svc.Login(ctx, "marc", goodPassword, "10.3.0.1"); !errors.As(err, &rl) || rl.RetryAfter != 15*time.Minute {
+		t.Fatalf("service RetryAfter: %v", err)
+	}
+}
+
+func TestLoginOversizedLoginRejectedWithoutLimiterEntry(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	setupAdmin(t, svc)
+	calls := 0
+	real := svc.verify
+	svc.verify = func(p, e string) (bool, error) { calls++; return real(p, e) }
+	ctx := context.Background()
+	long := strings.Repeat("a", 65)
+	for i := 0; i < 10; i++ {
+		if _, err := svc.Login(ctx, long, goodPassword, "10.0.0.5"); !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("oversized login: %v", err)
+		}
+	}
+	if calls != 0 {
+		t.Fatalf("verify called %d times for an oversized login", calls)
+	}
+	svc.loginLimiter.mu.Lock()
+	n := len(svc.loginLimiter.entries)
+	svc.loginLimiter.mu.Unlock()
+	if n != 0 {
+		t.Fatalf("login limiter has %d entries, want 0", n)
+	}
+	svc.ipLimiter.mu.Lock()
+	e := svc.ipLimiter.entries["ip:10.0.0.5"]
+	svc.ipLimiter.mu.Unlock()
+	if e == nil || e.fails != 10 {
+		t.Fatalf("IP failures must still be counted, entry=%+v", e)
+	}
+}
+
+func mustInvite(t *testing.T, svc *Service, ctx context.Context) SessionGrant {
+	t.Helper()
+	p, err := svc.Authenticate(ctx, setupToken(t, svc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _, err := svc.CreateInvite(ctx, p, domain.RoleMember)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := svc.AcceptInvite(ctx, raw, AcceptInput{Login: "anna", Password: goodPassword, DisplayName: "Anna"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return g
+}
+
+func setupToken(t *testing.T, svc *Service) string {
+	t.Helper()
+	g, err := svc.Login(context.Background(), "marc", goodPassword, "192.0.2.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return g.Token
 }

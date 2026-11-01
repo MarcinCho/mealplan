@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -41,7 +42,9 @@ type Service struct {
 	loginLimiter *Limiter
 	ipLimiter    *Limiter
 	verify       func(password, encoded string) (bool, error)
-	dummyHash    string // verified against when the user does not exist, to equalize timing
+	hash         func(password string) (string, error)
+	sem          chan struct{} // bounds concurrent argon2 work
+	dummyHash    string        // verified against when the user does not exist, to equalize timing
 }
 
 func NewService(st *store.Store, cfg Config, now func() time.Time) (*Service, error) {
@@ -58,6 +61,8 @@ func NewService(st *store.Store, cfg Config, now func() time.Time) (*Service, er
 		ipLimiter:    NewLimiter(now, 30),
 		dummyHash:    dummy,
 		verify:       Verify,
+		hash:         cfg.Hasher.Hash,
+		sem:          make(chan struct{}, argonSlots()),
 	}, nil
 }
 
@@ -125,7 +130,12 @@ func (s *Service) Setup(ctx context.Context, in SetupInput) (SessionGrant, error
 	if err := ValidatePassword(in.Password); err != nil {
 		return SessionGrant{}, err
 	}
-	hash, err := s.cfg.Hasher.Hash(in.Password)
+	if need, err := s.SetupRequired(ctx); err != nil {
+		return SessionGrant{}, err
+	} else if !need {
+		return SessionGrant{}, ErrSetupDone // cheap check before hashing; the store re-checks transactionally
+	}
+	hash, err := s.hashPassword(ctx, in.Password)
 	if err != nil {
 		return SessionGrant{}, err
 	}
@@ -145,6 +155,10 @@ func (s *Service) Setup(ctx context.Context, in SetupInput) (SessionGrant, error
 func (s *Service) Login(ctx context.Context, login, password, ip string) (SessionGrant, error) {
 	login = normalizeLogin(login)
 	loginKey, ipKey := "login:"+login, "ip:"+ip
+	if utf8.RuneCountInString(login) > 64 { // can never match loginRe; do not let it key a limiter entry
+		s.ipLimiter.Fail(ipKey)
+		return SessionGrant{}, ErrInvalidCredentials
+	}
 	for _, c := range []struct {
 		l   *Limiter
 		key string
@@ -166,7 +180,10 @@ func (s *Service) Login(ctx context.Context, login, password, ip string) (Sessio
 		if found {
 			hash = u.PasswordHash
 		}
-		match, verr := s.verify(password, hash)
+		match, verr := s.verifyPassword(ctx, password, hash)
+		if verr != nil && ctx.Err() != nil {
+			return SessionGrant{}, ctx.Err()
+		}
 		ok = verr == nil && match && found
 	}
 	if !ok {
@@ -341,7 +358,7 @@ func (s *Service) AcceptInvite(ctx context.Context, rawToken string, in AcceptIn
 	if err != nil {
 		return SessionGrant{}, err
 	}
-	hash, err := s.cfg.Hasher.Hash(in.Password)
+	hash, err := s.hashPassword(ctx, in.Password)
 	if err != nil {
 		return SessionGrant{}, err
 	}
@@ -362,4 +379,35 @@ func (s *Service) AcceptInvite(ctx context.Context, rawToken string, in AcceptIn
 
 func (s *Service) Members(ctx context.Context, p Principal) ([]domain.Member, error) {
 	return s.st.ListMembers(ctx, p.HouseholdID)
+}
+
+// argonSlots bounds concurrent argon2 computations (each uses tens of MiB).
+func argonSlots() int { return min(max(runtime.NumCPU(), 1), 4) }
+
+// acquire takes an argon2 slot, honoring ctx. Callers must not hold it during DB work.
+func (s *Service) acquire(ctx context.Context) error {
+	select {
+	case s.sem <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (s *Service) release() { <-s.sem }
+
+func (s *Service) hashPassword(ctx context.Context, password string) (string, error) {
+	if err := s.acquire(ctx); err != nil {
+		return "", err
+	}
+	defer s.release()
+	return s.hash(password)
+}
+
+func (s *Service) verifyPassword(ctx context.Context, password, encoded string) (bool, error) {
+	if err := s.acquire(ctx); err != nil {
+		return false, err
+	}
+	defer s.release()
+	return s.verify(password, encoded)
 }

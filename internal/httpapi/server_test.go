@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,21 +26,40 @@ var cheap = auth.Hasher{Time: 1, Memory: 8 * 1024, Threads: 1}
 const pw = "correct-horse-battery"
 
 type env struct {
-	srv *httpapi.Server
-	st  *store.Store
-	svc *auth.Service
+	srv   *httpapi.Server
+	st    *store.Store
+	svc   *auth.Service
+	clock *fakeClock
+}
+
+type fakeClock struct {
+	mu sync.Mutex
+	t  time.Time
+}
+
+func (c *fakeClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.t
+}
+
+func (c *fakeClock) Advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.t = c.t.Add(d)
 }
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	st := store.New(storetest.Open(t))
-	svc, err := auth.NewService(st, auth.Config{SessionIdle: time.Hour, SessionMax: 24 * time.Hour, InviteTTL: 72 * time.Hour, Hasher: cheap}, nil)
+	clock := &fakeClock{t: time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC)}
+	svc, err := auth.NewService(st, auth.Config{SessionIdle: time.Hour, SessionMax: 24 * time.Hour, InviteTTL: 72 * time.Hour, Hasher: cheap}, clock.Now)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cfg := config.Config{Mode: config.ModeSelfhost, CookieSecure: false}
 	srv := httpapi.New(svc, cfg, http.NotFoundHandler(), slog.New(slog.NewTextHandler(io.Discard, nil)))
-	return &env{srv: srv, st: st, svc: svc}
+	return &env{srv: srv, st: st, svc: svc, clock: clock}
 }
 
 type client struct {
@@ -200,6 +220,10 @@ func TestLoginRateLimited(t *testing.T) {
 	rec := c.do("POST", "/api/v1/auth/login", map[string]string{"login": "marc", "password": pw})
 	if rec.Code != 429 || errCode(t, rec) != "rate_limited" || rec.Header().Get("Retry-After") == "" {
 		t.Fatalf("expected 429 with Retry-After, got %d %s %v", rec.Code, rec.Body, rec.Header())
+	}
+	e.clock.Advance(time.Minute)
+	if rec := c.do("POST", "/api/v1/auth/login", map[string]string{"login": "marc", "password": pw}); rec.Code != 204 {
+		t.Fatalf("lock must expire with the clock: %d %s", rec.Code, rec.Body)
 	}
 }
 
