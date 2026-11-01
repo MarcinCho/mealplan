@@ -53,7 +53,7 @@ export const usePlan = defineStore('plan', {
     async copyFrom(fromWeek: string) {
       const week = this.week
       await api('POST', `/plan/${week}/copy`, { fromWeek })
-      await this.load(week)
+      if (this.week === week) await this.load(week)
     },
   },
 })

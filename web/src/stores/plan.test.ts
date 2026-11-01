@@ -59,6 +59,26 @@ describe('usePlan', () => {
     expect(JSON.parse((first[1] as RequestInit).body as string)).toEqual({ fromWeek: '2026-11-02' })
   })
 
+  it('does not reload the old week when the user moved on during a copy', async () => {
+    stub(200, { week: '2026-11-09', entries: [] })
+    const p = usePlan()
+    await p.load('2026-11-09')
+    let resolveCopy: (r: Response) => void = () => {}
+    const pending = new Promise<Response>((r) => (resolveCopy = r))
+    const spy = vi.fn().mockReturnValueOnce(pending)
+    vi.stubGlobal('fetch', spy)
+    const copying = p.copyFrom('2026-11-02')
+    stub(200, { week: '2026-11-16', entries: [] })
+    await p.load('2026-11-16')
+    const after = vi.fn(async () => new Response(JSON.stringify({ week: '2026-11-09', entries: [e1] }), { status: 200 }))
+    vi.stubGlobal('fetch', after)
+    resolveCopy(new Response(JSON.stringify({ copied: 1 }), { status: 200 }))
+    await copying
+    expect(after).not.toHaveBeenCalled()
+    expect(p.week).toBe('2026-11-16')
+    expect(p.loading).toBe(false)
+  })
+
   it('marks the week not loaded and clears entries when a load fails', async () => {
     stub(200, { week: '2026-11-02', entries: [e1] })
     const p = usePlan()
