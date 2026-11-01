@@ -33,6 +33,13 @@ Aplikacja będzie dostępna pod adresem maszyny w tailnecie z certyfikatem HTTPS
 
 Otwórz adres aplikacji. Pierwsza osoba tworzy gospodarstwo i konto administratora, a kolejne dołączają przez linki zaproszeń (Domownicy, Zaproszenia).
 
+## Zapraszanie osób
+
+- Telefon lub komputer zaproszonej osoby musi być w tym samym tailnecie: ma mieć zainstalowaną aplikację Tailscale i być zalogowana, albo maszyna z Mealplan musi zostać jej udostępniona.
+- Zaproszenie utwórz, przeglądając aplikację przez adres HTTPS z tailnetu. Link jest budowany z adresu strony, więc link utworzony na `http://localhost:8080` wskazuje na localhost na urządzeniu odbiorcy i nie zadziała.
+- `tailscale serve` z HTTPS wymaga włączonych certyfikatów HTTPS w konsoli administracyjnej Tailscale.
+- **Uwaga:** formularz pierwszego uruchomienia może wypełnić każdy, kto ma dostęp do adresu, dopóki właściciel nie zakończy konfiguracji. Wykonaj pierwsze uruchomienie zaraz przed udostępnieniem dostępu i nigdy nie wystawiaj portu publicznie (np. `tailscale funnel` albo mapowanie portu na 0.0.0.0) przed jego zakończeniem.
+
 ## Kopia zapasowa
 
 Zatrzymaj kontener i skopiuj plik `mealplan.db` (oraz `-wal` i `-shm`, jeśli istnieją) z wolumenu `/data`. Dla wolumenu nazwanego:

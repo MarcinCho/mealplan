@@ -11,7 +11,9 @@ docker build -t mealplan .
 docker run -d -p 127.0.0.1:8080:8080 -v mealplan-data:/data -e MEALPLAN_COOKIE_SECURE=false mealplan
 ```
 
-Otwórz `http://localhost:8080` i utwórz konto administratora. Do codziennego użytku ustaw HTTPS (np. `tailscale serve`) i zostaw `MEALPLAN_COOKIE_SECURE=true`.
+Otwórz `http://localhost:8080` i utwórz konto administratora. Do codziennego użytku ustaw HTTPS (np. `tailscale serve`) i zostaw `MEALPLAN_COOKIE_SECURE=true`. Po włączeniu HTTPS kontener trzeba utworzyć ponownie bez zmiennej `MEALPLAN_COOKIE_SECURE=false` (`docker rm -f` i `docker run` bez `-e`).
+
+Samo `go build` bez wcześniejszego `npm run build` daje pusty interfejs. Używaj `make build` albo Dockera.
 
 Wolumen nazwany działa od razu. Przy montowaniu katalogu z hosta (`-v "$PWD/data:/data"`) katalog musi być zapisywalny dla uid 65532 (`sudo chown 65532:65532 ./data`), bo obraz działa jako `nonroot`.
 

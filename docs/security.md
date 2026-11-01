@@ -19,7 +19,9 @@
 
 - **CSP dla stylów** dopuszcza `unsafe-inline`, bo Vuetify wstrzykuje arkusz motywu w czasie działania. Skrypty mają ścisłe `script-src 'self'`. Docelowo: nonce.
 - **Limiter prób jest w pamięci procesu.** Przy jednej instancji (`selfhost`) wystarcza. W trybie `hosted` z wieloma instancjami trzeba go przenieść do bazy (Etap 5). Restart procesu zeruje liczniki.
-- **Adres IP klienta** to `RemoteAddr`. Za reverse proxy (np. `tailscale serve`) wszystkie żądania mają adres 127.0.0.1, dlatego limit IP jest hojny, a główną ochroną jest limit na login. Zaufane proxy i `X-Forwarded-For` dojdą w Etapie 5.
+- **Adres IP klienta** to `RemoteAddr`. Za reverse proxy (np. `tailscale serve`) wszystkie żądania mają ten sam klucz IP. W Dockerze z `-p 127.0.0.1:8080:8080` `RemoteAddr` to adres bramy mostu Dockera (np. 172.17.0.1), a nie 127.0.0.1. Wpisy `ip=` w dzienniku audytu nie są tam więc miarodajne. Zaufane proxy i `X-Forwarded-For` dojdą w Etapie 5.
+- **Blokada może być nadużyta w obrębie tailnetu.** Uporczywy atakujący w tailnecie może utrzymywać blokadę znanego loginu (pojedyncza blokada ma maksymalnie 15 minut, ale można ją odnawiać kolejnymi porażkami). Około 40 porażek wystarcza, by zablokować wspólny kubełek IP, przez co logowanie wszystkich jest wstrzymane. Istniejące sesje nadal działają.
+- **Argon2 jest ograniczony współbieżnie.** Haszowanie i weryfikacja haseł korzystają z semafora o rozmiarze min(max(CPU, 1), 4), więc lawina logowań nie wyczerpie pamięci. `Setup` sprawdza, czy konfiguracja już została wykonana, przed haszowaniem hasła (transakcyjna kontrola w bazie pozostaje zabezpieczeniem ostatecznym).
 - Blokada loginu pozwala atakującemu chwilowo zablokować znane konto. Blokada jest ograniczona do 15 minut.
 
 ## Zgłaszanie podatności
