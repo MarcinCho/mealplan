@@ -72,6 +72,18 @@ export const t = {
   entryDay: 'Dzień',
   weekCopied: 'Skopiowano plan z poprzedniego tygodnia.',
   retry: 'Spróbuj ponownie',
+  shopping: 'Lista zakupów',
+  generate: 'Generuj z planu',
+  regenerate: 'Odśwież z planu',
+  addManualItem: 'Dodaj pozycję',
+  itemName: 'Produkt',
+  bought: 'Kupione',
+  noItems: 'Lista jest pusta. Wygeneruj ją z planu albo dodaj pozycję ręcznie.',
+  manualBadge: 'ręczna',
+  changeRole: 'Zmień rolę',
+  removeMember: 'Usuń z gospodarstwa',
+  confirmRemoveMember: 'Usunąć tę osobę z gospodarstwa?',
+  you: 'to Ty',
 }
 
 const errors: Record<string, string> = {

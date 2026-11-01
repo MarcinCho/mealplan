@@ -9,6 +9,7 @@ import PlanView from './views/PlanView.vue'
 import RecipeEditView from './views/RecipeEditView.vue'
 import RecipesView from './views/RecipesView.vue'
 import SetupView from './views/SetupView.vue'
+import ShoppingView from './views/ShoppingView.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -24,6 +25,7 @@ export const router = createRouter({
         { path: 'recipes', name: 'recipes', component: RecipesView },
         { path: 'recipes/new', name: 'recipe-new', component: RecipeEditView },
         { path: 'recipes/:id', name: 'recipe-edit', component: RecipeEditView },
+        { path: 'shopping', name: 'shopping', component: ShoppingView },
         { path: 'members', name: 'members', component: MembersView },
       ],
     },

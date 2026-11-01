@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api } from '../api/client'
 import { copyText } from '../clipboard'
 import { useSession } from '../stores/session'
@@ -53,6 +53,33 @@ async function revoke(id: string) {
   await load()
 }
 
+async function changeRole(m: Member, role: 'admin' | 'member') {
+  if (role === m.role) return
+  error.value = ''
+  try {
+    await api('PATCH', `/household/members/${encodeURIComponent(m.id)}`, { role })
+  } catch (e) {
+    error.value = errorText(e)
+  }
+  await load()
+}
+
+const removing = ref('')
+async function removeMember(id: string) {
+  error.value = ''
+  try {
+    await api('DELETE', `/household/members/${encodeURIComponent(id)}`)
+  } catch (e) {
+    error.value = errorText(e)
+  } finally {
+    removing.value = ''
+  }
+  await load()
+}
+
+const adminCount = computed(() => members.value.filter((m) => m.role === 'admin').length)
+const isLastAdmin = (m: Member) => m.role === 'admin' && adminCount.value <= 1
+
 async function copy() {
   error.value = ''
   copied.value = await copyText(link.value)
@@ -67,7 +94,34 @@ onMounted(load)
   <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
   <v-list lines="one" border rounded class="mb-8">
     <v-list-item v-for="m in members" :key="m.id" :title="m.displayName" :subtitle="m.login">
-      <template #append><v-chip size="small">{{ m.role === 'admin' ? t.admin : t.member }}</v-chip></template>
+      <template #append>
+        <template v-if="session.isAdmin">
+          <v-chip v-if="m.id === session.me?.user.id" size="small" class="mr-2">{{ t.you }}</v-chip>
+          <v-select
+            :model-value="m.role"
+            :items="roles"
+            :aria-label="t.changeRole"
+            :disabled="isLastAdmin(m)"
+            density="compact"
+            hide-details
+            style="max-width: 170px"
+            @update:model-value="changeRole(m, $event)"
+          />
+          <v-btn
+            v-if="m.id !== session.me?.user.id && !isLastAdmin(m)"
+            class="ml-2"
+            size="small"
+            variant="text"
+            color="error"
+            :title="t.removeMember"
+            @click="removing === m.id ? removeMember(m.id) : (removing = m.id)"
+          >{{ removing === m.id ? t.confirmRemoveMember : t.removeMember }}</v-btn>
+        </template>
+        <template v-else>
+          <v-chip v-if="m.id === session.me?.user.id" size="small" class="mr-2">{{ t.you }}</v-chip>
+          <v-chip size="small">{{ m.role === 'admin' ? t.admin : t.member }}</v-chip>
+        </template>
+      </template>
     </v-list-item>
   </v-list>
 
