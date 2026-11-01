@@ -9,12 +9,14 @@ import (
 	"mealplan/internal/config"
 	"mealplan/internal/plan"
 	"mealplan/internal/recipe"
+	"mealplan/internal/shopping"
 )
 
 // Deps carries the use-case services the handlers call.
 type Deps struct {
-	Recipes *recipe.Service
-	Plan    *plan.Service
+	Recipes  *recipe.Service
+	Plan     *plan.Service
+	Shopping *shopping.Service
 }
 
 type Server struct {
@@ -59,6 +61,11 @@ func (s *Server) routes() []route {
 		{"PUT /api/v1/plan/{week}/entries/{id}", s.private(s.handleEditEntry)},
 		{"DELETE /api/v1/plan/{week}/entries/{id}", s.private(s.handleRemoveEntry)},
 		{"POST /api/v1/plan/{week}/copy", s.private(s.handleCopyWeek)},
+		{"GET /api/v1/shopping", s.private(s.handleListShopping)},
+		{"POST /api/v1/shopping/generate", s.private(s.handleGenerateShopping)},
+		{"POST /api/v1/shopping/items", s.private(s.handleAddShoppingItem)},
+		{"PATCH /api/v1/shopping/items/{id}", s.private(s.handlePatchShoppingItem)},
+		{"DELETE /api/v1/shopping/items/{id}", s.private(s.handleDeleteShoppingItem)},
 	}
 }
 

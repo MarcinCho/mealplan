@@ -1,0 +1,201 @@
+package shopping
+
+import (
+	"context"
+	"fmt"
+	"math"
+	"strings"
+	"unicode/utf8"
+
+	"mealplan/internal/auth"
+	"mealplan/internal/domain"
+	"mealplan/internal/plan"
+	"mealplan/internal/units"
+)
+
+const (
+	maxName     = 200
+	maxUnitLen  = 30
+	maxQuantity = 1e6
+)
+
+type Repo interface {
+	ShoppingItems(ctx context.Context, householdID, week string) ([]domain.ShoppingItem, error)
+	ReplaceGeneratedItems(ctx context.Context, householdID, week string, items []domain.ShoppingItem) error
+	InsertShoppingItem(ctx context.Context, it domain.ShoppingItem) error
+	UpdateShoppingItem(ctx context.Context, it domain.ShoppingItem) error
+	DeleteShoppingItem(ctx context.Context, householdID, id string) error
+	ShoppingItemByID(ctx context.Context, householdID, id string) (domain.ShoppingItem, error)
+}
+
+type PlanSource interface {
+	PlanEntries(ctx context.Context, householdID, fromDate, toDate string) ([]domain.PlanEntry, error)
+	RecipesByIDs(ctx context.Context, householdID string, ids []string) (map[string]domain.Recipe, error)
+}
+
+type ItemInput struct {
+	Name     string
+	Quantity *float64
+	Unit     string
+}
+
+type Service struct {
+	repo  Repo
+	plans PlanSource
+}
+
+func New(repo Repo, plans PlanSource) *Service { return &Service{repo: repo, plans: plans} }
+
+func invalid(format string, a ...any) error {
+	return fmt.Errorf("%w: "+format, append([]any{domain.ErrInvalid}, a...)...)
+}
+
+func (in ItemInput) validate() (name, unit string, err error) {
+	name = strings.TrimSpace(in.Name)
+	unit = units.CanonUnit(in.Unit)
+	if n := utf8.RuneCountInString(name); n == 0 || n > maxName {
+		return "", "", invalid("name must be 1 to %d characters", maxName)
+	}
+	if utf8.RuneCountInString(unit) > maxUnitLen {
+		return "", "", invalid("unit must be at most %d characters", maxUnitLen)
+	}
+	if in.Quantity != nil {
+		v := *in.Quantity
+		if math.IsNaN(v) || math.IsInf(v, 0) || v <= 0 || v > maxQuantity {
+			return "", "", invalid("quantity must be greater than 0 and at most %v", maxQuantity)
+		}
+	}
+	return name, unit, nil
+}
+
+func itemKey(norm, unit string, hasQty bool) string {
+	if !hasQty {
+		return norm + "|-"
+	}
+	return norm + "|" + unit
+}
+
+func sameQty(a, b *float64) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return units.Round(*a) == units.Round(*b)
+}
+
+func (s *Service) List(ctx context.Context, householdID, week string) ([]domain.ShoppingItem, error) {
+	if _, err := plan.ValidWeek(week); err != nil {
+		return nil, err
+	}
+	return s.repo.ShoppingItems(ctx, householdID, week)
+}
+
+// Generate rebuilds the generated part of the week's list from the plan. Manual items are kept, and
+// a generated item whose key and quantity did not change keeps its id and checked state.
+func (s *Service) Generate(ctx context.Context, householdID, week, from, to string) ([]domain.ShoppingItem, error) {
+	dates, err := plan.WeekDates(week)
+	if err != nil {
+		return nil, err
+	}
+	lo, hi := dates[0], dates[6]
+	if from != "" || to != "" {
+		if from == "" || to == "" || from > to || from < lo || to > hi {
+			return nil, invalid("from and to must be dates of the week, from not after to")
+		}
+		if _, err := plan.ValidWeek(week); err != nil {
+			return nil, err
+		}
+		lo, hi = from, to
+	}
+	entries, err := s.plans.PlanEntries(ctx, householdID, lo, hi)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(entries))
+	seen := map[string]bool{}
+	for _, e := range entries {
+		if e.RecipeID != "" && !seen[e.RecipeID] {
+			seen[e.RecipeID] = true
+			ids = append(ids, e.RecipeID)
+		}
+	}
+	recipes, err := s.plans.RecipesByIDs(ctx, householdID, ids)
+	if err != nil {
+		return nil, err
+	}
+	lines, err := Build(entries, recipes, nil) // pantry stock is wired in during Stage 3
+	if err != nil {
+		return nil, err
+	}
+
+	existing, err := s.repo.ShoppingItems(ctx, householdID, week)
+	if err != nil {
+		return nil, err
+	}
+	prev := map[string]domain.ShoppingItem{}
+	for _, it := range existing {
+		if !it.Manual {
+			prev[itemKey(it.NormalizedName, it.Unit, it.Quantity != nil)] = it
+		}
+	}
+	fresh := make([]domain.ShoppingItem, 0, len(lines))
+	for _, l := range lines {
+		it := domain.ShoppingItem{ID: auth.NewID(), Week: week, Name: l.Name, NormalizedName: l.NormalizedName, Quantity: l.Quantity, Unit: l.Unit}
+		if old, ok := prev[itemKey(l.NormalizedName, l.Unit, l.Quantity != nil)]; ok {
+			it.ID = old.ID
+			it.Checked = old.Checked && sameQty(old.Quantity, l.Quantity)
+		}
+		fresh = append(fresh, it)
+	}
+	if err := s.repo.ReplaceGeneratedItems(ctx, householdID, week, fresh); err != nil {
+		return nil, err
+	}
+	return s.repo.ShoppingItems(ctx, householdID, week)
+}
+
+func (s *Service) AddManual(ctx context.Context, householdID, week string, in ItemInput) (domain.ShoppingItem, error) {
+	if _, err := plan.ValidWeek(week); err != nil {
+		return domain.ShoppingItem{}, err
+	}
+	name, unit, err := in.validate()
+	if err != nil {
+		return domain.ShoppingItem{}, err
+	}
+	it := domain.ShoppingItem{ID: auth.NewID(), HouseholdID: householdID, Week: week, Name: name,
+		NormalizedName: units.NormalizeName(name), Quantity: in.Quantity, Unit: unit, Manual: true}
+	if err := s.repo.InsertShoppingItem(ctx, it); err != nil {
+		return domain.ShoppingItem{}, err
+	}
+	return it, nil
+}
+
+func (s *Service) SetChecked(ctx context.Context, householdID, id string, checked bool) error {
+	it, err := s.repo.ShoppingItemByID(ctx, householdID, id)
+	if err != nil {
+		return err
+	}
+	it.Checked = checked
+	return s.repo.UpdateShoppingItem(ctx, it)
+}
+
+func (s *Service) Edit(ctx context.Context, householdID, id string, in ItemInput) (domain.ShoppingItem, error) {
+	it, err := s.repo.ShoppingItemByID(ctx, householdID, id)
+	if err != nil {
+		return domain.ShoppingItem{}, err
+	}
+	if !it.Manual {
+		return domain.ShoppingItem{}, invalid("generated items cannot be edited; change the plan or recipe instead")
+	}
+	name, unit, err := in.validate()
+	if err != nil {
+		return domain.ShoppingItem{}, err
+	}
+	it.Name, it.NormalizedName, it.Quantity, it.Unit = name, units.NormalizeName(name), in.Quantity, unit
+	if err := s.repo.UpdateShoppingItem(ctx, it); err != nil {
+		return domain.ShoppingItem{}, err
+	}
+	return it, nil
+}
+
+func (s *Service) Remove(ctx context.Context, householdID, id string) error {
+	return s.repo.DeleteShoppingItem(ctx, householdID, id)
+}

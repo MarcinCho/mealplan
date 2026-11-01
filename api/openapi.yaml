@@ -364,6 +364,111 @@ paths:
         "413": { $ref: "#/components/responses/TooLarge" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/shopping:
+    get:
+      summary: Get the shopping list of a week
+      security: [{ session: [] }]
+      parameters:
+        - { name: week, in: query, required: true, schema: { type: string, format: date }, description: Monday of the week (YYYY-MM-DD) }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShoppingList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/shopping/generate:
+    post:
+      summary: Generate (or regenerate) the list of a week from the plan, keeping manual items
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [week]
+              properties:
+                week: { type: string, format: date }
+                from: { type: string, format: date, description: Optional first day (requires to) }
+                to: { type: string, format: date, description: Optional last day (requires from) }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShoppingList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/shopping/items:
+    post:
+      summary: Add a manual item
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [week, name]
+              properties:
+                week: { type: string, format: date }
+                name: { type: string }
+                quantity: { type: number, nullable: true }
+                unit: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShoppingItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/shopping/items/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Check or uncheck an item, or edit a manual item (name, quantity, unit)
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                checked: { type: boolean }
+                name: { type: string, description: Manual items only }
+                quantity: { type: number, nullable: true }
+                unit: { type: string }
+      responses:
+        "204": { description: Updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Remove an item
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
 components:
   securitySchemes:
     session: { type: apiKey, in: cookie, name: mealplan_session }
@@ -581,3 +686,22 @@ components:
       properties:
         week: { type: string, format: date }
         entries: { type: array, items: { $ref: "#/components/schemas/PlanEntry" } }
+    ShoppingItem:
+      type: object
+      required: [id, week, name, quantity, unit, checked, manual]
+      properties:
+        id: { type: string }
+        week: { type: string, format: date }
+        name: { type: string }
+        quantity: { type: number, nullable: true }
+        unit: { type: string }
+        checked: { type: boolean }
+        manual: { type: boolean }
+    ShoppingList:
+      type: object
+      required: [week, items]
+      properties:
+        week: { type: string, format: date }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ShoppingItem" }

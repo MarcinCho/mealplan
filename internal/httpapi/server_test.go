@@ -19,6 +19,7 @@ import (
 	"mealplan/internal/httpapi"
 	"mealplan/internal/plan"
 	"mealplan/internal/recipe"
+	"mealplan/internal/shopping"
 	"mealplan/internal/store"
 	"mealplan/internal/store/storetest"
 )
@@ -61,7 +62,7 @@ func newEnv(t *testing.T) *env {
 	}
 	cfg := config.Config{Mode: config.ModeSelfhost, CookieSecure: false}
 	recipes := recipe.New(st, clock.Now)
-	deps := httpapi.Deps{Recipes: recipes, Plan: plan.New(st, st)}
+	deps := httpapi.Deps{Recipes: recipes, Plan: plan.New(st, st), Shopping: shopping.New(st, st)}
 	srv := httpapi.New(svc, deps, cfg, http.NotFoundHandler(), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	return &env{srv: srv, st: st, svc: svc, clock: clock}
 }
