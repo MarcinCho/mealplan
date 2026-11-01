@@ -55,6 +55,8 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, http.StatusUnprocessableEntity, "invalid_input", err.Error())
 	case errors.Is(err, store.ErrInUse):
 		writeError(w, http.StatusConflict, "in_use", "resource is still in use")
+	case errors.Is(err, store.ErrConflict):
+		writeError(w, http.StatusConflict, "conflict", "resource already exists or is not empty")
 	case errors.Is(err, store.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "resource not found")
 	default:

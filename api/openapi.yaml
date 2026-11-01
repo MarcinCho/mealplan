@@ -228,6 +228,109 @@ paths:
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/plan/{week}:
+    parameters:
+      - { name: week, in: path, required: true, schema: { type: string, format: date }, description: Monday of the week (YYYY-MM-DD) }
+    get:
+      summary: Get the plan entries of a week
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Week" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/plan/{week}/entries:
+    parameters:
+      - { name: week, in: path, required: true, schema: { type: string, format: date } }
+    post:
+      summary: Add an entry to a week
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlanEntryInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanEntry" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/plan/{week}/entries/{id}:
+    parameters:
+      - { name: week, in: path, required: true, schema: { type: string, format: date } }
+      - { name: id, in: path, required: true, schema: { type: string } }
+    put:
+      summary: Replace a plan entry
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlanEntryInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanEntry" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Remove a plan entry
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/plan/{week}/copy:
+    parameters:
+      - { name: week, in: path, required: true, schema: { type: string, format: date }, description: Target week }
+    post:
+      summary: Copy all entries of another week into this (empty) week
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromWeek]
+              properties:
+                fromWeek: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [copied]
+                properties:
+                  copied: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
 components:
   securitySchemes:
     session: { type: apiKey, in: cookie, name: mealplan_session }
@@ -279,7 +382,7 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
     Conflict:
-      description: Conflict (code setup_done, login_taken or in_use)
+      description: Conflict (code setup_done, login_taken, in_use or conflict)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
@@ -418,3 +521,30 @@ components:
         steps: { type: array, items: { type: string }, description: Empty in list responses }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    PlanEntryInput:
+      type: object
+      required: [date, slot]
+      properties:
+        date: { type: string, format: date, description: A day within the week }
+        slot: { type: string, enum: [breakfast, lunch, dinner, snack] }
+        recipeId: { type: string, nullable: true }
+        freeText: { type: string }
+        servings: { type: integer, description: Zero or omitted means the recipe base servings (or 4) }
+        cookUserId: { type: string, nullable: true }
+    PlanEntry:
+      type: object
+      required: [id, date, slot, recipeId, freeText, servings, cookUserId]
+      properties:
+        id: { type: string }
+        date: { type: string, format: date }
+        slot: { type: string, enum: [breakfast, lunch, dinner, snack] }
+        recipeId: { type: string, nullable: true }
+        freeText: { type: string }
+        servings: { type: integer }
+        cookUserId: { type: string, nullable: true }
+    Week:
+      type: object
+      required: [week, entries]
+      properties:
+        week: { type: string, format: date }
+        entries: { type: array, items: { $ref: "#/components/schemas/PlanEntry" } }
