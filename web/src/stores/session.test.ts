@@ -84,4 +84,14 @@ describe('session store', () => {
     await s.logout()
     expect(s.me).toBeNull()
   })
+
+  it('logout clears local state even when the request fails', async () => {
+    vi.stubGlobal('fetch', route({
+      'POST /api/v1/auth/logout': () => json(500, { code: 'internal', message: 'x' }),
+    }))
+    const s = useSession()
+    s.me = me as never
+    await s.logout().catch(() => {})
+    expect(s.me).toBeNull()
+  })
 })

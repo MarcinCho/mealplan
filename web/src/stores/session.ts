@@ -61,9 +61,13 @@ export const useSession = defineStore('session', {
       await this.afterSignIn()
     },
     async logout() {
-      await api('POST', '/auth/logout')
-      this.me = null
-      setCsrfToken('')
+      try {
+        await api('POST', '/auth/logout')
+      } finally {
+        // Always drop local state, even if the request failed (expired session, network).
+        this.me = null
+        setCsrfToken('')
+      }
     },
   },
 })

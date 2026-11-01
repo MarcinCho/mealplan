@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { api } from '../api/client'
+import { copyText } from '../clipboard'
 import { useSession } from '../stores/session'
 import { errorText, t } from '../messages'
 
@@ -21,8 +22,12 @@ const roles = [
 ]
 
 async function load() {
-  members.value = await api<Member[]>('GET', '/household/members')
-  if (session.isAdmin) invites.value = await api<Invite[]>('GET', '/auth/invites')
+  try {
+    members.value = await api<Member[]>('GET', '/household/members')
+    if (session.isAdmin) invites.value = await api<Invite[]>('GET', '/auth/invites')
+  } catch (e) {
+    error.value = errorText(e)
+  }
 }
 
 async function create() {
@@ -38,13 +43,20 @@ async function create() {
 }
 
 async function revoke(id: string) {
-  await api('DELETE', `/auth/invites/${id}`)
+  error.value = ''
+  try {
+    await api('DELETE', `/auth/invites/${encodeURIComponent(id)}`)
+  } catch (e) {
+    error.value = errorText(e)
+    return
+  }
   await load()
 }
 
 async function copy() {
-  await navigator.clipboard.writeText(link.value)
-  copied.value = true
+  error.value = ''
+  copied.value = await copyText(link.value)
+  if (!copied.value) error.value = t.copyFailed
 }
 
 onMounted(load)
@@ -52,6 +64,7 @@ onMounted(load)
 
 <template>
   <h1 class="text-h5 mb-4">{{ t.members }}</h1>
+  <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
   <v-list lines="one" border rounded class="mb-8">
     <v-list-item v-for="m in members" :key="m.id" :title="m.displayName" :subtitle="m.login">
       <template #append><v-chip size="small">{{ m.role === 'admin' ? t.admin : t.member }}</v-chip></template>
@@ -60,7 +73,6 @@ onMounted(load)
 
   <template v-if="session.isAdmin">
     <h2 class="text-h6 mb-2">{{ t.invites }}</h2>
-    <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
     <div class="d-flex flex-wrap ga-3 align-start mb-4">
       <v-select v-model="newRole" :items="roles" :label="t.role" style="max-width: 220px" hide-details />
       <v-btn color="primary" class="mt-1" @click="create">{{ t.createInvite }}</v-btn>

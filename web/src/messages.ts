@@ -26,6 +26,7 @@ export const t = {
   createInvite: 'Utwórz link',
   copy: 'Kopiuj',
   copied: 'Skopiowano',
+  copyFailed: 'Nie udało się skopiować automatycznie. Zaznacz link i skopiuj go ręcznie.',
   inviteLinkOnce: 'Link jest pokazywany tylko raz. Skopiuj go teraz.',
   noInvites: 'Brak oczekujących zaproszeń.',
   expires: 'Ważne do',

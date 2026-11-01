@@ -19,8 +19,13 @@ function toggleTheme() {
 }
 
 async function logout() {
-  await session.logout()
-  await router.push({ name: 'login' })
+  try {
+    await session.logout()
+  } catch {
+    // local state is cleared by the store; the login page is the sane place to land
+  } finally {
+    await router.push({ name: 'login' })
+  }
 }
 </script>
 
