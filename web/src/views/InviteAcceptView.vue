@@ -48,7 +48,7 @@ async function submit() {
         <v-card-subtitle class="mb-4">{{ householdName }}</v-card-subtitle>
         <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
         <v-text-field v-model="form.displayName" :label="t.displayName" autofocus />
-        <v-text-field v-model="form.login" :label="t.login" autocomplete="username" />
+        <v-text-field v-model="form.login" :label="t.login" :hint="t.loginHint" persistent-hint autocomplete="username" />
         <v-text-field v-model="form.password" :label="t.password" :hint="t.passwordHint" persistent-hint type="password" autocomplete="new-password" class="mb-4" />
         <v-btn type="submit" color="primary" block :loading="busy">{{ t.createAccount }}</v-btn>
       </v-form>

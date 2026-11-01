@@ -52,9 +52,14 @@ export const useSession = defineStore('session', {
       await this.afterSignIn()
     },
     async setup(input: { householdName: string; login: string; password: string; displayName: string }) {
-      await api('POST', '/auth/setup', input)
+      try {
+        await api('POST', '/auth/setup', input)
+      } catch (e) {
+        if (e instanceof ApiError && e.code === 'setup_done') this.setupRequired = false
+        throw e
+      }
+      this.setupRequired = false // setup is done server-side even if the cookie below is dropped
       await this.afterSignIn()
-      this.setupRequired = false
     },
     async acceptInvite(token: string, input: { login: string; password: string; displayName: string }) {
       await api('POST', `/auth/invitations/${encodeURIComponent(token)}/accept`, input)

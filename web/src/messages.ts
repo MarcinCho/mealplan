@@ -4,6 +4,7 @@ export const t = {
   appName: 'Mealplan',
   login: 'Login',
   password: 'Hasło',
+  loginHint: 'Małe litery a-z, cyfry oraz znaki . _ - (od 3 do 64 znaków)',
   passwordHint: 'Co najmniej 12 znaków',
   displayName: 'Imię',
   householdName: 'Nazwa gospodarstwa',
@@ -36,18 +37,31 @@ export const t = {
 
 const errors: Record<string, string> = {
   invalid_credentials: 'Nieprawidłowy login lub hasło.',
-  rate_limited: 'Zbyt wiele prób. Spróbuj ponownie za chwilę.',
   setup_done: 'Konfiguracja została już wykonana.',
   invite_invalid: t.inviteInvalid,
   login_taken: 'Ten login jest już zajęty.',
   password_length: 'Hasło musi mieć od 12 do 128 znaków.',
   invalid_input: 'Sprawdź poprawność wpisanych danych.',
   forbidden: 'Brak uprawnień do tej operacji.',
+  unauthenticated: 'Sesja wygasła. Zaloguj się ponownie.',
+  csrf: 'Sesja jest nieaktualna. Odśwież stronę i spróbuj ponownie.',
+  not_found: 'Nie znaleziono żądanego zasobu.',
+  too_large: 'Przesłane dane są zbyt duże.',
+  bad_request: 'Nieprawidłowe żądanie.',
+  internal: 'Błąd serwera. Spróbuj ponownie za chwilę.',
+  unsupported_media_type: 'Nieobsługiwany format danych.',
   cookie_not_stored:
     'Przeglądarka nie zapisała sesji. Jeśli otwierasz aplikację przez zwykłe HTTP, ustaw MEALPLAN_COOKIE_SECURE=false lub użyj HTTPS (np. tailscale serve).',
 }
 
 export function errorText(e: unknown): string {
-  if (e instanceof ApiError) return errors[e.code] ?? e.message
+  if (e instanceof ApiError) {
+    if (e.code === 'rate_limited') {
+      return e.retryAfter
+        ? `Zbyt wiele prób. Spróbuj ponownie za ${e.retryAfter} s.`
+        : 'Zbyt wiele prób. Spróbuj ponownie za chwilę.'
+    }
+    return errors[e.code] ?? e.message
+  }
   return 'Coś poszło nie tak. Spróbuj ponownie.'
 }

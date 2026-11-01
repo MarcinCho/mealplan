@@ -85,6 +85,40 @@ describe('session store', () => {
     expect(s.me).toBeNull()
   })
 
+  it('setup that succeeded but lost the cookie still clears setupRequired', async () => {
+    vi.stubGlobal('fetch', route({
+      'POST /api/v1/auth/setup': () => json(204),
+      'GET /api/v1/auth/me': () => json(401, { code: 'unauthenticated', message: 'x' }),
+    }))
+    const s = useSession()
+    s.setupRequired = true
+    const err = await s.setup({ householdName: 'Dom', login: 'marc', password: 'pw', displayName: 'Marc' }).catch((e) => e)
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.code).toBe('cookie_not_stored')
+    expect(s.setupRequired).toBe(false)
+  })
+
+  it('setup_done error clears setupRequired', async () => {
+    vi.stubGlobal('fetch', route({
+      'POST /api/v1/auth/setup': () => json(409, { code: 'setup_done', message: 'x' }),
+    }))
+    const s = useSession()
+    s.setupRequired = true
+    const err = await s.setup({ householdName: 'Dom', login: 'marc', password: 'pw', displayName: 'Marc' }).catch((e) => e)
+    expect(err.code).toBe('setup_done')
+    expect(s.setupRequired).toBe(false)
+  })
+
+  it('other setup errors keep setupRequired', async () => {
+    vi.stubGlobal('fetch', route({
+      'POST /api/v1/auth/setup': () => json(400, { code: 'invalid_input', message: 'x' }),
+    }))
+    const s = useSession()
+    s.setupRequired = true
+    await s.setup({ householdName: 'Dom', login: 'marc', password: 'pw', displayName: 'Marc' }).catch(() => {})
+    expect(s.setupRequired).toBe(true)
+  })
+
   it('logout clears local state even when the request fails', async () => {
     vi.stubGlobal('fetch', route({
       'POST /api/v1/auth/logout': () => json(500, { code: 'internal', message: 'x' }),
