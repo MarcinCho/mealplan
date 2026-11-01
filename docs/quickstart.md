@@ -48,14 +48,14 @@ Domyślnie baza to plik `mealplan.db` w katalogu, z którego uruchamiasz program
 flowchart TD
     A[Otwórz http://localhost:8080] --> B[Formularz pierwszego uruchomienia]
     B --> C[Nazwa gospodarstwa i konto administratora]
-    C --> D[Domownicy, Nowe zaproszenie]
+    C --> D[Domownicy, Utwórz link]
     D --> E[Wyślij link domownikowi]
     E --> F[Domownik zakłada konto]
 ```
 
 1. Otwórz `http://localhost:8080`. Zobaczysz formularz pierwszego uruchomienia.
 2. Podaj nazwę gospodarstwa, login (3 do 64 znaków: małe litery, cyfry, `.`, `_`, `-`), nazwę wyświetlaną i hasło administratora. Hasło ma od 12 do 128 znaków.
-3. Aby dodać rodzinę, wejdź w zakładkę Domownicy i wybierz Nowe zaproszenie. Link jest ważny 72 godziny, jest jednorazowy i pokazuje się tylko raz, więc skopiuj go od razu.
+3. Aby dodać rodzinę, wejdź w zakładkę Domownicy i w sekcji Zaproszenia wybierz Utwórz link. Link jest ważny 72 godziny, jest jednorazowy i pokazuje się tylko raz, więc skopiuj go od razu.
 
 Uwaga: dopóki nie ukończysz kroku 2, formularz może wypełnić każdy, kto ma dostęp do adresu. Nie wystawiaj portu publicznie przed jego zakończeniem.
 
@@ -87,7 +87,7 @@ docker compose logs -f
 docker compose down
 ```
 
-`docker compose down` nie usuwa wolumenu z danymi (usunąłby go dopiero `down -v`). Do testu po HTTP odkomentuj w pliku linię z `MEALPLAN_COOKIE_SECURE: "false"`.
+`docker compose down` nie usuwa wolumenu z danymi (usunąłby go dopiero `down -v`). Do testu po HTTP w `docker-compose.yml` usuń `# ` z początku linii `# MEALPLAN_COOKIE_SECURE: "false"` (zachowaj wcięcie, linia leży pod `environment:`).
 
 Polityka `restart: unless-stopped` (w `docker run`: `--restart unless-stopped`) uruchamia aplikację ponownie po restarcie komputera i po awarii, dopóki sam jej nie zatrzymasz.
 

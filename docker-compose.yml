@@ -8,11 +8,11 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - mealplan-data:/data
-    # environment:
-    #   # Tylko do lokalnego testu po zwykłym HTTP. Za HTTPS (np. tailscale serve) usuń tę linię.
-    #   MEALPLAN_COOKIE_SECURE: "false"
-    #   # Adres nasłuchu wewnątrz kontenera (domyślnie :8080); przy zmianie popraw też mapowanie portów.
-    #   MEALPLAN_ADDR: ":8080"
+    environment:
+      # Adres nasłuchu wewnątrz kontenera (domyślnie :8080); przy zmianie popraw też mapowanie portów.
+      MEALPLAN_ADDR: ":8080"
+      # Tylko do lokalnego testu po zwykłym HTTP: usuń "# " z początku następnej linii. Za HTTPS (np. tailscale serve) zostaw ją zakomentowaną.
+      # MEALPLAN_COOKIE_SECURE: "false"
 
 volumes:
   mealplan-data:
