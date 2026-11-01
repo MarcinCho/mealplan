@@ -27,7 +27,7 @@ jobs:
       MEALPLAN_TEST_DRIVER: ${{ matrix.db }}
       MEALPLAN_TEST_DSN: postgres://postgres:mealplan@localhost:5432/mealplan?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with: { go-version: "1.26" }
       - name: gofmt
@@ -43,7 +43,7 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: web/package-lock.json }
       - run: npm ci
@@ -55,7 +55,7 @@ jobs:
   vuln:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with: { go-version: "1.26" }
       - run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
@@ -64,5 +64,5 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker build -t mealplan:ci .
