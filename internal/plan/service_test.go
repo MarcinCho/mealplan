@@ -142,3 +142,28 @@ func TestCopyShiftsDatesAndRefusesNonEmptyTarget(t *testing.T) {
 		t.Fatalf("non-monday target: %v", err)
 	}
 }
+
+func TestEditAndRemoveRespectTheWeek(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	const other = "2026-11-09"
+	e, err := f.svc.Add(ctx, f.hid, other, plan.EntryInput{Date: "2026-11-10", Slot: domain.SlotLunch, FreeText: "x"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, plan.EntryInput{Date: "2026-11-05", Slot: domain.SlotDinner, FreeText: "y"}); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("edit through wrong week: %v", err)
+	}
+	if err := f.svc.Remove(ctx, f.hid, wk, e.ID); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("remove through wrong week: %v", err)
+	}
+	if err := f.svc.Remove(ctx, "h2", other, e.ID); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("remove foreign: %v", err)
+	}
+	if _, err := f.svc.Edit(ctx, f.hid, other, e.ID, plan.EntryInput{Date: "2026-11-11", Slot: domain.SlotDinner, FreeText: "y"}); err != nil {
+		t.Fatalf("edit through own week: %v", err)
+	}
+	if err := f.svc.Remove(ctx, f.hid, other, e.ID); err != nil {
+		t.Fatalf("remove through own week: %v", err)
+	}
+}

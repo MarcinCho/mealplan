@@ -73,6 +73,13 @@ func TestPlanWeekLifecycle(t *testing.T) {
 		t.Fatalf("second copy: %d", rec.Code)
 	}
 
+	// An entry of week 2026-11-02 is not reachable through another week's URL.
+	if rec := c.do("PUT", "/api/v1/plan/2026-11-09/entries/"+added.ID, map[string]any{"date": "2026-11-10", "slot": "lunch", "freeText": "x"}); rec.Code != 404 {
+		t.Fatalf("edit via other week: %d", rec.Code)
+	}
+	if rec := c.do("DELETE", "/api/v1/plan/2026-11-09/entries/"+added.ID, nil); rec.Code != 404 {
+		t.Fatalf("delete via other week: %d", rec.Code)
+	}
 	if rec := c.do("DELETE", "/api/v1/plan/2026-11-02/entries/"+added.ID, nil); rec.Code != 204 {
 		t.Fatalf("delete: %d", rec.Code)
 	}

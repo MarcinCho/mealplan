@@ -117,9 +117,28 @@ func (s *Service) Add(ctx context.Context, householdID, week string, in EntryInp
 	return e, nil
 }
 
+// inWeek returns store.ErrNotFound unless the household's entry exists and is dated inside the week.
+func (s *Service) inWeek(ctx context.Context, householdID, week, id string) error {
+	dates, err := WeekDates(week)
+	if err != nil {
+		return err
+	}
+	cur, err := s.repo.PlanEntryByID(ctx, householdID, id)
+	if err != nil {
+		return err
+	}
+	if cur.Date < dates[0] || cur.Date > dates[6] {
+		return store.ErrNotFound
+	}
+	return nil
+}
+
 func (s *Service) Edit(ctx context.Context, householdID, week, id string, in EntryInput) (domain.PlanEntry, error) {
 	e, err := s.entry(ctx, householdID, week, in)
 	if err != nil {
+		return domain.PlanEntry{}, err
+	}
+	if err := s.inWeek(ctx, householdID, week, id); err != nil {
 		return domain.PlanEntry{}, err
 	}
 	e.ID = id
@@ -130,7 +149,7 @@ func (s *Service) Edit(ctx context.Context, householdID, week, id string, in Ent
 }
 
 func (s *Service) Remove(ctx context.Context, householdID, week, id string) error {
-	if _, err := ValidWeek(week); err != nil {
+	if err := s.inWeek(ctx, householdID, week, id); err != nil {
 		return err
 	}
 	return s.repo.DeletePlanEntry(ctx, householdID, id)
