@@ -24,6 +24,8 @@ function define(dark: boolean, colors: Record<string, string>): ThemeDefinition 
 }
 
 // `bar` is the app bar color (own theme color so each palette can brand it).
+export const DEFAULT_PALETTE: PaletteId = 'earth'
+
 export const PALETTES: Palette[] = [
   {
     id: 'classic',
@@ -104,7 +106,7 @@ export const VUETIFY_THEMES: Record<string, ThemeDefinition> = Object.fromEntrie
 )
 
 export function parseChoice(raw: string | null, prefersDark: boolean): Choice {
-  const fallback: Choice = { palette: 'classic', mode: prefersDark ? 'dark' : 'light' }
+  const fallback: Choice = { palette: DEFAULT_PALETTE, mode: prefersDark ? 'dark' : 'light' }
   if (!raw) return fallback
   try {
     const v = JSON.parse(raw)

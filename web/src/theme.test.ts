@@ -32,17 +32,17 @@ describe('themeName', () => {
 
 describe('parseChoice', () => {
   it('falls back to the OS preference when nothing is stored', () => {
-    expect(parseChoice(null, true)).toEqual({ palette: 'classic', mode: 'dark' })
-    expect(parseChoice(null, false)).toEqual({ palette: 'classic', mode: 'light' })
+    expect(parseChoice(null, true)).toEqual({ palette: 'earth', mode: 'dark' })
+    expect(parseChoice(null, false)).toEqual({ palette: 'earth', mode: 'light' })
   })
   it('reads a stored choice', () => {
-    expect(parseChoice('{"palette":"earth","mode":"dark"}', false)).toEqual({ palette: 'earth', mode: 'dark' })
+    expect(parseChoice('{"palette":"navy","mode":"dark"}', false)).toEqual({ palette: 'navy', mode: 'dark' })
   })
   it('ignores garbage, unknown palettes and wrong types', () => {
-    expect(parseChoice('not json', false)).toEqual({ palette: 'classic', mode: 'light' })
-    expect(parseChoice('{"palette":"neon","mode":"dark"}', false)).toEqual({ palette: 'classic', mode: 'dark' })
-    expect(parseChoice('{"palette":42,"mode":"sepia"}', true)).toEqual({ palette: 'classic', mode: 'dark' })
-    expect(parseChoice('null', false)).toEqual({ palette: 'classic', mode: 'light' })
+    expect(parseChoice('not json', false)).toEqual({ palette: 'earth', mode: 'light' })
+    expect(parseChoice('{"palette":"neon","mode":"dark"}', false)).toEqual({ palette: 'earth', mode: 'dark' })
+    expect(parseChoice('{"palette":42,"mode":"sepia"}', true)).toEqual({ palette: 'earth', mode: 'dark' })
+    expect(parseChoice('null', false)).toEqual({ palette: 'earth', mode: 'light' })
   })
 })
 
@@ -61,7 +61,7 @@ describe('storage', () => {
       },
     })
     expect(() => saveChoice({ palette: 'plum', mode: 'light' })).not.toThrow()
-    expect(loadChoice().palette).toBe('classic')
+    expect(loadChoice().palette).toBe('earth')
   })
 })
 
