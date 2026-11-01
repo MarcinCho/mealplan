@@ -25,8 +25,11 @@ paths:
             schema: { $ref: "#/components/schemas/SetupRequest" }
       responses:
         "204": { description: Created; session cookies set }
-        "409": { $ref: "#/components/responses/Error" }
-        "422": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /api/v1/auth/login:
     post:
       summary: Log in with login and password
@@ -37,14 +40,19 @@ paths:
             schema: { $ref: "#/components/schemas/LoginRequest" }
       responses:
         "204": { description: Logged in; session cookies set }
-        "401": { $ref: "#/components/responses/Error" }
-        "429": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/InvalidCredentials" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "429": { $ref: "#/components/responses/RateLimited" }
   /api/v1/auth/logout:
     post:
       summary: End the current session
       security: [{ session: [], csrf: [] }]
       responses:
         "204": { description: Logged out }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
   /api/v1/auth/me:
     get:
       summary: Current user, household, role and CSRF token
@@ -55,12 +63,13 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Me" }
-        "401": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /api/v1/auth/invites:
     post:
       summary: Create a one-time invite (admin)
       security: [{ session: [], csrf: [] }]
       requestBody:
+        required: true
         content:
           application/json:
             schema: { $ref: "#/components/schemas/CreateInviteRequest" }
@@ -70,7 +79,11 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/CreatedInvite" }
-        "403": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CsrfOrForbidden" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
     get:
       summary: List pending invites (admin)
       security: [{ session: [] }]
@@ -82,7 +95,8 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/Invite" }
-        "403": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /api/v1/auth/invites/{id}:
     delete:
       summary: Revoke a pending invite of the own household (admin)
@@ -91,7 +105,9 @@ paths:
         - { name: id, in: path, required: true, schema: { type: string } }
       responses:
         "204": { description: Revoked }
-        "404": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CsrfOrForbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /api/v1/auth/invitations/{token}:
     get:
       summary: Inspect an invite link
@@ -103,7 +119,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InviteInfo" }
-        "404": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/InviteInvalid" }
   /api/v1/auth/invitations/{token}/accept:
     post:
       summary: Accept an invite and create an account
@@ -116,9 +132,12 @@ paths:
             schema: { $ref: "#/components/schemas/AcceptRequest" }
       responses:
         "204": { description: Account created; session cookies set }
-        "404": { $ref: "#/components/responses/Error" }
-        "409": { $ref: "#/components/responses/Error" }
-        "422": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/InviteInvalid" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /api/v1/household/members:
     get:
       summary: Members of the current household
@@ -131,6 +150,7 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/Member" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 components:
   securitySchemes:
     session: { type: apiKey, in: cookie, name: mealplan_session }
@@ -138,6 +158,75 @@ components:
   responses:
     Error:
       description: Error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    BadRequest:
+      description: Malformed JSON body (code bad_request)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Missing, invalid or expired session (code unauthenticated)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    InvalidCredentials:
+      description: Wrong login or password (code invalid_credentials)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Admin role required (code forbidden)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Csrf:
+      description: Missing or invalid CSRF token (code csrf)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    CsrfOrForbidden:
+      description: Missing or invalid CSRF token (code csrf) or admin role required (code forbidden)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found in the own household (code not_found)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    InviteInvalid:
+      description: Invite is invalid, used or expired (code invite_invalid)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Conflict (code setup_done or login_taken)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    TooLarge:
+      description: Request body over 1 MiB (code too_large)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    UnsupportedMediaType:
+      description: Content-Type is not application/json (code unsupported_media_type)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unprocessable:
+      description: Validation failed (code invalid_input or password_length)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Too many attempts (code rate_limited)
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying
+          schema: { type: integer }
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
