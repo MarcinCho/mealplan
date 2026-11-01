@@ -151,6 +151,83 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/Member" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/recipes:
+    get:
+      summary: List recipes of the household (without ingredients and steps)
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Recipe" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Create a recipe
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecipeInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Recipe" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/recipes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: Get a recipe with ingredients and steps
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Recipe" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      summary: Replace a recipe
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecipeInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Recipe" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Delete a recipe
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 components:
   securitySchemes:
     session: { type: apiKey, in: cookie, name: mealplan_session }
@@ -202,7 +279,7 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
     Conflict:
-      description: Conflict (code setup_done or login_taken)
+      description: Conflict (code setup_done, login_taken or in_use)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
@@ -311,3 +388,33 @@ components:
         login: { type: string }
         displayName: { type: string }
         role: { type: string, enum: [admin, member] }
+    Ingredient:
+      type: object
+      required: [name, quantity, unit]
+      properties:
+        name: { type: string }
+        quantity: { type: number, nullable: true, description: Null when the amount is "to taste" }
+        unit: { type: string }
+    RecipeInput:
+      type: object
+      required: [title, baseServings]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        baseServings: { type: integer, minimum: 1, maximum: 100 }
+        sourceUrl: { type: string, description: Empty or an http(s) address }
+        tags: { type: array, maxItems: 20, items: { type: string, maxLength: 40 } }
+        ingredients: { type: array, maxItems: 200, items: { $ref: "#/components/schemas/Ingredient" } }
+        steps: { type: array, maxItems: 100, items: { type: string, maxLength: 2000 } }
+    Recipe:
+      type: object
+      required: [id, title, baseServings, sourceUrl, tags, ingredients, steps, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        baseServings: { type: integer }
+        sourceUrl: { type: string }
+        tags: { type: array, items: { type: string } }
+        ingredients: { type: array, items: { $ref: "#/components/schemas/Ingredient" }, description: Empty in list responses }
+        steps: { type: array, items: { type: string }, description: Empty in list responses }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }

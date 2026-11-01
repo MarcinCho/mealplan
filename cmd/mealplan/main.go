@@ -14,6 +14,7 @@ import (
 	"mealplan/internal/auth"
 	"mealplan/internal/config"
 	"mealplan/internal/httpapi"
+	"mealplan/internal/recipe"
 	"mealplan/internal/spa"
 	"mealplan/internal/store"
 	"mealplan/web"
@@ -42,7 +43,8 @@ func run(log *slog.Logger) error {
 	if err := db.Migrate(ctx); err != nil {
 		return err
 	}
-	svc, err := auth.NewService(store.New(db), auth.Config{
+	st := store.New(db)
+	svc, err := auth.NewService(st, auth.Config{
 		SessionIdle: cfg.SessionIdle,
 		SessionMax:  cfg.SessionMax,
 		InviteTTL:   72 * time.Hour,
@@ -57,7 +59,7 @@ func run(log *slog.Logger) error {
 	}
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.New(svc, cfg, spa.Handler(dist), log).Handler(),
+		Handler:           httpapi.New(svc, httpapi.Deps{Recipes: recipe.New(st, nil)}, cfg, spa.Handler(dist), log).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,

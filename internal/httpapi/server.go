@@ -7,17 +7,24 @@ import (
 
 	"mealplan/internal/auth"
 	"mealplan/internal/config"
+	"mealplan/internal/recipe"
 )
+
+// Deps carries the use-case services the handlers call.
+type Deps struct {
+	Recipes *recipe.Service
+}
 
 type Server struct {
 	auth   *auth.Service
+	deps   Deps
 	cfg    config.Config
 	static http.Handler
 	log    *slog.Logger
 }
 
-func New(a *auth.Service, cfg config.Config, static http.Handler, log *slog.Logger) *Server {
-	return &Server{auth: a, cfg: cfg, static: static, log: log}
+func New(a *auth.Service, d Deps, cfg config.Config, static http.Handler, log *slog.Logger) *Server {
+	return &Server{auth: a, deps: d, cfg: cfg, static: static, log: log}
 }
 
 type route struct {
@@ -38,6 +45,11 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/auth/invitations/{token}", http.HandlerFunc(s.handleInviteInfo)},
 		{"POST /api/v1/auth/invitations/{token}/accept", s.public(s.handleAcceptInvite)},
 		{"GET /api/v1/household/members", s.private(s.handleMembers)},
+		{"GET /api/v1/recipes", s.private(s.handleListRecipes)},
+		{"POST /api/v1/recipes", s.private(s.handleCreateRecipe)},
+		{"GET /api/v1/recipes/{id}", s.private(s.handleGetRecipe)},
+		{"PUT /api/v1/recipes/{id}", s.private(s.handleUpdateRecipe)},
+		{"DELETE /api/v1/recipes/{id}", s.private(s.handleDeleteRecipe)},
 	}
 }
 

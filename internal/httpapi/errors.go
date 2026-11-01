@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"mealplan/internal/auth"
+	"mealplan/internal/domain"
 	"mealplan/internal/store"
 )
 
@@ -50,6 +51,10 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, http.StatusUnprocessableEntity, "password_length", "password must be 12 to 128 characters")
 	case errors.Is(err, auth.ErrInvalidInput):
 		writeError(w, http.StatusUnprocessableEntity, "invalid_input", err.Error())
+	case errors.Is(err, domain.ErrInvalid):
+		writeError(w, http.StatusUnprocessableEntity, "invalid_input", err.Error())
+	case errors.Is(err, store.ErrInUse):
+		writeError(w, http.StatusConflict, "in_use", "resource is still in use")
 	case errors.Is(err, store.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "resource not found")
 	default:

@@ -17,6 +17,7 @@ import (
 	"mealplan/internal/config"
 	"mealplan/internal/domain"
 	"mealplan/internal/httpapi"
+	"mealplan/internal/recipe"
 	"mealplan/internal/store"
 	"mealplan/internal/store/storetest"
 )
@@ -58,8 +59,30 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	cfg := config.Config{Mode: config.ModeSelfhost, CookieSecure: false}
-	srv := httpapi.New(svc, cfg, http.NotFoundHandler(), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	deps := httpapi.Deps{Recipes: recipe.New(st, clock.Now)}
+	srv := httpapi.New(svc, deps, cfg, http.NotFoundHandler(), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	return &env{srv: srv, st: st, svc: svc, clock: clock}
+}
+
+// secondHouseholdClient creates an independent household with its own admin and logs in.
+func (e *env) secondHouseholdClient(t *testing.T) *client {
+	t.Helper()
+	hash, err := cheap.Hash("another-long-password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = e.st.CreateHouseholdWithAdmin(context.Background(),
+		domain.Household{ID: "hB", Name: "Drugi", CreatedAt: e.clock.Now()},
+		domain.User{ID: "uB", Login: "bob", PasswordHash: hash, DisplayName: "Bob", CreatedAt: e.clock.Now()}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := e.client(t)
+	if rec := c.do("POST", "/api/v1/auth/login", map[string]string{"login": "bob", "password": "another-long-password"}); rec.Code != 204 {
+		t.Fatalf("login second: %d %s", rec.Code, rec.Body)
+	}
+	c.useCSRF()
+	return c
 }
 
 type client struct {
