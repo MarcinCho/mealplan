@@ -12,12 +12,17 @@ const recipe = ref<Recipe>(emptyRecipe())
 const error = ref('')
 const busy = ref(false)
 const confirming = ref(false)
+const loaded = ref(false)
 const isNew = computed(() => !route.params.id)
 
 onMounted(async () => {
-  if (isNew.value) return
+  if (isNew.value) {
+    loaded.value = true
+    return
+  }
   try {
     recipe.value = await recipes.get(String(route.params.id))
+    loaded.value = true
   } catch (e) {
     error.value = errorText(e)
   }
@@ -31,6 +36,7 @@ function addStep() {
 }
 
 async function submit() {
+  if (!loaded.value || (!isNew.value && !recipe.value.id)) return
   error.value = ''
   busy.value = true
   try {
@@ -44,6 +50,7 @@ async function submit() {
 }
 
 async function remove() {
+  if (!loaded.value || isNew.value || !recipe.value.id) return
   error.value = ''
   try {
     await recipes.remove(recipe.value.id)
@@ -58,7 +65,9 @@ async function remove() {
 <template>
   <h1 class="text-h5 mb-4">{{ isNew ? t.newRecipe : t.editRecipe }}</h1>
   <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
-  <v-form @submit.prevent="submit">
+  <v-progress-linear v-if="!loaded && !error" indeterminate class="mb-4" :aria-label="t.loading" />
+  <v-btn v-if="!loaded && error" variant="text" :to="{ name: 'recipes' }">{{ t.backToList }}</v-btn>
+  <v-form v-if="loaded" @submit.prevent="submit">
     <v-text-field v-model="recipe.title" :label="t.recipeTitle" maxlength="200" required />
     <div class="d-flex ga-3 flex-wrap">
       <v-text-field v-model.number="recipe.baseServings" :label="t.baseServings" type="number" min="1" max="100" style="max-width: 180px" />
@@ -69,7 +78,7 @@ async function remove() {
     <h2 class="text-h6 mb-2">{{ t.ingredients }}</h2>
     <div v-for="(ing, i) in recipe.ingredients" :key="i" class="d-flex ga-2 align-start">
       <v-text-field v-model="ing.name" :label="t.ingredientName" class="flex-grow-1" density="compact" />
-      <v-text-field v-model.number="ing.quantity" :label="t.quantity" type="number" min="0" step="any" density="compact" style="max-width: 110px" />
+      <v-text-field v-model.number="ing.quantity" :label="t.quantity" type="number" min="0.001" step="any" density="compact" style="max-width: 110px" />
       <v-text-field v-model="ing.unit" :label="t.unit" density="compact" style="max-width: 110px" />
       <v-btn icon="mdi-close" variant="text" :title="t.remove" @click="recipe.ingredients.splice(i, 1)" />
     </div>

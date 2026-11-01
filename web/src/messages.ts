@@ -57,6 +57,7 @@ export const t = {
   servingsShort: 'porcji',
   remove: 'Usuń',
   loading: 'Ładowanie…',
+  backToList: 'Wróć do listy',
 }
 
 const errors: Record<string, string> = {
