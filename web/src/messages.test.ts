@@ -30,3 +30,14 @@ describe('errorText', () => {
     expect(errorText(new Error('boom'))).toBe('Coś poszło nie tak. Spróbuj ponownie.')
   })
 })
+
+describe('errorText new codes', () => {
+  it.each(['in_use', 'conflict', 'last_admin'])('has a Polish text for %s', (code) => {
+    const text = errorText(new ApiError(409, code, 'English server text'))
+    expect(text).not.toBe('English server text')
+    expect(text.length).toBeGreaterThan(0)
+  })
+  it('explains in_use', () => {
+    expect(errorText(new ApiError(409, 'in_use', 'x'))).toBe('Ten przepis jest użyty w planie. Najpierw usuń go z planu.')
+  })
+})

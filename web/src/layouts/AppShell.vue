@@ -11,6 +11,7 @@ const router = useRouter()
 
 const items = [
   { title: t.navPlan, icon: 'mdi-calendar-week', to: { name: 'home' } },
+  { title: t.navRecipes, icon: 'mdi-book-open-variant', to: { name: 'recipes' } },
   { title: t.navMembers, icon: 'mdi-account-group', to: { name: 'members' } },
 ]
 

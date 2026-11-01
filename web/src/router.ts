@@ -6,6 +6,8 @@ import HomeView from './views/HomeView.vue'
 import InviteAcceptView from './views/InviteAcceptView.vue'
 import LoginView from './views/LoginView.vue'
 import MembersView from './views/MembersView.vue'
+import RecipeEditView from './views/RecipeEditView.vue'
+import RecipesView from './views/RecipesView.vue'
 import SetupView from './views/SetupView.vue'
 
 export const router = createRouter({
@@ -19,6 +21,9 @@ export const router = createRouter({
       component: AppShell,
       children: [
         { path: '', name: 'home', component: HomeView },
+        { path: 'recipes', name: 'recipes', component: RecipesView },
+        { path: 'recipes/new', name: 'recipe-new', component: RecipeEditView },
+        { path: 'recipes/:id', name: 'recipe-edit', component: RecipeEditView },
         { path: 'members', name: 'members', component: MembersView },
       ],
     },
