@@ -26,6 +26,9 @@ func Open(driver, dsn string) (*DB, error) {
 	default:
 		return nil, fmt.Errorf("store: unknown driver %q", driver)
 	}
+	if driver == "sqlite" {
+		dsn = sqliteDSN(dsn)
+	}
 	sdb, err := sql.Open(name, dsn)
 	if err != nil {
 		return nil, err
@@ -56,4 +59,17 @@ func (d *DB) Rebind(q string) string {
 		b.WriteRune(r)
 	}
 	return b.String()
+}
+
+// sqliteDSN makes sure foreign keys are enforced; SQLite leaves them off by default and the
+// setting is per connection, so it has to travel with the DSN.
+func sqliteDSN(dsn string) string {
+	if strings.Contains(dsn, "foreign_keys") {
+		return dsn
+	}
+	sep := "?"
+	if strings.Contains(dsn, "?") {
+		sep = "&"
+	}
+	return dsn + sep + "_pragma=foreign_keys(1)"
 }
