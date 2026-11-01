@@ -33,7 +33,7 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `GET /plan/{week}` | wpisy planu tygodnia |
 | `POST /plan/{week}/entries` | dodanie wpisu: przepis albo tekst wolny, slot, porcje, opcjonalnie kucharz |
 | `PUT/DELETE /plan/{week}/entries/{id}` | zamiana i usunięcie wpisu |
-| `POST /plan/{week}/copy` | kopiowanie wpisów z `fromWeek`; tylko na pusty tydzień, inaczej `409 conflict` |
+| `POST /plan/{week}/copy` | kopiowanie wpisów z `fromWeek`; tylko na pusty tydzień, inaczej `409 conflict`; ten sam tydzień jako źródło i cel daje `422 invalid_input` |
 | `GET /shopping?week=` | lista zakupów tygodnia |
 | `POST /shopping/generate` | generowanie z planu (`week`, opcjonalnie `from` i `to`) |
 | `POST /shopping/items` | dodanie pozycji ręcznej |
@@ -54,11 +54,13 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 
 | Kod | HTTP | Kiedy |
 |---|---|---|
-| `invalid_input` | 422 | błędna walidacja (pola, `sourceUrl`, data tygodnia nie jest poniedziałkiem, edycja pozycji wygenerowanej) |
+| `invalid_input` | 422 | błędna walidacja (pola, `sourceUrl`, data tygodnia nie jest poniedziałkiem, edycja pozycji wygenerowanej, kopiowanie tygodnia na ten sam tydzień) |
 | `not_found` | 404 | zasób nie istnieje lub należy do innego gospodarstwa |
 | `conflict` | 409 | kopiowanie tygodnia na niepusty tydzień |
 | `in_use` | 409 | usunięcie przepisu użytego w planie |
 | `last_admin` | 409 | zmiana roli lub usunięcie ostatniego administratora |
-| `forbidden` | 403 | brak uprawnień (np. członek zarządza rolami) lub błąd CSRF |
+| `forbidden` | 403 | brak uprawnień (np. członek zarządza rolami) |
+| `csrf` | 403 | brak lub błędny nagłówek `X-CSRF-Token` w żądaniu modyfikującym |
+| `internal` | 500 | nieoczekiwany błąd serwera (szczegóły tylko w dzienniku) |
 
 Pozostałe kody (`unauthenticated`, `invalid_credentials`, `rate_limited`, `login_taken`, `invite_invalid`, `setup_done`, `password_length`) dotyczą kont i sesji z Etapu 1.
