@@ -1,0 +1,70 @@
+name: Błąd
+description: Zgłoś błąd w działaniu aplikacji
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Dziękujemy za zgłoszenie. Luki bezpieczeństwa zgłaszaj prywatnie (zobacz SECURITY.md), nie tutaj.
+  - type: input
+    id: version
+    attributes:
+      label: Wersja lub commit
+      description: Wynik `git rev-parse --short HEAD` lub numer wydania.
+      placeholder: "np. 56be76c"
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Sposób uruchomienia
+      options:
+        - Docker
+        - Docker Compose
+        - Binarka (make build)
+        - Inny
+    validations:
+      required: true
+  - type: dropdown
+    id: db
+    attributes:
+      label: Baza danych
+      options:
+        - SQLite
+        - Postgres
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Przeglądarka i urządzenie
+      placeholder: "np. Firefox 130 na Androidzie"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Kroki do odtworzenia
+      placeholder: |
+        1. Otwórz ...
+        2. Kliknij ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Oczekiwane zachowanie
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Rzeczywiste zachowanie
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logi
+      description: Np. `docker logs mealplan`. Usuń z nich dane wrażliwe (hasła, tokeny, linki zaproszeń).
+      render: shell

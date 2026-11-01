@@ -1,0 +1,18 @@
+# Minimalny przykład dla selfhost. Szczegóły: docs/quickstart.md
+services:
+  mealplan:
+    build: .
+    image: mealplan:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - mealplan-data:/data
+    # environment:
+    #   # Tylko do lokalnego testu po zwykłym HTTP. Za HTTPS (np. tailscale serve) usuń tę linię.
+    #   MEALPLAN_COOKIE_SECURE: "false"
+    #   # Adres nasłuchu wewnątrz kontenera (domyślnie :8080); przy zmianie popraw też mapowanie portów.
+    #   MEALPLAN_ADDR: ":8080"
+
+volumes:
+  mealplan-data:

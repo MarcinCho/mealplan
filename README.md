@@ -1,36 +1,45 @@
 # Mealplan
 
-Lekka domowa aplikacja do planowania jadłospisu na tydzień: kto gotuje które danie, lista zakupów, import przepisów, inwentarz i statystyki. Działa w przeglądarce na telefonie i komputerze. Licencja MIT.
+[![ci](https://github.com/MarcinCho/mealplan/actions/workflows/ci.yml/badge.svg)](https://github.com/MarcinCho/mealplan/actions/workflows/ci.yml)
+[![Licencja: MIT](https://img.shields.io/badge/licencja-MIT-blue.svg)](LICENSE)
 
-> Status: Etap 1 (fundament): konta, logowanie, zaproszenia i powłoka UI. Planowanie, przepisy i zakupy w kolejnych etapach.
+Lekka domowa aplikacja do planowania jadłospisu na tydzień: kto gotuje które danie, lista zakupów, przepisy. Działa w przeglądarce na telefonie i komputerze, na własnym serwerze (selfhost), z bazą SQLite w jednym pliku.
+
+> Status: Etap 2 (rdzeń): przepisy, tygodniowy plan, lista zakupów oraz konta, zaproszenia i role. Import przepisów, inwentarz, statystyki i tryb hosted są dopiero planowane.
+
+## Funkcje
+
+- Przepisy z listą składników i porcjami.
+- Tygodniowy plan: kto gotuje które danie i na ile porcji.
+- Lista zakupów generowana z planu.
+- Konta domowników, zaproszenia (link ważny 72 godziny) i role.
 
 ## Szybki start
 
+Pełny przewodnik krok po kroku (Docker, Docker Compose, kod źródłowy, HTTPS przez Tailscale, kopie zapasowe): [Szybki start](docs/quickstart.md).
+
 ```bash
 docker build -t mealplan .
-docker run -d -p 127.0.0.1:8080:8080 -v mealplan-data:/data -e MEALPLAN_COOKIE_SECURE=false mealplan
+docker run -d --name mealplan --restart unless-stopped -p 127.0.0.1:8080:8080 -v mealplan-data:/data -e MEALPLAN_COOKIE_SECURE=false mealplan
+# otwórz http://localhost:8080 i utwórz konto administratora
 ```
 
-Otwórz `http://localhost:8080` i utwórz konto administratora. Do codziennego użytku ustaw HTTPS (np. `tailscale serve`) i zostaw `MEALPLAN_COOKIE_SECURE=true`. Po włączeniu HTTPS kontener trzeba utworzyć ponownie bez zmiennej `MEALPLAN_COOKIE_SECURE=false` (`docker rm -f` i `docker run` bez `-e`).
-
-Samo `go build` bez wcześniejszego `npm run build` daje pusty interfejs. Używaj `make build` albo Dockera.
-
-Wolumen nazwany działa od razu. Przy montowaniu katalogu z hosta (`-v "$PWD/data:/data"`) katalog musi być zapisywalny dla uid 65532 (`sudo chown 65532:65532 ./data`), bo obraz działa jako `nonroot`.
-
-Z kodu źródłowego (Go 1.26, Node 22):
-
-```bash
-make run
-```
+`MEALPLAN_COOKIE_SECURE=false` służy tylko do testu po zwykłym HTTP. Na co dzień użyj HTTPS i usuń tę zmienną.
 
 ## Dokumentacja
 
+- [Szybki start (selfhost)](docs/quickstart.md)
 - [Architektura](docs/architecture.md)
 - [Bezpieczeństwo](docs/security.md)
 - [Tryby i konfiguracja](docs/modes.md)
 - [Wdrożenie selfhost z Tailscale](docs/deployment-selfhost.md)
 - [API](docs/api.md)
+
+## Projekt
+
 - [Współpraca](CONTRIBUTING.md)
+- [Kodeks postępowania](CODE_OF_CONDUCT.md)
+- [Polityka bezpieczeństwa](SECURITY.md)
 
 ## Licencja
 

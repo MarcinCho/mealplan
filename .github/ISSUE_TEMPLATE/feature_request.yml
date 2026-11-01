@@ -1,0 +1,27 @@
+name: Propozycja funkcji
+description: Zaproponuj nową funkcję lub zmianę
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Jaką potrzebę chcesz zaspokoić? Opisz sytuację, nie rozwiązanie.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proponowane rozwiązanie
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Rozważane alternatywy
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Współpraca
+      options:
+        - label: Chcę sam(a) przygotować pull request
