@@ -59,3 +59,29 @@ func TestValidatePassword(t *testing.T) {
 		}
 	}
 }
+
+func TestVerifyRejectsHostileParams(t *testing.T) {
+	salt, key := "c29tZXNhbHRzb21lc2FsdA", "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE"
+	mk := func(ver, params, s, k string) string {
+		return "$argon2id$" + ver + "$" + params + "$" + s + "$" + k
+	}
+	cases := map[string]string{
+		"t=0":          mk("v=19", "m=8192,t=0,p=1", salt, key),
+		"p=0":          mk("v=19", "m=8192,t=1,p=0", salt, key),
+		"huge m":       mk("v=19", "m=4194304,t=1,p=1", salt, key),
+		"huge t":       mk("v=19", "m=8192,t=1000,p=1", salt, key),
+		"m < 8p":       mk("v=19", "m=8,t=1,p=2", salt, key),
+		"version junk": mk("v=19xyz", "m=8192,t=1,p=1", salt, key),
+		"p junk":       mk("v=19", "m=8192,t=1,p=1junk", salt, key),
+		"bad salt b64": mk("v=19", "m=8192,t=1,p=1", "!!!", key),
+		"bad key b64":  mk("v=19", "m=8192,t=1,p=1", salt, "!!!"),
+	}
+	for name, enc := range cases {
+		t.Run(name, func(t *testing.T) {
+			ok, err := Verify("x", enc)
+			if ok || !errors.Is(err, ErrInvalidHash) {
+				t.Fatalf("ok=%v err=%v", ok, err)
+			}
+		})
+	}
+}

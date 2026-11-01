@@ -50,12 +50,17 @@ func Verify(password, encoded string) (bool, error) {
 		return false, ErrInvalidHash
 	}
 	var version int
-	if _, err := fmt.Sscanf(parts[2], "v=%d", &version); err != nil || version != argon2.Version {
+	if _, err := fmt.Sscanf(parts[2], "v=%d", &version); err != nil || version != argon2.Version || parts[2] != fmt.Sprintf("v=%d", version) {
 		return false, ErrInvalidHash
 	}
 	var m, t uint32
 	var p uint8
-	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &m, &t, &p); err != nil {
+	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &m, &t, &p); err != nil ||
+		parts[3] != fmt.Sprintf("m=%d,t=%d,p=%d", m, t, p) {
+		return false, ErrInvalidHash
+	}
+	// Bound the cost parameters: a corrupted or hostile row must not panic or exhaust resources.
+	if t < 1 || t > 10 || p < 1 || p > 32 || m < 8*uint32(p) || m > 1<<20 {
 		return false, ErrInvalidHash
 	}
 	salt, err := b64.DecodeString(parts[4])
