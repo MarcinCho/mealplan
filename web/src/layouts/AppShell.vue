@@ -74,16 +74,16 @@ async function logout() {
   </v-app-bar>
 
   <v-navigation-drawer v-if="mdAndUp" rail permanent>
-    <v-list nav>
+    <v-list nav color="primary">
       <v-list-item v-for="i in items" :key="i.title" :to="i.to" :prepend-icon="i.icon" :title="i.title" />
     </v-list>
   </v-navigation-drawer>
 
   <v-main>
-    <v-container class="py-6" style="max-width: 960px"><router-view /></v-container>
+    <v-container class="py-6" style="max-width: 1200px"><router-view /></v-container>
   </v-main>
 
-  <v-bottom-navigation v-if="!mdAndUp" grow>
+  <v-bottom-navigation v-if="!mdAndUp" grow color="primary">
     <v-btn v-for="i in items" :key="i.title" :to="i.to"><v-icon>{{ i.icon }}</v-icon>{{ i.title }}</v-btn>
   </v-bottom-navigation>
 </template>
