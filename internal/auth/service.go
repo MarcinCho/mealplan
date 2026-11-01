@@ -192,13 +192,26 @@ func (s *Service) Login(ctx context.Context, login, password, ip string) (Sessio
 		s.audit(ctx, "", "", "login_failed", "ip="+ip)
 		return SessionGrant{}, ErrInvalidCredentials
 	}
+	g, err := s.startSession(ctx, u.ID)
+	if errors.Is(err, ErrInvalidCredentials) { // account without a household: indistinguishable from a wrong password
+		s.loginLimiter.Fail(loginKey)
+		s.ipLimiter.Fail(ipKey)
+		s.audit(ctx, "", "", "login_failed", "ip="+ip)
+		return SessionGrant{}, ErrInvalidCredentials
+	}
+	if err != nil {
+		return SessionGrant{}, err
+	}
 	s.loginLimiter.Reset(loginKey)
 	s.audit(ctx, "", u.ID, "login", "ip="+ip)
-	return s.startSession(ctx, u.ID)
+	return g, nil
 }
 
 func (s *Service) startSession(ctx context.Context, userID string) (SessionGrant, error) {
 	hid, _, err := s.st.FirstMembership(ctx, userID)
+	if errors.Is(err, store.ErrNotFound) {
+		return SessionGrant{}, ErrInvalidCredentials
+	}
 	if err != nil {
 		return SessionGrant{}, err
 	}
@@ -410,4 +423,37 @@ func (s *Service) verifyPassword(ctx context.Context, password, encoded string) 
 	}
 	defer s.release()
 	return s.verify(password, encoded)
+}
+
+var ErrLastAdmin = errors.New("auth: last admin")
+
+func (s *Service) ChangeRole(ctx context.Context, p Principal, userID string, role domain.Role) error {
+	if err := requireAdmin(p); err != nil {
+		return err
+	}
+	if !role.Valid() {
+		return fmt.Errorf("%w: unknown role", ErrInvalidInput)
+	}
+	if err := s.st.SetRole(ctx, p.HouseholdID, userID, role); err != nil {
+		if errors.Is(err, store.ErrLastAdmin) {
+			return ErrLastAdmin
+		}
+		return err
+	}
+	s.audit(ctx, p.HouseholdID, p.UserID, "role_changed", "user="+userID+" role="+string(role))
+	return nil
+}
+
+func (s *Service) RemoveMember(ctx context.Context, p Principal, userID string) error {
+	if err := requireAdmin(p); err != nil {
+		return err
+	}
+	if err := s.st.RemoveMember(ctx, p.HouseholdID, userID); err != nil {
+		if errors.Is(err, store.ErrLastAdmin) {
+			return ErrLastAdmin
+		}
+		return err
+	}
+	s.audit(ctx, p.HouseholdID, p.UserID, "member_removed", "user="+userID)
+	return nil
 }

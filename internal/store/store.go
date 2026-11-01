@@ -14,6 +14,7 @@ var (
 	ErrSetupDone      = errors.New("store: setup already done")
 	ErrInviteUnusable = errors.New("store: invite unusable")
 	ErrInUse          = errors.New("store: in use")
+	ErrLastAdmin      = errors.New("store: last admin")
 )
 
 type Store struct{ db *DB }

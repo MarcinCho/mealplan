@@ -502,3 +502,45 @@ func setupToken(t *testing.T, svc *Service) string {
 	}
 	return g.Token
 }
+
+func TestRemoveMemberAndRoleAudit(t *testing.T) {
+	svc, st, _ := newTestService(t)
+	ctx := context.Background()
+	admin, _ := svc.Authenticate(ctx, setupAdmin(t, svc).Token)
+	raw, _, err := svc.CreateInvite(ctx, admin, domain.RoleMember)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := svc.AcceptInvite(ctx, raw, AcceptInput{Login: "mia", Password: goodPassword, DisplayName: "Mia"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	member, _ := svc.Authenticate(ctx, g.Token)
+	if err := svc.ChangeRole(ctx, member, admin.UserID, domain.RoleMember); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("member changing role: %v", err)
+	}
+	if err := svc.ChangeRole(ctx, admin, member.UserID, domain.RoleAdmin); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.ChangeRole(ctx, admin, member.UserID, domain.Role("bogus")); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("bad role: %v", err)
+	}
+	if err := svc.RemoveMember(ctx, admin, member.UserID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Authenticate(ctx, g.Token); err == nil {
+		t.Fatal("removed member session must be dead")
+	}
+	if _, err := svc.Login(ctx, "mia", goodPassword, "1.2.3.4"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("removed member login: %v", err)
+	}
+	if err := svc.RemoveMember(ctx, admin, admin.UserID); !errors.Is(err, ErrLastAdmin) {
+		t.Fatalf("last admin: %v", err)
+	}
+	for _, typ := range []string{"role_changed", "member_removed"} {
+		var n int
+		if err := st.DB().QueryRowContext(ctx, st.DB().Rebind(`SELECT COUNT(*) FROM audit_event WHERE type = ?`), typ).Scan(&n); err != nil || n != 1 {
+			t.Fatalf("audit %s: n=%d err=%v", typ, n, err)
+		}
+	}
+}

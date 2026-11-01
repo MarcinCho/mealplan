@@ -52,6 +52,8 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/recipes/{id}", s.private(s.handleGetRecipe)},
 		{"PUT /api/v1/recipes/{id}", s.private(s.handleUpdateRecipe)},
 		{"DELETE /api/v1/recipes/{id}", s.private(s.handleDeleteRecipe)},
+		{"PATCH /api/v1/household/members/{id}", s.private(s.handleChangeRole)},
+		{"DELETE /api/v1/household/members/{id}", s.private(s.handleRemoveMember)},
 		{"GET /api/v1/plan/{week}", s.private(s.handleGetWeek)},
 		{"POST /api/v1/plan/{week}/entries", s.private(s.handleAddEntry)},
 		{"PUT /api/v1/plan/{week}/entries/{id}", s.private(s.handleEditEntry)},

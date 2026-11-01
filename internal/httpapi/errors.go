@@ -41,6 +41,8 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, http.StatusUnauthorized, "unauthenticated", "authentication required")
 	case errors.Is(err, auth.ErrForbidden):
 		writeError(w, http.StatusForbidden, "forbidden", "insufficient permissions")
+	case errors.Is(err, auth.ErrLastAdmin):
+		writeError(w, http.StatusConflict, "last_admin", "the household must keep at least one admin")
 	case errors.Is(err, auth.ErrSetupDone):
 		writeError(w, http.StatusConflict, "setup_done", "setup has already been completed")
 	case errors.Is(err, auth.ErrInviteInvalid):
