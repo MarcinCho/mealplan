@@ -40,6 +40,7 @@ type Service struct {
 	now          func() time.Time
 	loginLimiter *Limiter
 	ipLimiter    *Limiter
+	verify       func(password, encoded string) (bool, error)
 	dummyHash    string // verified against when the user does not exist, to equalize timing
 }
 
@@ -56,6 +57,7 @@ func NewService(st *store.Store, cfg Config, now func() time.Time) (*Service, er
 		loginLimiter: NewLimiter(now, 5),
 		ipLimiter:    NewLimiter(now, 30),
 		dummyHash:    dummy,
+		verify:       Verify,
 	}, nil
 }
 
@@ -164,7 +166,7 @@ func (s *Service) Login(ctx context.Context, login, password, ip string) (Sessio
 		if found {
 			hash = u.PasswordHash
 		}
-		match, verr := Verify(password, hash)
+		match, verr := s.verify(password, hash)
 		ok = verr == nil && match && found
 	}
 	if !ok {

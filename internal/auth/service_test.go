@@ -92,12 +92,27 @@ func TestLoginFailuresLookAlike(t *testing.T) {
 	}
 }
 
-func TestLoginHugePasswordIsRejectedCheaply(t *testing.T) {
+func TestLoginOversizedPasswordSkipsVerify(t *testing.T) {
 	svc, _, _ := newTestService(t)
 	setupAdmin(t, svc)
-	_, err := svc.Login(context.Background(), "marc", strings.Repeat("a", 5000), "10.0.0.1")
-	if !errors.Is(err, ErrInvalidCredentials) {
-		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	calls := 0
+	real := svc.verify
+	svc.verify = func(p, e string) (bool, error) { calls++; return real(p, e) }
+	ctx := context.Background()
+
+	if _, err := svc.Login(ctx, "marc", "wrong-password-123", "10.0.0.1"); !errors.Is(err, ErrInvalidCredentials) || calls != 1 {
+		t.Fatalf("normal wrong password: err=%v calls=%d", err, calls)
+	}
+	for name, pw := range map[string]string{"5000 chars": strings.Repeat("a", 5000), "129 runes": strings.Repeat("ż", MaxPasswordLen+1)} {
+		if _, err := svc.Login(ctx, "marc", pw, "10.0.0.1"); !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if calls != 1 {
+			t.Fatalf("%s: verify was called (calls=%d)", name, calls)
+		}
+	}
+	if _, err := svc.Login(ctx, "marc", strings.Repeat("ż", MaxPasswordLen), "10.0.0.1"); !errors.Is(err, ErrInvalidCredentials) || calls != 2 {
+		t.Fatalf("boundary password must reach verify: err=%v calls=%d", err, calls)
 	}
 }
 
