@@ -1,6 +1,6 @@
 # Bezpieczeństwo
 
-## Zaimplementowane w Etapie 1
+## Zaimplementowane w Etapach 1 i 2
 
 | Obszar | Rozwiązanie |
 |---|---|
@@ -11,9 +11,12 @@
 | Trasy publiczne | tylko `Content-Type: application/json`, co blokuje formularze z innych witryn |
 | Logowanie | limit na login (blokada od 5. kolejnej porażki) i na IP (od 30.), blokada 1 s podwajana do 15 min; identyczny błąd dla złego loginu i hasła; hashowanie atrapy dla nieistniejącego loginu wyrównuje czas odpowiedzi |
 | Zaproszenia | jednorazowe, ważne 72 godziny (stała w `cmd/mealplan/main.go`, nie zmienna środowiskowa), token hashowany, zużycie atomowe w transakcji |
-| Izolacja gospodarstw | `household_id` w zapytaniach, testy między dwoma gospodarstwami |
+| Izolacja gospodarstw | `household_id` w zapytaniach, testy między dwoma gospodarstwami; obejmuje przepisy, plan i listę zakupów (obcy zasób zwraca `404 not_found`); wpis planu może wskazać tylko przepis i kucharza z własnego gospodarstwa |
+| Integralność | włączone klucze obce (`foreign_keys`) w SQLite; przepis użyty w planie nie da się usunąć (`ON DELETE RESTRICT`, `409 in_use`) |
+| Walidacja wejścia | `sourceUrl` tylko `http` lub `https` z hostem (odrzucone `javascript:`, `data:`); limity długości nazw, liczby składników, ilości i porcji |
+| Członkowie | usunięcie członka kasuje jego sesje w gospodarstwie i czyści go z roli kucharza; ostatniego administratora nie można zdegradować ani usunąć (`409 last_admin`, blokada administratorów w transakcji) |
 | Nagłówki | CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, HSTS przy `Secure`, `Cache-Control: no-store` dla `/api/` |
-| Audyt | tabela `audit_event` (zdarzenia `setup`, `login`, `login_failed`, `invite_created`, `invite_revoked`, `invite_accepted`) |
+| Audyt | tabela `audit_event` (zdarzenia `setup`, `login`, `login_failed`, `invite_created`, `invite_revoked`, `invite_accepted`, `role_changed`, `member_removed`) |
 
 ## Znane ograniczenia
 

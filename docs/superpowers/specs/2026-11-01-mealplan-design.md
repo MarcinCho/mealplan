@@ -110,6 +110,17 @@ erDiagram
 - `shopping_item(id, household_id, name, quantity, unit, checked, manual, week)`.
 - `audit_event(id, household_id, user_id, type, at, details)`.
 
+### Rozstrzygnięcia Etapu 2
+
+- Tagi przepisu są w tabeli `recipe_tag(recipe_id, tag)` zamiast kolumny `tags` (statystyki po tagach to zwykły `GROUP BY`).
+- `shopping_item` ma `normalized_name`; regeneracja listy dopasowuje pozycje po nazwie znormalizowanej i jednostce.
+- Tydzień jest identyfikowany poniedziałkiem w formacie `YYYY-MM-DD`.
+- `recipe.image_path` jest zarezerwowane do Etapu 3 i 4.
+- Przepis użyty w planie nie da się usunąć (`409 in_use`); kopiowanie tygodnia działa tylko na pusty tydzień (`409 conflict`).
+- Pozycje wygenerowane są tylko do odhaczania, ręczne można edytować i usuwać; regeneracja zachowuje ręczne oraz `id` i `checked` pozycji o niezmienionej ilości.
+- Wszyscy członkowie edytują przepisy, plan i listę; role, członków i zaproszenia zarządza tylko administrator. Usunięcie członka kasuje jego sesje w gospodarstwie i czyści go jako kucharza; ostatniego administratora nie można zdegradować ani usunąć (`409 last_admin`).
+- Odejmowanie zapasów jest podpięte w generatorze, ale dostaje pustą listę do Etapu 3.
+
 **Izolacja:** każda tabela domenowa ma `household_id`. Repozytoria przyjmują go jako obowiązkowy parametr i dodają do każdego zapytania w jednym miejscu. Testy potwierdzają, że gospodarstwo A nie odczyta ani nie zmieni danych B.
 
 **Jednostki:** ilość to liczba plus jednostka. Obsługiwane konwersje: g↔kg, ml↔l. Konwersje międzygrupowe (np. łyżka↔gram) świadomie pomijamy.
