@@ -6,7 +6,7 @@
 4. SQL musi być przenośny między SQLite i Postgres (znaki `?`, bez składni specyficznej dla jednego silnika).
 5. Diagramy w dokumentacji piszemy w mermaid.
 6. Commity w formie `feat:`, `fix:`, `docs:`, `test:`.
-7. Zależności Go są przypięte do wersji zgodnych z Go 1.23 (`modernc.org/sqlite` v1.34.5, `pgx/v5` v5.7.2, `golang.org/x/crypto` v0.31.0). Podniesienie ich wymaga nowszego toolchainu Go (i zmiany `go.mod`, CI oraz Dockerfile).
+7. Projekt używa Go 1.26 (`go.mod`, CI, Dockerfile) i aktualnych zależności; przy podnoszeniu toolchainu lub zależności zmieniaj te trzy miejsca razem i uruchom `govulncheck ./...` (wersja przypięta w CI).
 8. Audyt zależności frontendu w CI: `cd web && npm audit --omit=dev --omit=peer --omit=optional --audit-level=high`. Sprawdza tylko zależności dostarczane w produkcie; vite i esbuild to narzędzia czasu budowania i nie trafiają do obrazu.
 
 ```mermaid

@@ -15,7 +15,7 @@ Otwórz `http://localhost:8080` i utwórz konto administratora. Do codziennego u
 
 Wolumen nazwany działa od razu. Przy montowaniu katalogu z hosta (`-v ./data:/data`) katalog musi być zapisywalny dla uid 65532 (`sudo chown 65532:65532 ./data`), bo obraz działa jako `nonroot`.
 
-Z kodu źródłowego (Go 1.23, Node 22):
+Z kodu źródłowego (Go 1.26, Node 22):
 
 ```bash
 make run
