@@ -1,0 +1,224 @@
+openapi: 3.0.3
+info:
+  title: Mealplan API
+  version: 0.1.0
+  description: REST API of Mealplan. All responses are JSON; errors use the Error schema.
+servers:
+  - url: /
+paths:
+  /api/v1/auth/status:
+    get:
+      summary: Setup state and deployment mode
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Status" }
+  /api/v1/auth/setup:
+    post:
+      summary: Create the first household and admin (only when no users exist)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetupRequest" }
+      responses:
+        "204": { description: Created; session cookies set }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /api/v1/auth/login:
+    post:
+      summary: Log in with login and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "204": { description: Logged in; session cookies set }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /api/v1/auth/logout:
+    post:
+      summary: End the current session
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Logged out }
+  /api/v1/auth/me:
+    get:
+      summary: Current user, household, role and CSRF token
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "401": { $ref: "#/components/responses/Error" }
+  /api/v1/auth/invites:
+    post:
+      summary: Create a one-time invite (admin)
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateInviteRequest" }
+      responses:
+        "201":
+          description: Created; the token is shown only once
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreatedInvite" }
+        "403": { $ref: "#/components/responses/Error" }
+    get:
+      summary: List pending invites (admin)
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Invite" }
+        "403": { $ref: "#/components/responses/Error" }
+  /api/v1/auth/invites/{id}:
+    delete:
+      summary: Revoke a pending invite of the own household (admin)
+      security: [{ session: [], csrf: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Revoked }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/v1/auth/invitations/{token}:
+    get:
+      summary: Inspect an invite link
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InviteInfo" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/v1/auth/invitations/{token}/accept:
+    post:
+      summary: Accept an invite and create an account
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AcceptRequest" }
+      responses:
+        "204": { description: Account created; session cookies set }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /api/v1/household/members:
+    get:
+      summary: Members of the current household
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Member" }
+components:
+  securitySchemes:
+    session: { type: apiKey, in: cookie, name: mealplan_session }
+    csrf: { type: apiKey, in: header, name: X-CSRF-Token }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: {}
+    Status:
+      type: object
+      properties:
+        setupRequired: { type: boolean }
+        mode: { type: string, enum: [selfhost, hosted] }
+    SetupRequest:
+      type: object
+      required: [householdName, login, password, displayName]
+      properties:
+        householdName: { type: string, maxLength: 100 }
+        login: { type: string, pattern: "^[a-z0-9._-]{3,64}$" }
+        password: { type: string, minLength: 12, maxLength: 128 }
+        displayName: { type: string, maxLength: 64 }
+    LoginRequest:
+      type: object
+      required: [login, password]
+      properties:
+        login: { type: string }
+        password: { type: string }
+    AcceptRequest:
+      type: object
+      required: [login, password, displayName]
+      properties:
+        login: { type: string, pattern: "^[a-z0-9._-]{3,64}$" }
+        password: { type: string, minLength: 12, maxLength: 128 }
+        displayName: { type: string, maxLength: 64 }
+    Me:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id: { type: string }
+            login: { type: string }
+            displayName: { type: string }
+        household:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+        role: { type: string, enum: [admin, member] }
+        csrfToken: { type: string }
+    CreateInviteRequest:
+      type: object
+      properties:
+        role: { type: string, enum: [admin, member], default: member }
+    CreatedInvite:
+      type: object
+      properties:
+        id: { type: string }
+        token: { type: string }
+        role: { type: string }
+        expiresAt: { type: string, format: date-time }
+        path: { type: string }
+    Invite:
+      type: object
+      properties:
+        id: { type: string }
+        role: { type: string }
+        expiresAt: { type: string, format: date-time }
+    InviteInfo:
+      type: object
+      properties:
+        householdName: { type: string }
+        role: { type: string }
+        expiresAt: { type: string, format: date-time }
+    Member:
+      type: object
+      properties:
+        id: { type: string }
+        login: { type: string }
+        displayName: { type: string }
+        role: { type: string, enum: [admin, member] }

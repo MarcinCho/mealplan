@@ -137,7 +137,7 @@ REST/JSON pod `/api/v1`, kontrakt w `api/openapi.yaml`, klient TypeScript genero
 - **Zaproszenia:** jednorazowy token (hash w bazie), ważność 72 godziny, z przypisaną rolą.
 - **SSRF przy imporcie z URL:** tylko http/https; blokada adresów prywatnych, loopback i link-local, sprawdzana po rozwiązaniu DNS i przy każdym przekierowaniu; limity rozmiaru i czasu. W tailnecie ma to szczególne znaczenie, bo serwer widzi inne maszyny.
 - **Import `.md`:** limit rozmiaru; surowy HTML nigdy nie jest renderowany.
-- **Nagłówki:** CSP bez `unsafe-inline`, `X-Content-Type-Options`, `Referrer-Policy`. Zapytania SQL w pełni parametryzowane.
+- **Nagłówki:** CSP bez `unsafe-inline` dla skryptów (dla stylów `unsafe-inline` jest tymczasowo dozwolone, bo Vuetify wstrzykuje arkusz motywu w czasie działania; docelowo nonce), `X-Content-Type-Options`, `Referrer-Policy`. Zapytania SQL w pełni parametryzowane.
 - **Audyt:** logowania, zmiany ról, zaproszenia zapisywane w `audit_event`.
 - **Izolacja gospodarstw:** patrz sekcja 4.
 
@@ -169,9 +169,9 @@ sequenceDiagram
     A->>D: zapisz hash tokenu, ważność 72h
     A-->>Ad: link zaproszenia
     Ad->>N: przekazuje link
-    N->>A: GET /auth/invites/{token}
+    N->>A: GET /auth/invitations/{token}
     A->>D: sprawdź ważność i brak użycia
-    N->>A: POST /auth/invites/{token}/accept (imię, hasło)
+    N->>A: POST /auth/invitations/{token}/accept (imię, hasło)
     A->>D: utwórz użytkownika, członkostwo, unieważnij token
     A-->>N: sesja
 ```
