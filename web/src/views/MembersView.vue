@@ -58,6 +58,8 @@ async function changeRole(m: Member, role: 'admin' | 'member') {
   error.value = ''
   try {
     await api('PATCH', `/household/members/${encodeURIComponent(m.id)}`, { role })
+    // Demoting yourself changes your own role: refresh the session so admin-only calls and controls go away.
+    if (m.id === session.me?.user.id) await session.fetchMe()
   } catch (e) {
     error.value = errorText(e)
   }
