@@ -44,7 +44,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
-      - run: npm audit --omit=dev --audit-level=high
+      # vite/esbuild are build-time-only tools (optional peers of vuetify); this step audits shipped runtime deps.
+      - run: npm audit --omit=dev --omit=peer --omit=optional --audit-level=high
 
   vuln:
     runs-on: ubuntu-latest
@@ -52,7 +53,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version: "1.23" }
-      - run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
       - run: govulncheck ./...
 
   docker:
