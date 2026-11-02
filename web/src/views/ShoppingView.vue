@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import EmptyState from '../components/EmptyState.vue'
 import { errorText, t } from '../messages'
 import { useShopping } from '../stores/shopping'
 import { formatQuantity } from '../stores/recipes'
@@ -101,7 +102,7 @@ function add() {
       <v-btn type="submit" variant="tonal" :disabled="!name.trim() || busy">{{ t.addManualItem }}</v-btn>
     </v-form>
 
-    <p v-if="!shop.items.length" class="text-medium-emphasis">{{ t.noItems }}</p>
+    <EmptyState v-if="!shop.items.length" :title="t.noItemsTitle" :hint="t.noItems" />
     <v-list v-else border rounded>
       <v-list-item v-for="i in shop.open" :key="i.id">
         <template #prepend>

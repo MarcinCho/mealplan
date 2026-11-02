@@ -2,7 +2,7 @@ import type { Slot } from './api/types'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-function fmt(d: Date): string {
+export function isoDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
@@ -14,17 +14,17 @@ function parse(date: string): Date {
 // mondayOf returns the Monday of the week containing d (weeks run Monday to Sunday).
 export function mondayOf(d: Date): string {
   const day = (d.getDay() + 6) % 7
-  return fmt(new Date(d.getFullYear(), d.getMonth(), d.getDate() - day))
+  return isoDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() - day))
 }
 
 export function shiftWeek(week: string, n: number): string {
   const d = parse(week)
-  return fmt(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7 * n))
+  return isoDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7 * n))
 }
 
 export function weekDates(week: string): string[] {
   const d = parse(week)
-  return Array.from({ length: 7 }, (_, i) => fmt(new Date(d.getFullYear(), d.getMonth(), d.getDate() + i)))
+  return Array.from({ length: 7 }, (_, i) => isoDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() + i)))
 }
 
 export function formatDay(date: string): string {

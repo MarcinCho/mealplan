@@ -24,6 +24,7 @@ export interface PlanEntry {
   freeText: string
   servings: number
   cookUserId: string | null
+  done: boolean
 }
 
 export interface ShoppingItem {
