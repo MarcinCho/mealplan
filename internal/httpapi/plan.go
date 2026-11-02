@@ -15,6 +15,7 @@ type entryJSON struct {
 	FreeText   string  `json:"freeText"`
 	Servings   int     `json:"servings"`
 	CookUserID *string `json:"cookUserId"`
+	Done       bool    `json:"done"`
 }
 
 func strPtr(s string) *string {
@@ -26,7 +27,7 @@ func strPtr(s string) *string {
 
 func toEntryJSON(e domain.PlanEntry) entryJSON {
 	return entryJSON{ID: e.ID, Date: e.Date, Slot: string(e.Slot), RecipeID: strPtr(e.RecipeID),
-		FreeText: e.FreeText, Servings: e.Servings, CookUserID: strPtr(e.CookUserID)}
+		FreeText: e.FreeText, Servings: e.Servings, CookUserID: strPtr(e.CookUserID), Done: e.Done}
 }
 
 type entryInJSON struct {
@@ -36,10 +37,11 @@ type entryInJSON struct {
 	FreeText   string  `json:"freeText"`
 	Servings   int     `json:"servings"`
 	CookUserID *string `json:"cookUserId"`
+	Done       bool    `json:"done"`
 }
 
 func (in entryInJSON) toInput() plan.EntryInput {
-	out := plan.EntryInput{Date: in.Date, Slot: domain.Slot(in.Slot), FreeText: in.FreeText, Servings: in.Servings}
+	out := plan.EntryInput{Date: in.Date, Slot: domain.Slot(in.Slot), FreeText: in.FreeText, Servings: in.Servings, Done: in.Done}
 	if in.RecipeID != nil {
 		out.RecipeID = *in.RecipeID
 	}

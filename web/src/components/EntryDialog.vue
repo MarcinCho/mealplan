@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useDisplay } from 'vuetify'
+import { VBottomSheet, VDialog } from 'vuetify/components'
 import type { PlanEntry, Recipe, Slot } from '../api/types'
 import { formatDay, SLOTS } from '../weeks'
 import { t } from '../messages'
@@ -20,6 +22,8 @@ const emit = defineEmits<{
   (e: 'save', input: EntryInput): void
   (e: 'remove'): void
 }>()
+
+const { mdAndUp } = useDisplay()
 
 const kind = ref<'recipe' | 'text'>('recipe')
 const date = ref('')
@@ -56,12 +60,18 @@ function save() {
     freeText: kind.value === 'text' ? freeText.value : '',
     servings: servings.value || 0,
     cookUserId: cookUserId.value,
+    done: props.entry?.done ?? false,
   })
 }
 </script>
 
 <template>
-  <v-dialog :model-value="modelValue" max-width="480" @update:model-value="emit('update:modelValue', $event)">
+  <component
+    :is="mdAndUp ? VDialog : VBottomSheet"
+    :model-value="modelValue"
+    max-width="480"
+    @update:model-value="emit('update:modelValue', $event)"
+  >
     <v-card>
       <v-card-title>{{ entry ? t.save : t.addEntry }}</v-card-title>
       <v-card-text>
@@ -83,5 +93,5 @@ function save() {
         <v-btn color="primary" :disabled="!valid" @click="save">{{ t.save }}</v-btn>
       </v-card-actions>
     </v-card>
-  </v-dialog>
+  </component>
 </template>

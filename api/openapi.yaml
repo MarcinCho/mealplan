@@ -664,9 +664,10 @@ components:
         freeText: { type: string }
         servings: { type: integer, description: Zero or omitted means the recipe base servings, or 1 for free-text entries }
         cookUserId: { type: string, nullable: true }
+        done: { type: boolean, description: Whether the meal was cooked; defaults to false }
     PlanEntry:
       type: object
-      required: [id, date, slot, recipeId, freeText, servings, cookUserId]
+      required: [id, date, slot, recipeId, freeText, servings, cookUserId, done]
       properties:
         id: { type: string }
         date: { type: string, format: date }
@@ -675,6 +676,7 @@ components:
         freeText: { type: string }
         servings: { type: integer }
         cookUserId: { type: string, nullable: true }
+        done: { type: boolean }
     Week:
       type: object
       required: [week, entries]

@@ -37,6 +37,7 @@ type EntryInput struct {
 	FreeText   string
 	Servings   int // 0 = the recipe's base servings (1 for free text)
 	CookUserID string
+	Done       bool
 }
 
 type Service struct {
@@ -94,7 +95,7 @@ func (s *Service) entry(ctx context.Context, householdID, week string, in EntryI
 		servings = 1
 	}
 	return domain.PlanEntry{HouseholdID: householdID, Date: in.Date, Slot: in.Slot, RecipeID: in.RecipeID,
-		FreeText: text, Servings: servings, CookUserID: in.CookUserID}, nil
+		FreeText: text, Servings: servings, CookUserID: in.CookUserID, Done: in.Done}, nil
 }
 
 func (s *Service) Week(ctx context.Context, householdID, week string) ([]domain.PlanEntry, error) {
@@ -186,6 +187,7 @@ func (s *Service) Copy(ctx context.Context, householdID, fromWeek, toWeek string
 		d, _ := time.Parse(dateLayout, e.Date)
 		e.ID = auth.NewID()
 		e.Date = d.AddDate(0, 0, shift).Format(dateLayout)
+		e.Done = false
 		out = append(out, e)
 	}
 	if err := s.repo.CopyPlanEntries(ctx, householdID, out); err != nil {

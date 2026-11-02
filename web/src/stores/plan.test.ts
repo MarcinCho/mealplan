@@ -8,7 +8,7 @@ function stub(status: number, body: unknown) {
   return spy
 }
 
-const e1 = { id: 'e1', date: '2026-11-03', slot: 'dinner', recipeId: null, freeText: 'Pizza', servings: 2, cookUserId: null }
+const e1 = { id: 'e1', date: '2026-11-03', slot: 'dinner', recipeId: null, freeText: 'Pizza', servings: 2, cookUserId: null, done: false }
 
 describe('usePlan', () => {
   beforeEach(() => {
@@ -118,5 +118,23 @@ describe('usePlan', () => {
     resolveAdd(new Response(JSON.stringify(e1), { status: 201 }))
     await adding
     expect(p.entries).toEqual([])
+  })
+})
+
+describe('usePlan.setDone', () => {
+  it('sends the whole entry back with done flipped and updates the state', async () => {
+    setActivePinia(createPinia())
+    stub(200, { week: '2026-11-02', entries: [e1] })
+    const p = usePlan()
+    await p.load('2026-11-02')
+    const spy = stub(200, { ...e1, done: true })
+    await p.setDone(p.entries[0], true)
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/v1/plan/2026-11-02/entries/e1')
+    expect(init.method).toBe('PUT')
+    expect(JSON.parse(init.body as string)).toEqual({
+      date: '2026-11-03', slot: 'dinner', recipeId: null, freeText: 'Pizza', servings: 2, cookUserId: null, done: true,
+    })
+    expect(p.entries[0].done).toBe(true)
   })
 })

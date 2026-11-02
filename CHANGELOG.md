@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Nowy wygląd
+
+- Ekran „Dziś" jako strona startowa: najbliższy niegotowy posiłek dnia, pasek dni tygodnia, lista posiłków z kucharzem i przycisk „Zrobione" (`plan_entry.done`, migracja 0003, pole `done` w API; kopiowanie tygodnia zeruje stan). Siatka tygodnia przeniesiona na `/plan`.
+- Szybkie dodawanie posiłku z podpowiedziami przepisów, dniem, posiłkiem i kucharzem.
+- Nawigacja: ciemny pasek boczny na komputerze, dolny pasek na telefonie; ustawienia (kolory, motyw, domownicy, wylogowanie) w menu awatara.
+- Material 3: duże zaokrąglenia, płaskie powierzchnie z cienką ramką, dolny arkusz zamiast okna dialogowego na telefonie, puste stany z ilustracją, płynne przejścia.
+- Palety kolorów (Klasyczny, Śliwka, Ziemia, Granat), domyślnie Ziemia.
+
 ### Etap 2: rdzeń
 
 - Przepisy (składniki, kroki, tagi, `sourceUrl` tylko http/https), tygodniowy plan (wpis: przepis albo tekst wolny, slot, porcje, kucharz), kopiowanie tygodnia, lista zakupów generowana z planu z ręcznymi pozycjami, jednostki i normalizacja nazw.

@@ -10,6 +10,7 @@ import RecipeEditView from './views/RecipeEditView.vue'
 import RecipesView from './views/RecipesView.vue'
 import SetupView from './views/SetupView.vue'
 import ShoppingView from './views/ShoppingView.vue'
+import TodayView from './views/TodayView.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -21,7 +22,8 @@ export const router = createRouter({
       path: '/',
       component: AppShell,
       children: [
-        { path: '', name: 'home', component: PlanView },
+        { path: '', name: 'home', component: TodayView },
+        { path: 'plan', name: 'plan', component: PlanView },
         { path: 'recipes', name: 'recipes', component: RecipesView },
         { path: 'recipes/new', name: 'recipe-new', component: RecipeEditView },
         { path: 'recipes/:id', name: 'recipe-edit', component: RecipeEditView },

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import EmptyState from '../components/EmptyState.vue'
 import { useRecipes } from '../stores/recipes'
 import { errorText, t } from '../messages'
 
@@ -22,7 +23,7 @@ onMounted(async () => {
     <v-btn color="primary" :to="{ name: 'recipe-new' }" prepend-icon="mdi-plus">{{ t.newRecipe }}</v-btn>
   </div>
   <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
-  <p v-if="recipes.loaded && !recipes.items.length" class="text-medium-emphasis">{{ t.noRecipes }}</p>
+  <EmptyState v-if="recipes.loaded && !recipes.items.length" :title="t.noRecipes" :hint="t.noRecipesHint" />
   <v-list v-else lines="two" border rounded>
     <v-list-item
       v-for="r in recipes.items"
