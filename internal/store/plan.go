@@ -8,7 +8,7 @@ import (
 	"mealplan/internal/domain"
 )
 
-const planCols = `id, household_id, date, slot, recipe_id, free_text, servings, cook_user_id`
+const planCols = `id, household_id, date, slot, recipe_id, free_text, servings, cook_user_id, done`
 
 func nullable(s string) any {
 	if s == "" {
@@ -21,11 +21,13 @@ func scanEntry(r scanner) (domain.PlanEntry, error) {
 	var e domain.PlanEntry
 	var slot string
 	var recipe, cook sql.NullString
-	if err := r.Scan(&e.ID, &e.HouseholdID, &e.Date, &slot, &recipe, &e.FreeText, &e.Servings, &cook); err != nil {
+	var done int
+	if err := r.Scan(&e.ID, &e.HouseholdID, &e.Date, &slot, &recipe, &e.FreeText, &e.Servings, &cook, &done); err != nil {
 		return domain.PlanEntry{}, mapErr(err)
 	}
 	e.Slot = domain.Slot(slot)
 	e.RecipeID, e.CookUserID = recipe.String, cook.String
+	e.Done = done != 0
 	return e, nil
 }
 
@@ -56,8 +58,8 @@ func (s *Store) insertEntry(ctx context.Context, tx *sql.Tx, e domain.PlanEntry)
 	if err := s.checkRefs(ctx, tx, e); err != nil {
 		return err
 	}
-	return s.exec(ctx, tx, `INSERT INTO plan_entry (`+planCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		e.ID, e.HouseholdID, e.Date, string(e.Slot), nullable(e.RecipeID), e.FreeText, e.Servings, nullable(e.CookUserID))
+	return s.exec(ctx, tx, `INSERT INTO plan_entry (`+planCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		e.ID, e.HouseholdID, e.Date, string(e.Slot), nullable(e.RecipeID), e.FreeText, e.Servings, nullable(e.CookUserID), b2i(e.Done))
 }
 
 func (s *Store) InsertPlanEntry(ctx context.Context, e domain.PlanEntry) error {
@@ -70,8 +72,8 @@ func (s *Store) UpdatePlanEntry(ctx context.Context, e domain.PlanEntry) error {
 			return err
 		}
 		res, err := tx.ExecContext(ctx, s.db.Rebind(
-			`UPDATE plan_entry SET date = ?, slot = ?, recipe_id = ?, free_text = ?, servings = ?, cook_user_id = ? WHERE id = ? AND household_id = ?`),
-			e.Date, string(e.Slot), nullable(e.RecipeID), e.FreeText, e.Servings, nullable(e.CookUserID), e.ID, e.HouseholdID)
+			`UPDATE plan_entry SET date = ?, slot = ?, recipe_id = ?, free_text = ?, servings = ?, cook_user_id = ?, done = ? WHERE id = ? AND household_id = ?`),
+			e.Date, string(e.Slot), nullable(e.RecipeID), e.FreeText, e.Servings, nullable(e.CookUserID), b2i(e.Done), e.ID, e.HouseholdID)
 		if err != nil {
 			return mapErr(err)
 		}

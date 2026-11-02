@@ -111,6 +111,7 @@ type PlanEntry struct {
 	FreeText    string
 	Servings    int
 	CookUserID  string
+	Done        bool
 }
 
 // ShoppingItem belongs to the week starting on Week (YYYY-MM-DD, a Monday).

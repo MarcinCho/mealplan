@@ -43,6 +43,26 @@ func TestPlanEntryLifecycle(t *testing.T) {
 	}
 }
 
+func TestPlanEntryDoneRoundTrips(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedTwoHouseholds(t, s)
+	e := entry("e1", "hA", "2026-11-02", domain.SlotDinner)
+	if err := s.InsertPlanEntry(ctx, e); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.PlanEntryByID(ctx, "hA", "e1"); got.Done {
+		t.Fatalf("new entries start undone: %+v", got)
+	}
+	e.Done = true
+	if err := s.UpdatePlanEntry(ctx, e); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.PlanEntryByID(ctx, "hA", "e1"); !got.Done {
+		t.Fatalf("done not stored: %+v", got)
+	}
+}
+
 func TestPlanEntriesRangeAndOrder(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)
