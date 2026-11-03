@@ -98,8 +98,10 @@ Parser ma twarde granice, żeby ogromna strona lub wklejka nie zużyła czasu an
 - tekst jest przetwarzany najwyżej do 5000 niepustych linii (dalsze są odcinane z ostrzeżeniem „przetworzono tylko pierwsze 5000 linii");
 - zbieranie składników kończy się po 210 liniach, a kroków po 110 (limity przepisu 200 i 100 plus mały zapas); nadmiar jest pomijany z ostrzeżeniem, dotyczy to też list z JSON-LD i microdata;
 - krok łączony z zawiniętych linii przestaje rosnąć po ok. 8000 znakach (i tak zostanie skrócony do 2000);
-- znaki sterujące (C0 poza tabulatorem i znakiem nowej linii oraz DEL) są zamieniane w spacje, bo walidacja przepisu by je odrzuciła;
-- `recipeYield` wyrażony objętością lub wagą (`około 1650 ml`) nie jest traktowany jako liczba porcji.
+- znaki sterujące (C0 poza tabulatorem, znakiem nowej linii i CR, które zostają, oraz DEL) są zamieniane w spacje, bo walidacja przepisu by je odrzuciła;
+- `recipeYield` wyrażony objętością lub wagą (`około 1650 ml`) nie jest traktowany jako liczba porcji; liczy się pierwsza liczba (`4 porcje (ok. 2 l)` to 4).
+- Tekst strony: każdy nagłówek otwiera blok. Menu nawigacyjne z linkiem „Składniki" przed właściwą sekcją jest pomijane (blok bez ilości, gdy inny je ma). Lista ponad 60 składników, w której prawie żaden nie ma ilości ani jednostki, jest uznawana za menu, a źródło za nieużyteczne.
+- Ostrzeżenia o przycięciu list pojawiają się raz.
 
 Parser linii składnika rozpoznaje też ilość po nazwie („czosnek 2 ząbki", „sól 1 płaska łyżeczka"; jednostka jest wtedy wymagana) oraz przymiotnik między liczbą a jednostką („1 płaska łyżeczka", „2 czubate łyżki").
 
@@ -107,7 +109,7 @@ Parser linii składnika rozpoznaje też ilość po nazwie („czosnek 2 ząbki",
 
 Po analizie edytor porównuje szkic z listą przepisów. Za duplikat uważany jest przepis o tym samym znormalizowanym adresie źródła (bez schematu, `www.`, fragmentu `#…` i końcowych `/`, wielkość liter bez znaczenia) albo o takim samym tytule (wielkość liter bez znaczenia). Użytkownik wybiera:
 
-- **Zaktualizuj istniejący**: zapis zastąpi tytuł, składniki i kroki istniejącego przepisu. Istniejący adres źródła i tagi są zachowane, gdy szkic ich nie ma.
+- **Zaktualizuj istniejący**: zapis zastąpi tytuł, składniki i kroki istniejącego przepisu. Gdy szkic czegoś nie ma, zachowane zostaje to, co jest w istniejącym przepisie: tytuł, liczba porcji, adres źródła, tagi, składniki i kroki.
 - **Dodaj jako nowy**: powstaje osobny przepis.
 
 ## Znane ograniczenia

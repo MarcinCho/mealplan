@@ -2,6 +2,7 @@ package importer
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -143,5 +144,54 @@ func TestParseHTMLMicrodataIgnoresNestedItems(t *testing.T) {
 	}
 	if len(d.Steps) != 2 {
 		t.Errorf("steps=%q", d.Steps)
+	}
+}
+
+func TestYieldOf(t *testing.T) {
+	for in, want := range map[string]int{
+		"4 porcje (ok. 2 l)": 4, "6 osób (1,5 kg)": 6, "4 porcje": 4, "10 porcji": 10,
+		"około 1650 ml": 0, "2 litry": 0, "500 g": 0, "2l": 0, "1,5 kg": 0, "": 0,
+	} {
+		if got := yieldOf(in); got != want {
+			t.Errorf("%q: got %d want %d", in, got, want)
+		}
+	}
+}
+
+const menuNav = `<ul><li><a href="/s">Składniki</a><ul>%s</ul></li></ul>`
+
+func menuPage(items int, withRealList bool) string {
+	var b strings.Builder
+	for i := 0; i < items; i++ {
+		fmt.Fprintf(&b, `<li><a href="/x%d">Kasza numer %d</a></li>`, i, i)
+	}
+	page := `<html><body>` + fmt.Sprintf(menuNav, b.String()) + `<h1>Chlebek</h1>`
+	if withRealList {
+		page += `<div><h3><span>Składniki</span></h3><div>10 porcji</div><ul><li>4 jajka</li><li>1 szklanka cukru</li><li>200 g mąki</li></ul></div>`
+	}
+	return page + `<div><h3>Przygotowanie</h3><ul><li>Wymieszaj wszystkie składniki dokładnie.</li><li>Piecz w piekarniku przez godzinę.</li></ul></div></body></html>`
+}
+
+func TestPageTextSkipsMenuIngredientBlock(t *testing.T) {
+	d, err := ParseHTML([]byte(menuPage(80, true)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Title != "Chlebek" || d.Servings != 10 || len(d.Ingredients) != 3 || len(d.Steps) != 2 {
+		t.Errorf("title=%q servings=%d ingredients=%d steps=%d", d.Title, d.Servings, len(d.Ingredients), len(d.Steps))
+	}
+}
+
+func TestMenuLikeIngredientListIsUnusable(t *testing.T) {
+	if _, err := ParseHTML([]byte(menuPage(80, false))); !errors.Is(err, ErrUnparsable) {
+		t.Errorf("page text: %v", err)
+	}
+	var ing []string
+	for i := 0; i < 80; i++ {
+		ing = append(ing, `"Kasza"`)
+	}
+	page := `<script type="application/ld+json">{"@type":"Recipe","name":"R","recipeIngredient":[` + strings.Join(ing, ",") + `]}</script>`
+	if _, err := ParseHTML([]byte(page)); !errors.Is(err, ErrUnparsable) {
+		t.Errorf("json-ld: %v", err)
 	}
 }

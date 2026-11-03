@@ -22,7 +22,8 @@ var knownUnits = map[string]bool{
 var fillers = map[string]bool{
 	"płaska": true, "płaską": true, "płaskie": true, "czubata": true, "czubatą": true, "czubate": true,
 	"kopiasta": true, "gładka": true, "duża": true, "duży": true, "małe": true, "mała": true, "mały": true,
-	"średnia": true, "średni": true, "średnie": true,
+	"średnia": true, "średni": true, "średnie": true, "duże": true, "dużą": true, "małą": true,
+	"kopiaste": true, "kopiastą": true, "średnią": true, "gładkie": true,
 }
 
 // takeUnitAfterFiller is takeUnit that also skips one filler adjective when a known unit follows it.
@@ -227,20 +228,40 @@ func hasDigit(s string) bool {
 	return false
 }
 
-// trailingAmount finds "<qty> <unit>" that consumes the rest of the tokens after at least one name token
-// ("czosnek 2 ząbki"). The unit is required so "mąka typ 500" and "sos 1000 wysp" stay as they are.
-func trailingAmount(tk []string) (v float64, unit string, at int, ok bool) {
+// trailingAmount finds the first "<qty> <unit>" after at least one name token ("czosnek 2 ząbki"). The unit is
+// required so "mąka typ 500" and "sos 1000 wysp" stay as they are. Whatever follows must be empty or note-like
+// (another amount, "po 150 g", "- około 200 g"); it is returned as the note.
+func trailingAmount(tk []string) (v float64, unit string, at int, note string, ok bool) {
 	for i := 1; i < len(tk); i++ {
 		q, n, _, qok := parseQuantity(tk[i:])
 		if !qok {
 			continue
 		}
 		u, mult, un := takeUnitAfterFiller(tk[i+n:])
-		if un > 0 && i+n+un == len(tk) {
-			return q * mult, u, i, true
+		if un == 0 {
+			continue
+		}
+		tail := tk[i+n+un:]
+		if len(tail) == 0 {
+			return q * mult, u, i, "", true
+		}
+		if noteLikeTail(tail) {
+			return q * mult, u, i, strings.Trim(strings.Join(tail, " "), " -–—"), true
 		}
 	}
-	return 0, "", 0, false
+	return 0, "", 0, "", false
+}
+
+func noteLikeTail(tail []string) bool {
+	switch strings.ToLower(tail[0]) {
+	case "po", "-", "–", "—", "około", "ok.":
+		return true
+	}
+	if _, n, _, ok := parseQuantity(tail); ok {
+		_, _, un := takeUnitAfterFiller(tail[n:])
+		return un > 0
+	}
+	return false
 }
 
 // ParseIngredient splits one ingredient line into amount, unit, name and note. It never drops the line:
@@ -285,8 +306,15 @@ func ParseIngredient(raw string) IngredientLine {
 				}
 			}
 		}
-	} else if v, u, i, ok := trailingAmount(tk); ok {
+	} else if v, u, i, tn, ok := trailingAmount(tk); ok {
 		qty, unit, rest, guess, consumed = &v, u, tk[:i], true, true
+		if tn != "" {
+			if note == "" {
+				note = tn
+			} else {
+				note = tn + ", " + note
+			}
+		}
 	}
 
 	name := strings.Trim(strings.Join(rest, " "), " ,;:-–—")

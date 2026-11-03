@@ -16,7 +16,7 @@ var (
 	breakRe  = regexp.MustCompile(`(?i)<\s*(?:br\s*/?|/p|/li|/div)\s*>`)
 	firstNum = regexp.MustCompile(`\d+`)
 	// "około 1650 ml" is a volume, not a number of servings.
-	volumeYield = regexp.MustCompile(`(?i)\d\s*(?:ml|l|litr\w*|g|kg|dag)\b`)
+	volumeYield = regexp.MustCompile(`(?i)^\D*\d+(?:[.,]\d+)?\s*(?:ml|l|litr\w*|g|kg|dag)\b`)
 )
 
 var skipTags = map[string]bool{
@@ -45,7 +45,21 @@ func ParseHTML(body []byte) (Draft, error) {
 	return fromPageText(doc)
 }
 
-func usable(d Draft) bool { return len(d.Ingredients)+len(d.Steps) > 0 }
+func usable(d Draft) bool { return len(d.Ingredients)+len(d.Steps) > 0 && !menuLike(d.Ingredients) }
+
+// menuLike reports a long ingredient list in which almost no row has an amount: a navigation menu, not a recipe.
+func menuLike(ing []IngredientLine) bool {
+	if len(ing) <= 60 {
+		return false
+	}
+	withAmount := 0
+	for _, l := range ing {
+		if l.Quantity != nil || l.Unit != "" {
+			withAmount++
+		}
+	}
+	return withAmount*20 < len(ing)
+}
 
 func walk(n *xhtml.Node, f func(*xhtml.Node) bool) {
 	if !f(n) {
@@ -432,7 +446,7 @@ func pageTitle(doc *xhtml.Node) string {
 // otherwise navigation and prose would turn into a bogus recipe.
 func fromPageText(doc *xhtml.Node) (Draft, error) {
 	d := ParseText(blockText(doc))
-	if len(d.Ingredients) < 2 || len(d.Steps) < 1 {
+	if menuLike(d.Ingredients) || len(d.Ingredients) < 2 || len(d.Steps) < 1 {
 		return Draft{}, ErrUnparsable
 	}
 	if t := pageTitle(doc); t != "" {

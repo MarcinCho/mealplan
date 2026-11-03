@@ -77,3 +77,35 @@ func TestFinishTitleAndSourceURL(t *testing.T) {
 		}
 	}
 }
+
+func TestFinishDropsEmptyIngredientsAndDedupesWarnings(t *testing.T) {
+	d := Draft{Title: "T", Ingredients: []IngredientLine{{Raw: "\x00\x01", Name: "\x00"}, {Raw: "ok", Name: "ok"}}}
+	d.finish()
+	if len(d.Ingredients) != 1 || d.Ingredients[0].Name != "ok" {
+		t.Errorf("ingredients=%+v", d.Ingredients)
+	}
+	before := append([]string(nil), d.Warnings...)
+	d.finish()
+	if strings.Join(before, "|") != strings.Join(d.Warnings, "|") {
+		t.Errorf("finish is not idempotent: %v then %v", before, d.Warnings)
+	}
+}
+
+func TestCapWarningsAppearOnce(t *testing.T) {
+	text := "Składniki\n" + strings.Repeat("200 g mąki\n", 400) + "Przygotowanie\n" + strings.Repeat("1. Zrób coś ważnego\n", 300)
+	d, err := importText(text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, w := range []string{"składniki ponad limit", "kroki ponad limit"} {
+		n := 0
+		for _, got := range d.Warnings {
+			if strings.Contains(got, w) {
+				n++
+			}
+		}
+		if n != 1 {
+			t.Errorf("%q appears %d times: %v", w, n, d.Warnings)
+		}
+	}
+}

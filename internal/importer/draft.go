@@ -134,17 +134,21 @@ func (d *Draft) finish() {
 		d.SourceURL = ""
 	}
 
-	if len(d.Ingredients) == 0 {
-		d.warn("Nie znaleziono składników.")
-	}
 	if len(d.Ingredients) > maxIngredients {
 		d.Ingredients = d.Ingredients[:maxIngredients]
 		d.warn("Pominięto składniki ponad limit %d.", maxIngredients)
 	}
-	for i := range d.Ingredients {
-		l := &d.Ingredients[i]
+	kept := d.Ingredients[:0]
+	for _, l := range d.Ingredients {
 		l.Raw, l.Name = cleanText(l.Raw, true), cleanText(l.Name, true)
 		l.Note, l.Unit = cleanText(l.Note, true), cleanText(l.Unit, true)
+		if l.Raw != "" || l.Name != "" {
+			kept = append(kept, l)
+		}
+	}
+	d.Ingredients = kept
+	if len(d.Ingredients) == 0 {
+		d.warn("Nie znaleziono składników.")
 	}
 
 	steps := make([]string, 0, len(d.Steps))
@@ -182,7 +186,14 @@ func (d *Draft) finish() {
 	if d.Ingredients == nil {
 		d.Ingredients = []IngredientLine{}
 	}
-	if d.Warnings == nil {
-		d.Warnings = []string{}
+	// Parsers and finish can report the same cut; each warning is shown once, which also makes finish repeatable.
+	seenWarn := map[string]bool{}
+	warnings := make([]string, 0, len(d.Warnings))
+	for _, w := range d.Warnings {
+		if !seenWarn[w] {
+			seenWarn[w] = true
+			warnings = append(warnings, w)
+		}
 	}
+	d.Warnings = warnings
 }

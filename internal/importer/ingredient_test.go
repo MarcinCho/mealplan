@@ -81,6 +81,12 @@ func TestParseIngredient(t *testing.T) {
 		{"sos 1000 wysp", "sos 1000 wysp", nil, "", "", ConfGuess},
 		{"???", "", nil, "", "", ConfUnparsed},
 		{"...", "", nil, "", "", ConfUnparsed},
+		{"2 duże łyżki mąki", "mąki", f(2), "łyżka", "", ConfOK},
+		{"2 kopiaste łyżki cukru", "cukru", f(2), "łyżka", "", ConfOK},
+		{"cukier 2 duże łyżki", "cukier", f(2), "łyżka", "", ConfGuess},
+		{"drożdże 1 kostka 100 g", "drożdże", f(1), "kostka", "100 g", ConfGuess},
+		{"jogurt naturalny 2 opakowania po 150 g", "jogurt naturalny", f(2), "opakowanie", "po 150 g", ConfGuess},
+		{"cebula 1 sztuka - około 200 g", "cebula", f(1), "szt", "około 200 g", ConfGuess},
 		{"0 g mąki", "", nil, "", "", ConfUnparsed},
 	}
 	for _, c := range cases {

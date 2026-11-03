@@ -111,6 +111,20 @@ func classify(l string) string {
 	return ""
 }
 
+// hasAmounts reports whether at least a tenth of the (first 200) lines start with an amount.
+func hasAmounts(lines []string) bool {
+	if len(lines) > 200 {
+		lines = lines[:200]
+	}
+	n := 0
+	for _, l := range lines {
+		if ParseIngredient(stepMarker.ReplaceAllString(l, "")).Quantity != nil {
+			n++
+		}
+	}
+	return n*10 >= len(lines)
+}
+
 func buildSteps(raw []string) []string {
 	markers := false
 	for _, l := range raw {
@@ -185,22 +199,44 @@ func ParseText(text string) Draft {
 		}
 	}
 
+	// Every heading starts a block. Navigation menus often contain a "Składniki" link before the real section,
+	// so ingredient blocks without amounts are dropped when another block has them.
+	type block struct {
+		kind  string
+		lines []string
+	}
+	var blocks []*block
 	var ingRaw, stepRaw, loose []string
-	cur, headed := "", false
+	headed := false
+	var cur *block
 	for _, l := range body {
 		if k, ok := heading(l); ok {
-			cur, headed = k, true
+			cur, headed = &block{kind: k}, true
+			blocks = append(blocks, cur)
 			continue
 		}
-		switch cur {
-		case secIngredients:
-			if !isSubLabel(l) {
-				ingRaw = append(ingRaw, l)
-			}
-		case secSteps:
-			stepRaw = append(stepRaw, l)
-		default:
+		switch {
+		case cur == nil:
 			loose = append(loose, l)
+		case cur.kind == secIngredients && isSubLabel(l):
+		default:
+			cur.lines = append(cur.lines, l)
+		}
+	}
+	var ingBlocks []*block
+	anyAmounts := false
+	for _, b := range blocks {
+		if b.kind == secIngredients {
+			ingBlocks = append(ingBlocks, b)
+			anyAmounts = anyAmounts || hasAmounts(b.lines)
+		}
+	}
+	for _, b := range blocks {
+		switch {
+		case b.kind == secSteps:
+			stepRaw = append(stepRaw, b.lines...)
+		case !anyAmounts || len(b.lines) <= 10 || hasAmounts(b.lines):
+			ingRaw = append(ingRaw, b.lines...)
 		}
 	}
 	if !headed {
