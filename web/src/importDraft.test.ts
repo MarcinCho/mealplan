@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { draftToRecipe, findDuplicate, keepsDraft, normalizeUrl } from './importDraft'
+import { draftToRecipe, findDuplicate, importErrorText, keepsDraft, mergeIntoExisting, normalizeImportUrl, normalizeUrl } from './importDraft'
+import { ApiError } from './api/client'
+import { t } from './messages'
 import type { Recipe, RecipeDraft } from './api/types'
 
 function draft(over: Partial<RecipeDraft> = {}): RecipeDraft {
@@ -74,5 +76,55 @@ describe('keepsDraft', () => {
     expect(keepsDraft('recipe-new')).toBe(true)
     expect(keepsDraft('recipe-edit')).toBe(true)
     for (const n of ['recipes', 'home', 'recipe-import', undefined]) expect(keepsDraft(n)).toBe(false)
+  })
+})
+
+describe('mergeIntoExisting', () => {
+  const existing = recipe({
+    id: 'r9', title: 'Stary', baseServings: 6, sourceUrl: 'https://old.example/z', tags: ['stare'],
+    ingredients: [{ name: 'stary', quantity: 1, unit: 'g' }], steps: ['stary krok'],
+  })
+  it('replaces ingredients and steps, keeps the id', () => {
+    const m = mergeIntoExisting(draft(), existing)
+    expect(m.id).toBe('r9')
+    expect(m.title).toBe('Zupa')
+    expect(m.baseServings).toBe(4)
+    expect(m.sourceUrl).toBe('https://Example.com/zupa/')
+    expect(m.tags).toEqual(['zupa'])
+    expect(m.steps).toEqual(['Gotuj.'])
+    expect(m.ingredients[0].name).toBe('wody')
+  })
+  it('keeps what the draft did not carry', () => {
+    const m = mergeIntoExisting(draft({ title: '  ', servings: 0, sourceUrl: '', tags: [] }), existing)
+    expect(m.title).toBe('Stary')
+    expect(m.baseServings).toBe(6)
+    expect(m.sourceUrl).toBe('https://old.example/z')
+    expect(m.tags).toEqual(['stare'])
+    expect(m.tags).not.toBe(existing.tags)
+  })
+})
+
+describe('normalizeImportUrl', () => {
+  it('adds https when there is no scheme and leaves others alone', () => {
+    expect(normalizeImportUrl('  example.com/zupa ')).toBe('https://example.com/zupa')
+    expect(normalizeImportUrl('http://example.com/z')).toBe('http://example.com/z')
+    expect(normalizeImportUrl('HTTPS://Example.com')).toBe('HTTPS://Example.com')
+    expect(normalizeImportUrl('')).toBe('')
+  })
+})
+
+describe('importErrorText', () => {
+  it('shows the Polish server text of invalid_input without the English prefix', () => {
+    expect(importErrorText(new ApiError(422, 'invalid_input', 'invalid input: tekst przepisu jest pusty'), 'text')).toBe('tekst przepisu jest pusty')
+  })
+  it('explains unparsable text differently from unparsable links', () => {
+    const e = new ApiError(422, 'import_unparsable', 'x')
+    expect(importErrorText(e, 'text')).toBe(t.importTextUnparsable)
+    expect(importErrorText(e, 'url')).not.toBe(t.importTextUnparsable)
+    expect(importErrorText(e, 'url')).toContain('wkleić')
+  })
+  it('falls back to the common translations', () => {
+    expect(importErrorText(new ApiError(504, 'import_timeout', 'x'), 'url')).toContain('wolno')
+    expect(importErrorText(new Error('boom'), 'url')).toBe('Coś poszło nie tak. Spróbuj ponownie.')
   })
 })

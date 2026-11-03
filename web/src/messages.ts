@@ -123,6 +123,8 @@ export const t = {
   importDuplicateHint: 'Znaleziono przepis o tym samym adresie lub tytule:',
   importUpdate: 'Zaktualizuj istniejący',
   importAddNew: 'Dodaj jako nowy',
+  importTextUnparsable: 'Nie znaleziono w tekście składników ani kroków. Sprawdź, czy wklejony tekst zawiera przepis.',
+  titleRequired: 'Podaj tytuł przepisu.',
   importedBanner: 'Przepis wczytany z importu. Sprawdź wiersze oznaczone kolorem, zanim go zapiszesz.',
   fromText: 'Z tekstu',
   ingredientNote: 'Notatka (nie jest zapisywana)',

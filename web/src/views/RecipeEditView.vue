@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { draftToRecipe } from '../importDraft'
+import { draftToRecipe, mergeIntoExisting } from '../importDraft'
 import { useImport } from '../stores/import'
 import { emptyRecipe, useRecipes } from '../stores/recipes'
 import type { Recipe } from '../api/types'
@@ -28,11 +28,7 @@ onMounted(async () => {
   try {
     const existing = await recipes.get(String(route.params.id))
     if (d && imports.targetId === existing.id) {
-      const merged = draftToRecipe(d, existing.id)
-      // Do not silently drop what the draft did not carry.
-      if (!merged.sourceUrl) merged.sourceUrl = existing.sourceUrl
-      if (!merged.tags.length) merged.tags = [...existing.tags]
-      recipe.value = merged
+      recipe.value = mergeIntoExisting(d, existing)
     } else {
       recipe.value = existing
     }
@@ -57,6 +53,10 @@ function addStep() {
 async function submit() {
   if (!loaded.value || (!isNew.value && !recipe.value.id)) return
   error.value = ''
+  if (!recipe.value.title.trim()) {
+    error.value = t.titleRequired
+    return
+  }
   busy.value = true
   try {
     await recipes.save(recipe.value)
@@ -103,14 +103,14 @@ async function remove() {
 
     <h2 class="text-h6 mb-2">{{ t.ingredients }}</h2>
     <div v-for="(ing, i) in recipe.ingredients" :key="i" :class="['ing-row', ing.confidence && `ing-${ing.confidence}`]">
-      <div class="d-flex ga-2 align-start">
-        <v-text-field v-model="ing.name" :label="t.ingredientName" class="flex-grow-1" density="compact" />
-        <v-text-field v-model.number="ing.quantity" :label="t.quantity" type="number" min="0.001" step="any" density="compact" style="max-width: 110px" />
-        <v-text-field v-model="ing.unit" :label="t.unit" density="compact" style="max-width: 110px" />
+      <div class="d-flex ga-2 align-start ing-fields">
+        <v-text-field v-model="ing.name" :label="t.ingredientName" class="flex-grow-1 ing-name" density="compact" />
+        <v-text-field v-model.number="ing.quantity" :label="t.quantity" type="number" min="0.001" step="any" density="compact" class="ing-qty" />
+        <v-text-field v-model="ing.unit" :label="t.unit" density="compact" class="ing-unit" />
         <v-btn icon="mdi-close" variant="text" :title="t.remove" @click="recipe.ingredients.splice(i, 1)" />
       </div>
-      <div v-if="ing.confidence && ing.confidence !== 'ok'" class="text-caption text-medium-emphasis pb-2">{{ t.fromText }}: „{{ ing.raw }}"</div>
-      <div v-if="ing.note" class="text-caption text-medium-emphasis pb-2">{{ t.ingredientNote }}: {{ ing.note }}</div>
+      <div v-if="ing.confidence && ing.confidence !== 'ok'" class="text-caption text-medium-emphasis pb-1">{{ t.fromText }}: „{{ ing.raw }}"</div>
+      <div v-if="ing.note" class="text-caption text-medium-emphasis pb-1">{{ t.ingredientNote }}: {{ ing.note }}</div>
     </div>
     <v-btn variant="text" prepend-icon="mdi-plus" class="mb-4" @click="addIngredient">{{ t.addIngredient }}</v-btn>
 
@@ -139,9 +139,28 @@ async function remove() {
   padding: 0 8px;
 }
 .ing-guess {
-  background: rgba(var(--v-theme-warning), 0.1);
+  background: rgba(var(--v-theme-warning), 0.16);
+  border-left: 3px solid rgb(var(--v-theme-warning));
 }
 .ing-unparsed {
-  background: rgba(var(--v-theme-error), 0.1);
+  background: rgba(var(--v-theme-error), 0.16);
+  border-left: 3px solid rgb(var(--v-theme-error));
+}
+.ing-qty,
+.ing-unit {
+  max-width: 110px;
+}
+@media (max-width: 599.98px) {
+  .ing-fields {
+    flex-wrap: wrap;
+  }
+  .ing-name {
+    flex: 1 1 100%;
+  }
+  .ing-qty,
+  .ing-unit {
+    flex: 1 1 0;
+    max-width: none;
+  }
 }
 </style>

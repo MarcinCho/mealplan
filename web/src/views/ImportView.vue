@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
-import { findDuplicate, keepsDraft } from '../importDraft'
+import { findDuplicate, importErrorText, keepsDraft, normalizeImportUrl } from '../importDraft'
 import { useImport } from '../stores/import'
 import { useRecipes } from '../stores/recipes'
 import type { Recipe, RecipeDraft } from '../api/types'
-import { errorText, t } from '../messages'
+import { t } from '../messages'
 
 const router = useRouter()
 const imports = useImport()
@@ -19,12 +19,20 @@ const duplicate = ref<Recipe | null>(null)
 // While the duplicate card is shown the draft lives here, so the store (and the nav's "new recipe") never sees it.
 const pending = ref<RecipeDraft | null>(null)
 
+// Bumped on every new request and when the user leaves; a response from an older request must change nothing.
+let request = 0
+
 onMounted(() => {
   imports.clear()
 })
 
 onBeforeRouteLeave((to) => {
+  request++
   if (!keepsDraft(to.name)) imports.clear()
+})
+
+onBeforeUnmount(() => {
+  request++
 })
 
 function back() {
@@ -39,10 +47,18 @@ async function analyze() {
   duplicate.value = null
   pending.value = null
   busy.value = true
+  const mine = ++request
+  const stale = () => {
+    if (mine === request) return false
+    imports.clear() // the store was written by the response that nobody waits for any more
+    return true
+  }
   try {
-    const draft = tab.value === 'url' ? await imports.fromUrl(url.value.trim()) : await imports.fromText(text.value)
+    const draft = tab.value === 'url' ? await imports.fromUrl(normalizeImportUrl(url.value)) : await imports.fromText(text.value)
+    if (stale()) return
     try {
       if (!recipes.loaded) await recipes.load()
+      if (stale()) return
       const dup = findDuplicate(draft, recipes.items)
       if (dup) {
         pending.value = draft
@@ -55,7 +71,11 @@ async function analyze() {
     }
     await router.push({ name: 'recipe-new' })
   } catch (e) {
-    error.value = errorText(e)
+    if (mine !== request) {
+      imports.clear()
+      return
+    }
+    error.value = importErrorText(e, tab.value)
   } finally {
     busy.value = false
   }
