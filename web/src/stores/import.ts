@@ -6,15 +6,15 @@ import type { RecipeDraft } from '../api/types'
 export const useImport = defineStore('import', {
   state: () => ({ draft: null as RecipeDraft | null, targetId: '' }),
   actions: {
-    async fromUrl(url: string): Promise<RecipeDraft> {
-      this.draft = null
-      this.draft = await api<RecipeDraft>('POST', '/recipes/import/url', { url })
-      return this.draft
+    // The caller decides when (and whether) the draft is stored, so a late response cannot overwrite a newer one.
+    fetchUrl(url: string): Promise<RecipeDraft> {
+      return api<RecipeDraft>('POST', '/recipes/import/url', { url })
     },
-    async fromText(text: string): Promise<RecipeDraft> {
-      this.draft = null
-      this.draft = await api<RecipeDraft>('POST', '/recipes/import/text', { text })
-      return this.draft
+    fetchText(text: string): Promise<RecipeDraft> {
+      return api<RecipeDraft>('POST', '/recipes/import/text', { text })
+    },
+    setDraft(d: RecipeDraft) {
+      this.draft = d
     },
     clear() {
       this.draft = null

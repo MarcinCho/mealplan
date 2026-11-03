@@ -52,18 +52,24 @@ export function mergeIntoExisting(d: RecipeDraft, existing: Recipe): Recipe {
   if (!(d.servings > 0)) merged.baseServings = existing.baseServings
   if (!merged.sourceUrl) merged.sourceUrl = existing.sourceUrl
   if (!merged.tags.length) merged.tags = [...existing.tags]
+  if (!merged.ingredients.length) merged.ingredients = existing.ingredients.map((i) => ({ ...i }))
+  if (!merged.steps.length) merged.steps = [...existing.steps]
   return merged
 }
 
 // Links typed without a scheme ("example.com/zupa") are sent as https.
 export function normalizeImportUrl(u: string): string {
   const s = u.trim()
-  return s !== '' && !s.includes('://') ? `https://${s}` : s
+  return s !== '' && !/^[a-z][a-z0-9+.-]*:/i.test(s) ? `https://${s}` : s
 }
 
 export function importErrorText(e: unknown, tab: 'url' | 'text'): string {
   if (e instanceof ApiError) {
-    if (e.code === 'invalid_input') return e.message.replace(/^invalid input:\s*/, '')
+    if (e.code === 'invalid_input') {
+      const m = e.message.replace(/^invalid input:\s*/, '')
+      const sentence = m.charAt(0).toUpperCase() + m.slice(1)
+      return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`
+    }
     if (e.code === 'import_unparsable' && tab === 'text') return t.importTextUnparsable
   }
   return errorText(e)

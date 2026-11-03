@@ -48,13 +48,9 @@ async function analyze() {
   pending.value = null
   busy.value = true
   const mine = ++request
-  const stale = () => {
-    if (mine === request) return false
-    imports.clear() // the store was written by the response that nobody waits for any more
-    return true
-  }
+  const stale = () => mine !== request
   try {
-    const draft = tab.value === 'url' ? await imports.fromUrl(normalizeImportUrl(url.value)) : await imports.fromText(text.value)
+    const draft = tab.value === 'url' ? await imports.fetchUrl(normalizeImportUrl(url.value)) : await imports.fetchText(text.value)
     if (stale()) return
     try {
       if (!recipes.loaded) await recipes.load()
@@ -63,18 +59,15 @@ async function analyze() {
       if (dup) {
         pending.value = draft
         duplicate.value = dup
-        imports.clear()
         return
       }
     } catch {
       // The duplicate check is best effort; a good draft must not be lost because the list failed to load.
     }
+    imports.setDraft(draft)
     await router.push({ name: 'recipe-new' })
   } catch (e) {
-    if (mine !== request) {
-      imports.clear()
-      return
-    }
+    if (mine !== request) return
     error.value = importErrorText(e, tab.value)
   } finally {
     busy.value = false
@@ -83,7 +76,7 @@ async function analyze() {
 
 async function choose(update: boolean) {
   const dup = duplicate.value
-  if (pending.value) imports.draft = pending.value
+  if (pending.value) imports.setDraft(pending.value)
   if (update && dup) {
     imports.targetId = dup.id
     await router.push({ name: 'recipe-edit', params: { id: dup.id } })

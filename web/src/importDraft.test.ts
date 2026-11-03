@@ -102,6 +102,12 @@ describe('mergeIntoExisting', () => {
     expect(m.tags).toEqual(['stare'])
     expect(m.tags).not.toBe(existing.tags)
   })
+  it('keeps existing ingredients and steps when the draft has none', () => {
+    const m = mergeIntoExisting(draft({ ingredients: [], steps: [] }), existing)
+    expect(m.ingredients).toEqual(existing.ingredients)
+    expect(m.ingredients).not.toBe(existing.ingredients)
+    expect(m.steps).toEqual(['stary krok'])
+  })
 })
 
 describe('normalizeImportUrl', () => {
@@ -110,12 +116,21 @@ describe('normalizeImportUrl', () => {
     expect(normalizeImportUrl('http://example.com/z')).toBe('http://example.com/z')
     expect(normalizeImportUrl('HTTPS://Example.com')).toBe('HTTPS://Example.com')
     expect(normalizeImportUrl('')).toBe('')
+    expect(normalizeImportUrl('example.com/?r=https://y')).toBe('https://example.com/?r=https://y')
+    expect(normalizeImportUrl('http//x')).toBe('https://http//x')
+    for (const u of ['mailto:x@y.z', 'ftp://x', 'HTTP://x']) expect(normalizeImportUrl(u)).toBe(u)
   })
 })
 
 describe('importErrorText', () => {
   it('shows the Polish server text of invalid_input without the English prefix', () => {
-    expect(importErrorText(new ApiError(422, 'invalid_input', 'invalid input: tekst przepisu jest pusty'), 'text')).toBe('tekst przepisu jest pusty')
+    expect(importErrorText(new ApiError(422, 'invalid_input', 'invalid input: tekst przepisu jest pusty'), 'text')).toBe('Tekst przepisu jest pusty.')
+  })
+  it('capitalises the message and ends it with a full stop', () => {
+    const e = (m: string) => new ApiError(422, 'invalid_input', `invalid input: ${m}`)
+    expect(importErrorText(e('obsługiwane są tylko adresy http i https'), 'url')).toBe('Obsługiwane są tylko adresy http i https.')
+    expect(importErrorText(e('żółty adres?'), 'url')).toBe('Żółty adres?')
+    expect(importErrorText(e('Już z kropką.'), 'url')).toBe('Już z kropką.')
   })
   it('explains unparsable text differently from unparsable links', () => {
     const e = new ApiError(422, 'import_unparsable', 'x')

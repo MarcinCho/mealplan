@@ -138,6 +138,10 @@ async function remove() {
   border-radius: 12px;
   padding: 0 8px;
 }
+.ing-guess,
+.ing-unparsed {
+  margin-bottom: 8px;
+}
 .ing-guess {
   background: rgba(var(--v-theme-warning), 0.16);
   border-left: 3px solid rgb(var(--v-theme-warning));
@@ -145,6 +149,9 @@ async function remove() {
 .ing-unparsed {
   background: rgba(var(--v-theme-error), 0.16);
   border-left: 3px solid rgb(var(--v-theme-error));
+}
+:global(.v-theme--dark) .ing-unparsed {
+  background: rgba(var(--v-theme-error), 0.24);
 }
 .ing-qty,
 .ing-unit {
