@@ -12,9 +12,23 @@ var ErrBadServings = errors.New("units: servings must be positive")
 
 var aliases = map[string]string{
 	"szt": "szt", "szt.": "szt", "sztuka": "szt", "sztuki": "szt", "sztuk": "szt",
-	"gram": "g", "gramy": "g", "gramów": "g",
-	"kilogram": "kg", "kilogramy": "kg",
-	"litr": "l", "litry": "l", "mililitr": "ml", "mililitry": "ml",
+	"gram": "g", "gramy": "g", "gramów": "g", "gr": "g",
+	"kilogram": "kg", "kilogramy": "kg", "kilo": "kg",
+	"litr": "l", "litry": "l", "litra": "l", "litrów": "l",
+	"mililitr": "ml", "mililitry": "ml", "mililitrów": "ml",
+	"łyżki": "łyżka", "łyżek": "łyżka", "łyżkę": "łyżka", "łyż": "łyżka",
+	"łyżeczki": "łyżeczka", "łyżeczek": "łyżeczka", "łyżeczkę": "łyżeczka",
+	"szklanki": "szklanka", "szklanek": "szklanka", "szklankę": "szklanka", "szkl": "szklanka",
+	"ząbki": "ząbek", "ząbków": "ząbek",
+	"plasterki": "plaster", "plasterków": "plaster",
+	"szczypty": "szczypta", "szczyptę": "szczypta",
+	"opakowania": "opakowanie", "op": "opakowanie", "op.": "opakowanie",
+	"puszki": "puszka", "puszek": "puszka",
+	"pęczki": "pęczek", "pęczków": "pęczek",
+	"garści": "garść",
+	"kostki": "kostka",
+	"główki": "główka",
+	"kromki": "kromka", "kromek": "kromka",
 }
 
 // NormalizeName lowercases, trims and collapses whitespace so that equal ingredients match.
