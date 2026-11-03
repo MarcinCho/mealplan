@@ -60,7 +60,7 @@ export function mergeIntoExisting(d: RecipeDraft, existing: Recipe): Recipe {
 // Links typed without a scheme ("example.com/zupa") are sent as https.
 export function normalizeImportUrl(u: string): string {
   const s = u.trim()
-  return s !== '' && !/^[a-z][a-z0-9+.-]*:/i.test(s) ? `https://${s}` : s
+  return s !== '' && !/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(s) ? `https://${s}` : s
 }
 
 export function importErrorText(e: unknown, tab: 'url' | 'text'): string {

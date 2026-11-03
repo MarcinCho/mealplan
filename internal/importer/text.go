@@ -111,14 +111,14 @@ func classify(l string) string {
 	return ""
 }
 
-// hasAmounts reports whether at least a tenth of the (first 200) lines start with an amount.
+// hasAmounts reports whether at least a tenth of the (first 200) lines start with an amount or a unit.
 func hasAmounts(lines []string) bool {
 	if len(lines) > 200 {
 		lines = lines[:200]
 	}
 	n := 0
 	for _, l := range lines {
-		if ParseIngredient(stepMarker.ReplaceAllString(l, "")).Quantity != nil {
+		if p := ParseIngredient(stepMarker.ReplaceAllString(l, "")); p.Quantity != nil || p.Unit != "" {
 			n++
 		}
 	}
@@ -223,11 +223,9 @@ func ParseText(text string) Draft {
 			cur.lines = append(cur.lines, l)
 		}
 	}
-	var ingBlocks []*block
 	anyAmounts := false
 	for _, b := range blocks {
 		if b.kind == secIngredients {
-			ingBlocks = append(ingBlocks, b)
 			anyAmounts = anyAmounts || hasAmounts(b.lines)
 		}
 	}
@@ -237,6 +235,8 @@ func ParseText(text string) Draft {
 			stepRaw = append(stepRaw, b.lines...)
 		case !anyAmounts || len(b.lines) <= 10 || hasAmounts(b.lines):
 			ingRaw = append(ingRaw, b.lines...)
+		default:
+			d.warn("Pominięto %d linii z bloku składników bez ilości (wygląda na menu lub listę dodatków).", len(b.lines))
 		}
 	}
 	if !headed {

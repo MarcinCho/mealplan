@@ -118,6 +118,8 @@ describe('normalizeImportUrl', () => {
     expect(normalizeImportUrl('')).toBe('')
     expect(normalizeImportUrl('example.com/?r=https://y')).toBe('https://example.com/?r=https://y')
     expect(normalizeImportUrl('http//x')).toBe('https://http//x')
+    expect(normalizeImportUrl('localhost:8080/x')).toBe('https://localhost:8080/x')
+    expect(normalizeImportUrl('example.com:8080')).toBe('https://example.com:8080')
     for (const u of ['mailto:x@y.z', 'ftp://x', 'HTTP://x']) expect(normalizeImportUrl(u)).toBe(u)
   })
 })

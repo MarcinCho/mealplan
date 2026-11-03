@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -111,5 +112,36 @@ func TestParseTextNumberedIngredients(t *testing.T) {
 		if g.Raw != w.raw || g.Name != w.name || g.Quantity == nil || *g.Quantity != w.q {
 			t.Errorf("%d: %+v", i, g)
 		}
+	}
+}
+
+func nameOnly(n int) string {
+	var b strings.Builder
+	for i := 0; i < n; i++ {
+		fmt.Fprintf(&b, "dodatek%c\n", 'a'+i)
+	}
+	return b.String()
+}
+
+func TestAmountlessIngredientBlocks(t *testing.T) {
+	sauce := "Składniki na sos:\n200 g pomidorów\n1 łyżka oliwy\nPrzygotowanie\n1. Wymieszaj.\n"
+	hasDrop := func(d Draft) bool { return strings.Contains(strings.Join(d.Warnings, "|"), "bez ilości") }
+
+	d := ParseText("Składniki:\n" + nameOnly(11) + sauce)
+	if len(d.Ingredients) != 2 || !hasDrop(d) || !strings.Contains(strings.Join(d.Warnings, "|"), "11 linii") {
+		t.Errorf("11 name-only lines: %d %v", len(d.Ingredients), d.Warnings)
+	}
+	d = ParseText("Składniki:\n" + nameOnly(10) + sauce)
+	if len(d.Ingredients) != 12 || hasDrop(d) {
+		t.Errorf("10 name-only lines must stay: %d %v", len(d.Ingredients), d.Warnings)
+	}
+	unit := "Składniki:\npół szklanki mleka\nszczypta soli\ngarść orzechów\n" + nameOnly(9) + sauce
+	d = ParseText(unit)
+	if len(d.Ingredients) != 14 || hasDrop(d) {
+		t.Errorf("unit-only rows count as amounts: %d %v", len(d.Ingredients), d.Warnings)
+	}
+	d = ParseText("Składniki:\n" + nameOnly(12) + "Składniki na sos:\n" + nameOnly(12) + "Przygotowanie\n1. Wymieszaj.\n")
+	if len(d.Ingredients) != 24 || hasDrop(d) {
+		t.Errorf("two amount-less blocks: %d %v", len(d.Ingredients), d.Warnings)
 	}
 }

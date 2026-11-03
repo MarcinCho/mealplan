@@ -100,7 +100,7 @@ Parser ma twarde granice, żeby ogromna strona lub wklejka nie zużyła czasu an
 - krok łączony z zawiniętych linii przestaje rosnąć po ok. 8000 znakach (i tak zostanie skrócony do 2000);
 - znaki sterujące (C0 poza tabulatorem, znakiem nowej linii i CR, które zostają, oraz DEL) są zamieniane w spacje, bo walidacja przepisu by je odrzuciła;
 - `recipeYield` wyrażony objętością lub wagą (`około 1650 ml`) nie jest traktowany jako liczba porcji; liczy się pierwsza liczba (`4 porcje (ok. 2 l)` to 4).
-- Tekst strony: każdy nagłówek otwiera blok. Menu nawigacyjne z linkiem „Składniki" przed właściwą sekcją jest pomijane (blok bez ilości, gdy inny je ma). Lista ponad 60 składników, w której prawie żaden nie ma ilości ani jednostki, jest uznawana za menu, a źródło za nieużyteczne.
+- Tekst strony: każdy nagłówek otwiera blok. Menu nawigacyjne z linkiem „Składniki" przed właściwą sekcją jest pomijane (blok bez ilości i jednostek, gdy inny je ma). Pominięty blok jest zgłaszany ostrzeżeniem z liczbą linii. Lista ponad 60 składników, w której prawie żaden nie ma ilości ani jednostki, jest uznawana za menu, a źródło za nieużyteczne.
 - Ostrzeżenia o przycięciu list pojawiają się raz.
 
 Parser linii składnika rozpoznaje też ilość po nazwie („czosnek 2 ząbki", „sól 1 płaska łyżeczka"; jednostka jest wtedy wymagana) oraz przymiotnik między liczbą a jednostką („1 płaska łyżeczka", „2 czubate łyżki").
