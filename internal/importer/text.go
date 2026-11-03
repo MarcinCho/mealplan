@@ -192,7 +192,10 @@ func ParseText(text string) Draft {
 	}
 
 	for _, l := range ingRaw {
-		d.Ingredients = append(d.Ingredients, ParseIngredient(l))
+		// Numbering ("1.", "2)") is list decoration, not a quantity; Raw keeps the original line.
+		p := ParseIngredient(stepMarker.ReplaceAllString(l, ""))
+		p.Raw = l
+		d.Ingredients = append(d.Ingredients, p)
 	}
 	d.Steps = buildSteps(stepRaw)
 	return d

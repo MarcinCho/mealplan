@@ -27,6 +27,15 @@ var (
 	cgnat   = netip.MustParsePrefix("100.64.0.0/10") // Tailscale and carrier-grade NAT
 	thisNet = netip.MustParsePrefix("0.0.0.0/8")
 
+	// Ranges that are never public hosts, or that embed an IPv4 address a translator could route to.
+	benchmark    = netip.MustParsePrefix("198.18.0.0/15")
+	reservedV4   = netip.MustParsePrefix("240.0.0.0/4") // includes 255.255.255.255
+	ietfProtocol = netip.MustParsePrefix("192.0.0.0/24")
+	nat64        = netip.MustParsePrefix("64:ff9b::/96")
+	nat64Local   = netip.MustParsePrefix("64:ff9b:1::/48")
+	sixToFour    = netip.MustParsePrefix("2002::/16")
+	v4Compatible = netip.MustParsePrefix("::/96")
+
 	errInvalidRedirect = errors.New("importer: redirect to unsupported address")
 )
 
@@ -34,7 +43,9 @@ var (
 func blockedAddr(a netip.Addr) bool {
 	a = a.Unmap()
 	return !a.IsValid() || a.IsLoopback() || a.IsPrivate() || a.IsLinkLocalUnicast() || a.IsLinkLocalMulticast() ||
-		a.IsMulticast() || a.IsUnspecified() || cgnat.Contains(a) || thisNet.Contains(a)
+		a.IsMulticast() || a.IsUnspecified() || cgnat.Contains(a) || thisNet.Contains(a) ||
+		benchmark.Contains(a) || reservedV4.Contains(a) || ietfProtocol.Contains(a) ||
+		nat64.Contains(a) || nat64Local.Contains(a) || sixToFour.Contains(a) || v4Compatible.Contains(a)
 }
 
 type Fetcher struct {

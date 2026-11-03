@@ -93,3 +93,23 @@ func TestParseTextEmptyAndFirstLineIngredient(t *testing.T) {
 		t.Errorf("an ingredient line must not become the title: %+v", d)
 	}
 }
+
+func TestParseTextNumberedIngredients(t *testing.T) {
+	d := ParseText("Naleśniki\nSkładniki:\n1. 200 g mąki\n2) 3 jajka\n2 jajka\n1.5 szklanki mąki\n1,5 kg cukru\n\nPrzygotowanie:\n1. Wymieszaj całość dokładnie.\n")
+	if len(d.Ingredients) != 5 {
+		t.Fatalf("%+v", d.Ingredients)
+	}
+	want := []struct {
+		raw, name string
+		q         float64
+	}{
+		{"1. 200 g mąki", "mąki", 200}, {"2) 3 jajka", "jajka", 3}, {"2 jajka", "jajka", 2},
+		{"1.5 szklanki mąki", "mąki", 1.5}, {"1,5 kg cukru", "cukru", 1.5},
+	}
+	for i, w := range want {
+		g := d.Ingredients[i]
+		if g.Raw != w.raw || g.Name != w.name || g.Quantity == nil || *g.Quantity != w.q {
+			t.Errorf("%d: %+v", i, g)
+		}
+	}
+}

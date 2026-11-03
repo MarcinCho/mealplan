@@ -136,7 +136,13 @@ func fromJSONLD(doc *xhtml.Node) (Draft, bool) {
 		if n.Type == xhtml.ElementNode && n.Data == "script" && strings.EqualFold(attr(n, "type"), "application/ld+json") {
 			if n.FirstChild != nil {
 				var v any
-				if json.Unmarshal([]byte(cleanJSONLD(n.FirstChild.Data)), &v) == nil {
+				raw := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(n.FirstChild.Data), "\ufeff"))
+				// Valid JSON is used as is; stripping wrapper markers would also delete them inside string values.
+				err := json.Unmarshal([]byte(raw), &v)
+				if err != nil {
+					err = json.Unmarshal([]byte(cleanJSONLD(raw)), &v)
+				}
+				if err == nil {
 					cands = findRecipes(v, cands)
 				}
 			}

@@ -4,7 +4,7 @@ import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { findDuplicate, keepsDraft } from '../importDraft'
 import { useImport } from '../stores/import'
 import { useRecipes } from '../stores/recipes'
-import type { Recipe } from '../api/types'
+import type { Recipe, RecipeDraft } from '../api/types'
 import { errorText, t } from '../messages'
 
 const router = useRouter()
@@ -16,6 +16,8 @@ const text = ref('')
 const busy = ref(false)
 const error = ref('')
 const duplicate = ref<Recipe | null>(null)
+// While the duplicate card is shown the draft lives here, so the store (and the nav's "new recipe") never sees it.
+const pending = ref<RecipeDraft | null>(null)
 
 onMounted(() => {
   imports.clear()
@@ -27,6 +29,7 @@ onBeforeRouteLeave((to) => {
 
 function back() {
   duplicate.value = null
+  pending.value = null
   imports.clear()
 }
 
@@ -34,6 +37,7 @@ async function analyze() {
   if (busy.value) return
   error.value = ''
   duplicate.value = null
+  pending.value = null
   busy.value = true
   try {
     const draft = tab.value === 'url' ? await imports.fromUrl(url.value.trim()) : await imports.fromText(text.value)
@@ -41,7 +45,9 @@ async function analyze() {
       if (!recipes.loaded) await recipes.load()
       const dup = findDuplicate(draft, recipes.items)
       if (dup) {
+        pending.value = draft
         duplicate.value = dup
+        imports.clear()
         return
       }
     } catch {
@@ -57,6 +63,7 @@ async function analyze() {
 
 async function choose(update: boolean) {
   const dup = duplicate.value
+  if (pending.value) imports.draft = pending.value
   if (update && dup) {
     imports.targetId = dup.id
     await router.push({ name: 'recipe-edit', params: { id: dup.id } })

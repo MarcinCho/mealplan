@@ -121,3 +121,11 @@ func TestParseHTMLJSONLDWrappersAndCandidates(t *testing.T) {
 		}
 	}
 }
+
+func TestJSONLDKeepsMarkersInsideStrings(t *testing.T) {
+	rec := `{"@type":"Recipe","name":"R","description":"a --> b","recipeIngredient":["1 jajko"],"recipeInstructions":[{"@type":"HowToStep","text":"mix --> stir ]]> <![CDATA[ done"}]}`
+	d, err := ParseHTML([]byte(`<html><script type="application/ld+json">` + rec + `</script></html>`))
+	if err != nil || len(d.Steps) != 1 || d.Steps[0] != "mix --> stir ]]> <![CDATA[ done" {
+		t.Fatalf("%+v %v", d.Steps, err)
+	}
+}
