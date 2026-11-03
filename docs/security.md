@@ -24,7 +24,7 @@ Import przepisu z linku sprawia, że serwer łączy się z adresem podanym przez
 
 | Obszar | Rozwiązanie |
 |---|---|
-| Blokowane zakresy | loopback (`127.0.0.0/8`, `::1`), prywatne (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`), link-local (`169.254/16`, `fe80::/10`), multicast, adres nieokreślony, `0.0.0.0/8` oraz `100.64.0.0/10` (CGNAT i adresy tailnetu Tailscale); adresy IPv4 zapisane jako IPv6 (`::ffff:a.b.c.d`) są sprawdzane jako IPv4 |
+| Blokowane zakresy | loopback (`127.0.0.0/8`, `::1`), prywatne (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`), link-local (`169.254/16`, `fe80::/10`), multicast, adres nieokreślony, `0.0.0.0/8`, `100.64.0.0/10` (CGNAT i adresy tailnetu Tailscale), `198.18.0.0/15` (testy wydajności), `240.0.0.0/4` (zarezerwowane, w tym `255.255.255.255`), `192.0.0.0/24` (protokoły IETF) oraz zakresy IPv6 osadzające IPv4 lub przestarzałe: `64:ff9b::/96` i `64:ff9b:1::/48` (NAT64), `2002::/16` (6to4), `::/96` (zgodne z IPv4), `fec0::/10` (site-local) i `2001::/32` (Teredo); adresy IPv4 zapisane jako IPv6 (`::ffff:a.b.c.d`) są sprawdzane jako IPv4 |
 | Moment kontroli | w dialerze (`net.Dialer.Control`), po rozwiązaniu DNS i tuż przed połączeniem z konkretnym IP; dzięki temu zabezpieczone są też każde przekierowanie i rebinding DNS (nazwa rozwiązująca się najpierw na adres publiczny, potem na prywatny) |
 | Przekierowania | najwyżej 5; przekierowanie na nie-`http(s)`, adres z danymi logowania lub inny port niż 80/443 kończy się błędem |
 | Schematy i porty | tylko `http` i `https`, porty 80 i 443, bez `user:pass@` |

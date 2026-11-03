@@ -15,6 +15,8 @@ var (
 	tagRe    = regexp.MustCompile(`<[^>]*>`)
 	breakRe  = regexp.MustCompile(`(?i)<\s*(?:br\s*/?|/p|/li|/div)\s*>`)
 	firstNum = regexp.MustCompile(`\d+`)
+	// "około 1650 ml" is a volume, not a number of servings.
+	volumeYield = regexp.MustCompile(`(?i)\d\s*(?:ml|l|litr\w*|g|kg|dag)\b`)
 )
 
 var skipTags = map[string]bool{
@@ -61,6 +63,15 @@ func attr(n *xhtml.Node, key string) string {
 		}
 	}
 	return ""
+}
+
+func hasAttr(n *xhtml.Node, key string) bool {
+	for _, a := range n.Attr {
+		if a.Key == key {
+			return true
+		}
+	}
+	return false
 }
 
 // plain strips markup and entities and collapses whitespace.
@@ -110,7 +121,22 @@ func blockText(n *xhtml.Node) string {
 	return b.String()
 }
 
+// capDraft bounds the lists a structured source can hold and says so.
+func capDraft(d *Draft) {
+	if len(d.Ingredients) > parseMaxIng {
+		d.Ingredients = d.Ingredients[:parseMaxIng]
+		d.warn("Pominięto składniki ponad limit %d.", maxIngredients)
+	}
+	if len(d.Steps) > parseMaxSteps {
+		d.Steps = d.Steps[:parseMaxSteps]
+		d.warn("Pominięto kroki ponad limit %d.", maxSteps)
+	}
+}
+
 func yieldOf(s string) int {
+	if volumeYield.MatchString(s) {
+		return 0
+	}
 	if m := firstNum.FindString(s); m != "" {
 		n, _ := strconv.Atoi(m)
 		return n
@@ -122,6 +148,9 @@ func ingredientLines(raw []string) []IngredientLine {
 	var out []IngredientLine
 	for _, r := range raw {
 		for _, l := range lines(r) {
+			if len(out) > parseMaxIng {
+				return out
+			}
 			out = append(out, ParseIngredient(l))
 		}
 	}
@@ -297,6 +326,7 @@ func draftFromLD(m map[string]any) Draft {
 	d.Ingredients = ingredientLines(raw)
 	d.Steps = ldInstructions(m["recipeInstructions"])
 	d.Tags = append(ldTags(m["keywords"]), ldTags(m["recipeCategory"])...)
+	capDraft(&d)
 	return d
 }
 
@@ -342,6 +372,10 @@ func fromMicrodata(doc *xhtml.Node) (Draft, bool) {
 				}
 				continue
 			}
+			// A nested item without an itemprop (breadcrumbs, ratings) owns its properties.
+			if hasAttr(c, "itemscope") {
+				continue
+			}
 			collect(c)
 		}
 	}
@@ -365,6 +399,7 @@ func fromMicrodata(doc *xhtml.Node) (Draft, bool) {
 			}
 		}
 	}
+	capDraft(&d)
 	return d, true
 }
 

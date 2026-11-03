@@ -35,6 +35,8 @@ var (
 	nat64Local   = netip.MustParsePrefix("64:ff9b:1::/48")
 	sixToFour    = netip.MustParsePrefix("2002::/16")
 	v4Compatible = netip.MustParsePrefix("::/96")
+	siteLocal    = netip.MustParsePrefix("fec0::/10") // deprecated site-local, still routed on some networks
+	teredo       = netip.MustParsePrefix("2001::/32")
 
 	errInvalidRedirect = errors.New("importer: redirect to unsupported address")
 )
@@ -45,7 +47,8 @@ func blockedAddr(a netip.Addr) bool {
 	return !a.IsValid() || a.IsLoopback() || a.IsPrivate() || a.IsLinkLocalUnicast() || a.IsLinkLocalMulticast() ||
 		a.IsMulticast() || a.IsUnspecified() || cgnat.Contains(a) || thisNet.Contains(a) ||
 		benchmark.Contains(a) || reservedV4.Contains(a) || ietfProtocol.Contains(a) ||
-		nat64.Contains(a) || nat64Local.Contains(a) || sixToFour.Contains(a) || v4Compatible.Contains(a)
+		nat64.Contains(a) || nat64Local.Contains(a) || sixToFour.Contains(a) || v4Compatible.Contains(a) ||
+		siteLocal.Contains(a) || teredo.Contains(a)
 }
 
 type Fetcher struct {

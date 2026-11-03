@@ -26,16 +26,27 @@ var (
 	}
 )
 
-func splitLines(text string) []string {
+// Work bounds for the parsers; the margin keeps a little over the recipe limits so finish can still warn.
+const (
+	maxLines      = 5000
+	parseMargin   = 10
+	parseMaxIng   = maxIngredients + parseMargin
+	parseMaxSteps = maxSteps + parseMargin
+)
+
+// splitLines returns at most maxLines non-empty lines and whether the text had more.
+func splitLines(text string) (out []string, truncated bool) {
 	text = strings.TrimPrefix(text, "\uFEFF")
 	text = strings.NewReplacer("\r\n", "\n", "\r", "\n", "\u00a0", " ").Replace(text)
-	var out []string
 	for _, l := range strings.Split(text, "\n") {
 		if l = strings.TrimSpace(l); l != "" {
+			if len(out) == maxLines {
+				return out, true
+			}
 			out = append(out, l)
 		}
 	}
-	return out
+	return out, false
 }
 
 // heading reports whether a line names a section. Longer lines that merely start with a heading word
@@ -108,25 +119,45 @@ func buildSteps(raw []string) []string {
 			break
 		}
 	}
-	var out []string
+	var (
+		out []string
+		cur strings.Builder
+		has bool
+	)
+	flush := func() {
+		if has {
+			out = append(out, cur.String())
+		}
+		cur.Reset()
+		has = false
+	}
 	for _, l := range raw {
 		marked := stepMarker.MatchString(l) || bulletMarker.MatchString(l)
 		text := strings.TrimSpace(bulletMarker.ReplaceAllString(stepMarker.ReplaceAllString(l, ""), ""))
 		switch {
 		case text == "":
-		case !markers || marked || len(out) == 0:
-			out = append(out, text)
-		default:
-			out[len(out)-1] += " " + text
+		case !markers || marked || !has:
+			flush()
+			if len(out) > parseMaxSteps {
+				return out
+			}
+			cur.WriteString(text)
+			has = true
+		case cur.Len() < 4*maxStepLen: // finish cuts the step anyway, so stop growing it
+			cur.WriteString(" " + text)
 		}
 	}
+	flush()
 	return out
 }
 
 // ParseText reads a recipe pasted as plain text. Missing parts are left empty; Draft.finish reports them.
 func ParseText(text string) Draft {
 	var d Draft
-	lines := splitLines(text)
+	lines, truncated := splitLines(text)
+	if truncated {
+		d.warn("Tekst jest zbyt długi, przetworzono tylko pierwsze %d linii.", maxLines)
+	}
 
 	var body []string
 	titleFound := false
@@ -191,6 +222,10 @@ func ParseText(text string) Draft {
 		d.warn("Pominięto %d linii spoza sekcji (np. opis przed składnikami).", len(loose))
 	}
 
+	if len(ingRaw) > parseMaxIng {
+		ingRaw = ingRaw[:parseMaxIng]
+		d.warn("Pominięto składniki ponad limit %d.", maxIngredients)
+	}
 	for _, l := range ingRaw {
 		// Numbering ("1.", "2)") is list decoration, not a quantity; Raw keeps the original line.
 		p := ParseIngredient(stepMarker.ReplaceAllString(l, ""))
@@ -198,5 +233,9 @@ func ParseText(text string) Draft {
 		d.Ingredients = append(d.Ingredients, p)
 	}
 	d.Steps = buildSteps(stepRaw)
+	if len(d.Steps) > parseMaxSteps {
+		d.Steps = d.Steps[:parseMaxSteps]
+		d.warn("Pominięto kroki ponad limit %d.", maxSteps)
+	}
 	return d
 }

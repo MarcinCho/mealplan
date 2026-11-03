@@ -91,6 +91,18 @@ Zasady:
 - Linie dłuższe niż 10 słów są `unparsed`.
 - W edytorze linia `unparsed` ma jako nazwę swój oryginalny tekst (do 200 znaków), więc nic nie ginie; podświetlenie prosi o poprawę.
 
+## Limity pracy parsera
+
+Parser ma twarde granice, żeby ogromna strona lub wklejka nie zużyła czasu ani pamięci:
+
+- tekst jest przetwarzany najwyżej do 5000 niepustych linii (dalsze są odcinane z ostrzeżeniem „przetworzono tylko pierwsze 5000 linii");
+- zbieranie składników kończy się po 210 liniach, a kroków po 110 (limity przepisu 200 i 100 plus mały zapas); nadmiar jest pomijany z ostrzeżeniem, dotyczy to też list z JSON-LD i microdata;
+- krok łączony z zawiniętych linii przestaje rosnąć po ok. 8000 znakach (i tak zostanie skrócony do 2000);
+- znaki sterujące (C0 poza tabulatorem i znakiem nowej linii oraz DEL) są zamieniane w spacje, bo walidacja przepisu by je odrzuciła;
+- `recipeYield` wyrażony objętością lub wagą (`około 1650 ml`) nie jest traktowany jako liczba porcji.
+
+Parser linii składnika rozpoznaje też ilość po nazwie („czosnek 2 ząbki", „sól 1 płaska łyżeczka"; jednostka jest wtedy wymagana) oraz przymiotnik między liczbą a jednostką („1 płaska łyżeczka", „2 czubate łyżki").
+
 ## Duplikaty i aktualizacja
 
 Po analizie edytor porównuje szkic z listą przepisów. Za duplikat uważany jest przepis o tym samym znormalizowanym adresie źródła (bez schematu, `www.`, fragmentu `#…` i końcowych `/`, wielkość liter bez znaczenia) albo o takim samym tytule (wielkość liter bez znaczenia). Użytkownik wybiera:

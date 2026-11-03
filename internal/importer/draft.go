@@ -4,6 +4,7 @@ package importer
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"unicode/utf8"
 
@@ -71,6 +72,41 @@ func (d *Draft) warn(format string, a ...any) {
 	d.Warnings = append(d.Warnings, fmt.Sprintf(format, a...))
 }
 
+// cleanText replaces C0 control characters (except tab, newline and carriage return) and DEL with a space,
+// which the recipe validation would otherwise reject. Single-line fields also get their spaces collapsed.
+func cleanText(s string, singleLine bool) string {
+	bad := false
+	for _, r := range s {
+		if isBadControl(r) {
+			bad = true
+			break
+		}
+	}
+	if !bad {
+		return s
+	}
+	s = strings.Map(func(r rune) rune {
+		if isBadControl(r) {
+			return ' '
+		}
+		return r
+	}, s)
+	if singleLine {
+		s = strings.Join(strings.Fields(s), " ")
+	}
+	return s
+}
+
+func isBadControl(r rune) bool { return (r < 0x20 && r != '\t' && r != '\n' && r != '\r') || r == 0x7f }
+
+func validSourceURL(s string) bool {
+	if len(s) > maxURL {
+		return false
+	}
+	u, err := url.Parse(s)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
+}
+
 func cut(s string, n int) string {
 	if utf8.RuneCountInString(s) <= n {
 		return s
@@ -80,7 +116,10 @@ func cut(s string, n int) string {
 
 // finish enforces the recipe limits so a reviewed draft can always be saved, and reports anything it had to cut.
 func (d *Draft) finish() {
-	d.Title = strings.TrimSpace(d.Title)
+	d.Title = strings.TrimSpace(cleanText(d.Title, true))
+	if d.Title == "" {
+		d.warn("Nie znaleziono tytułu.")
+	}
 	if utf8.RuneCountInString(d.Title) > maxTitle {
 		d.Title = cut(d.Title, maxTitle)
 		d.warn("Tytuł został skrócony do %d znaków.", maxTitle)
@@ -91,8 +130,7 @@ func (d *Draft) finish() {
 	if d.Servings == 0 {
 		d.warn("Nie znaleziono liczby porcji, ustaw ją ręcznie.")
 	}
-	if d.SourceURL = strings.TrimSpace(d.SourceURL); len(d.SourceURL) > maxURL ||
-		!(strings.HasPrefix(d.SourceURL, "http://") || strings.HasPrefix(d.SourceURL, "https://")) {
+	if d.SourceURL = strings.TrimSpace(d.SourceURL); !validSourceURL(d.SourceURL) {
 		d.SourceURL = ""
 	}
 
@@ -103,10 +141,15 @@ func (d *Draft) finish() {
 		d.Ingredients = d.Ingredients[:maxIngredients]
 		d.warn("Pominięto składniki ponad limit %d.", maxIngredients)
 	}
+	for i := range d.Ingredients {
+		l := &d.Ingredients[i]
+		l.Raw, l.Name = cleanText(l.Raw, true), cleanText(l.Name, true)
+		l.Note, l.Unit = cleanText(l.Note, true), cleanText(l.Unit, true)
+	}
 
 	steps := make([]string, 0, len(d.Steps))
 	for _, s := range d.Steps {
-		if s = strings.TrimSpace(s); s == "" {
+		if s = strings.TrimSpace(cleanText(s, false)); s == "" {
 			continue
 		}
 		if utf8.RuneCountInString(s) > maxStepLen {
@@ -127,7 +170,7 @@ func (d *Draft) finish() {
 	seen := map[string]bool{}
 	tags := make([]string, 0, len(d.Tags))
 	for _, tg := range d.Tags {
-		tg = strings.ToLower(strings.TrimSpace(tg))
+		tg = strings.ToLower(strings.TrimSpace(cleanText(tg, true)))
 		if tg == "" || utf8.RuneCountInString(tg) > maxTagLen || seen[tg] || len(tags) == maxTags {
 			continue
 		}

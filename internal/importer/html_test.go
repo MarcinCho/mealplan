@@ -129,3 +129,19 @@ func TestJSONLDKeepsMarkersInsideStrings(t *testing.T) {
 		t.Fatalf("%+v %v", d.Steps, err)
 	}
 }
+
+func TestParseHTMLMicrodataIgnoresNestedItems(t *testing.T) {
+	d, err := ParseHTML(fixture(t, "microdata_breadcrumb.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Title != "Zupa z dyni" || d.Servings != 0 {
+		t.Errorf("title=%q servings=%d", d.Title, d.Servings)
+	}
+	if len(d.Ingredients) != 3 || d.Ingredients[1].Name != "czosnek" || d.Ingredients[1].Quantity == nil || *d.Ingredients[1].Quantity != 2 {
+		t.Errorf("ingredients=%+v", d.Ingredients)
+	}
+	if len(d.Steps) != 2 {
+		t.Errorf("steps=%q", d.Steps)
+	}
+}

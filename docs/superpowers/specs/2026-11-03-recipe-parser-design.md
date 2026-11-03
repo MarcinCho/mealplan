@@ -137,7 +137,7 @@ Na telefonie podgląd jest jedną kolumną; zapis jest przyklejony do dołu ekra
 
 - SSRF jak w §5 (w tym tylko porty 80 i 443); testowane tablicą adresów (127.0.0.1, ::1, 10/8, 172.16/12, 192.168/16, 169.254/16, adresy tailnetu 100.64/10, IPv4-mapped IPv6) oraz przekierowaniem na adres prywatny i rebindingiem DNS (adres sprawdzany po rozwiązaniu, połączenie do sprawdzonego IP).
 - Wynik parsowania to dane: tekst z `Draft` jest przy wyświetlaniu zawsze escapowany; nigdy `v-html`.
-- Limity rozmiaru wejścia, liczby linii i długości pól chronią przed nadużyciem.
+- Limity rozmiaru wejścia, liczby linii (5000), składników, kroków i długości pól chronią przed nadużyciem (wprowadzone po przeglądzie końcowym).
 - Dla samego `Parser` nie ma efektów ubocznych poza ruchem sieciowym `fetch`.
 
 ## 9. Testy
@@ -162,5 +162,6 @@ Na telefonie podgląd jest jedną kolumną; zapis jest przyklejony do dołu ekra
 
 ## 11. Otwarte kwestie
 
+- Odstępstwa od projektu: w §3 nie powstał osobny interfejs `Parser`, szwem jest `httpapi.Importer`; obsługa JSON-LD i microdata mieści się w `html.go`. W §8 limity liczby linii, składników i kroków istnieją od poprawek po przeglądzie.
 - Nowa zależność: `golang.org/x/net` (parser HTML `html` i dekodowanie stron w `html/charset`).
 - Lematyzacja nazw ("jajka" → "jajko") celowo pominięta; scalanie na liście zakupów korzysta z `units.NormalizeName`.

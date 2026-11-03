@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"mealplan/internal/units"
@@ -15,6 +16,23 @@ var knownUnits = map[string]bool{
 	"łyżka": true, "łyżeczka": true, "szklanka": true, "ząbek": true, "plaster": true,
 	"szczypta": true, "opakowanie": true, "puszka": true, "pęczek": true, "garść": true,
 	"kostka": true, "główka": true, "kromka": true,
+}
+
+// Adjectives that sit between an amount and its unit ("1 płaska łyżeczka", "1 duży ząbek").
+var fillers = map[string]bool{
+	"płaska": true, "płaską": true, "płaskie": true, "czubata": true, "czubatą": true, "czubate": true,
+	"kopiasta": true, "gładka": true, "duża": true, "duży": true, "małe": true, "mała": true, "mały": true,
+	"średnia": true, "średni": true, "średnie": true,
+}
+
+// takeUnitAfterFiller is takeUnit that also skips one filler adjective when a known unit follows it.
+func takeUnitAfterFiller(tk []string) (unit string, mult float64, n int) {
+	if len(tk) > 1 && fillers[strings.ToLower(tk[0])] {
+		if u, m, un := takeUnit(tk[1:]); un > 0 {
+			return u, m, un + 1
+		}
+	}
+	return takeUnit(tk)
 }
 
 // Units that make no sense without a number ("g soli") are excluded from number-less lines.
@@ -191,6 +209,15 @@ func tokens(main string) []string {
 	return out
 }
 
+func hasLetterOrDigit(s string) bool {
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
+}
+
 func hasDigit(s string) bool {
 	for _, r := range s {
 		if r >= '0' && r <= '9' {
@@ -198,6 +225,22 @@ func hasDigit(s string) bool {
 		}
 	}
 	return false
+}
+
+// trailingAmount finds "<qty> <unit>" that consumes the rest of the tokens after at least one name token
+// ("czosnek 2 ząbki"). The unit is required so "mąka typ 500" and "sos 1000 wysp" stay as they are.
+func trailingAmount(tk []string) (v float64, unit string, at int, ok bool) {
+	for i := 1; i < len(tk); i++ {
+		q, n, _, qok := parseQuantity(tk[i:])
+		if !qok {
+			continue
+		}
+		u, mult, un := takeUnitAfterFiller(tk[i+n:])
+		if un > 0 && i+n+un == len(tk) {
+			return q * mult, u, i, true
+		}
+	}
+	return 0, "", 0, false
 }
 
 // ParseIngredient splits one ingredient line into amount, unit, name and note. It never drops the line:
@@ -222,7 +265,7 @@ func ParseIngredient(raw string) IngredientLine {
 		rest     = tk
 	)
 	if v, n, rng, ok := parseQuantity(tk); ok {
-		u, mult, un := takeUnit(tk[n:])
+		u, mult, un := takeUnitAfterFiller(tk[n:])
 		v *= mult
 		qty, unit, rest, guess, consumed = &v, u, tk[n+un:], rng, true
 		if unit == "" {
@@ -242,6 +285,8 @@ func ParseIngredient(raw string) IngredientLine {
 				}
 			}
 		}
+	} else if v, u, i, ok := trailingAmount(tk); ok {
+		qty, unit, rest, guess, consumed = &v, u, tk[:i], true, true
 	}
 
 	name := strings.Trim(strings.Join(rest, " "), " ,;:-–—")
@@ -265,7 +310,7 @@ func ParseIngredient(raw string) IngredientLine {
 	}
 
 	switch {
-	case name == "" || utf8.RuneCountInString(name) > maxTitle:
+	case name == "" || !hasLetterOrDigit(name) || utf8.RuneCountInString(name) > maxTitle:
 		return line
 	case qty != nil && (*qty <= 0 || *qty > maxQuantity || math.IsNaN(*qty)):
 		return line

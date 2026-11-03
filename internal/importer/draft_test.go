@@ -59,3 +59,21 @@ func TestInvalidWrapsDomainError(t *testing.T) {
 		t.Fatalf("not wrapped: %v", err)
 	}
 }
+
+func TestFinishTitleAndSourceURL(t *testing.T) {
+	d := Draft{}
+	d.finish()
+	if !strings.Contains(strings.Join(d.Warnings, "|"), "tytułu") {
+		t.Errorf("missing title warning: %v", d.Warnings)
+	}
+	for in, want := range map[string]string{
+		"HTTPS://Example.com/r": "HTTPS://Example.com/r", "Http://example.com/": "Http://example.com/",
+		"https://": "", "http:///x": "", "javascript:alert(1)": "", "https:example.com": "", "example.com/x": "",
+	} {
+		d := Draft{Title: "T", SourceURL: in}
+		d.finish()
+		if d.SourceURL != want {
+			t.Errorf("%q: got %q want %q", in, d.SourceURL, want)
+		}
+	}
+}
