@@ -23,6 +23,7 @@ Dodanie przepisu ma zajmować sekundy, nie minuty pisania. Użytkownik wkleja li
 | Rozszerzalność | Interfejs `Parser`; opcjonalny fallback LLM (własny klucz, domyślnie wyłączony) może być dodany później bez zmian w pipeline |
 | Wynik niepewny | Linia składnika z `confidence: unparsed` zachowuje tekst oryginalny i jest podświetlona w podglądzie |
 | Zapis | Brak nowych endpointów zapisu |
+| Notatka składnika | `note` jest tylko podglądem w edytorze i nie jest zapisywana (przepis nie ma takiego pola) |
 
 ## 3. Architektura (`internal/importer`)
 
@@ -95,7 +96,7 @@ Wejście: `"2 łyżki oliwy z oliwek, podgrzanej"`. Wyjście: `Quantity 2, Unit 
 
 ### Link
 
-1. Pobranie z ochroną SSRF: tylko http/https; po rozwiązaniu DNS odrzucane adresy prywatne, loopback i link-local; ta sama kontrola przy każdym przekierowaniu (max 5); limit rozmiaru 2 MB i czas 10 s; `User-Agent: Mealplan`. Surowy HTML nigdy nie jest renderowany.
+1. Pobranie z ochroną SSRF: tylko http/https; po rozwiązaniu DNS odrzucane adresy prywatne, loopback i link-local; ta sama kontrola przy każdym przekierowaniu (max 5); tylko porty 80 i 443; brak proxy z otoczenia; limit rozmiaru 2 MB i czas 10 s; `User-Agent: Mealplan`. Surowy HTML nigdy nie jest renderowany.
 2. JSON-LD `Recipe`, także w `@graph` i tablicach: `name`, `recipeYield` (liczba, tekst lub tablica), `recipeIngredient`, `recipeInstructions` (tekst, `HowToStep`, `HowToSection`), `keywords`/`recipeCategory` jako tagi (czasy przygotowania pomijane w tej wersji).
 3. Microdata `itemtype=…/Recipe`, jeśli brak JSON-LD.
 4. Ostatnia deska ratunku: tekst strony (bez `script`, `style`, `nav`, `footer`) przepuszczony przez parser tekstu z ostrzeżeniem `Warnings: "Dane strukturalne nie znalezione, wynik oparty na tekście strony"`.
@@ -115,7 +116,7 @@ Zgodnie z §7.3 pierwszego specu, rozszerzone o `text`. Wszystkie wymagają sesj
 
 - `POST /api/v1/recipes/import/url` z `{ "url": "…" }` zwraca `Draft` (JSON, pola camelCase).
 - `POST /api/v1/recipes/import/text` z `{ "text": "…" }` zwraca `Draft`. Limit tekstu 100 KB.
-- Błędy: `422 invalid_input` (zły URL, pusty tekst), `422 import_blocked` (adres zablokowany przez SSRF), `422 import_unparsable` (nic nie wyciągnięto; komunikat sugeruje wklejenie tekstu), `504 import_timeout`.
+- Błędy: `422 invalid_input` (zły URL, pusty tekst), `422 import_blocked` (adres zablokowany przez SSRF), `422 import_unparsable` (nic nie wyciągnięto; komunikat sugeruje wklejenie tekstu), `422 import_failed` (nie udało się pobrać strony: status inny niż 2xx, zły typ treści, za duży plik, zbyt wiele przekierowań), `504 import_timeout`, `429 rate_limited` (limit importu z URL).
 - Zmiany w `api/openapi.yaml`; `TestRoutesMatchOpenAPI` musi przechodzić.
 - Limit częstotliwości importu z URL na użytkownika (np. 10/min), żeby serwer nie służył do skanowania sieci.
 
@@ -124,7 +125,7 @@ Zgodnie z §7.3 pierwszego specu, rozszerzone o `text`. Wszystkie wymagają sesj
 **Przepisy → Importuj**: dwie zakładki (Link, Tekst), pole i przycisk "Analizuj". Wynik w podglądzie:
 
 - tytuł, porcje, źródło, tagi (edytowalne);
-- tabela składników: ilość, jednostka, nazwa, notatka; wiersze `guess` podświetlone łagodnie, `unparsed` wyraźnie i z oryginalnym tekstem; można poprawić, usunąć, dodać wiersz;
+- tabela składników: ilość, jednostka, nazwa, notatka (notatka jest tylko podglądem i nie jest zapisywana); wiersze `guess` podświetlone łagodnie, `unparsed` wyraźnie i z oryginalnym tekstem; można poprawić, usunąć, dodać wiersz;
 - lista kroków (edytowalna, zmiana kolejności);
 - ostrzeżenia nad formularzem;
 - "Zapisz" wywołuje istniejące `POST /recipes`;
@@ -134,7 +135,7 @@ Na telefonie podgląd jest jedną kolumną; zapis jest przyklejony do dołu ekra
 
 ## 8. Bezpieczeństwo
 
-- SSRF jak w §5; testowane tablicą adresów (127.0.0.1, ::1, 10/8, 172.16/12, 192.168/16, 169.254/16, adresy tailnetu 100.64/10, IPv4-mapped IPv6) oraz przekierowaniem na adres prywatny i rebindingiem DNS (adres sprawdzany po rozwiązaniu, połączenie do sprawdzonego IP).
+- SSRF jak w §5 (w tym tylko porty 80 i 443); testowane tablicą adresów (127.0.0.1, ::1, 10/8, 172.16/12, 192.168/16, 169.254/16, adresy tailnetu 100.64/10, IPv4-mapped IPv6) oraz przekierowaniem na adres prywatny i rebindingiem DNS (adres sprawdzany po rozwiązaniu, połączenie do sprawdzonego IP).
 - Wynik parsowania to dane: tekst z `Draft` jest przy wyświetlaniu zawsze escapowany; nigdy `v-html`.
 - Limity rozmiaru wejścia, liczby linii i długości pól chronią przed nadużyciem.
 - Dla samego `Parser` nie ma efektów ubocznych poza ruchem sieciowym `fetch`.
@@ -161,5 +162,5 @@ Na telefonie podgląd jest jedną kolumną; zapis jest przyklejony do dołu ekra
 
 ## 11. Otwarte kwestie
 
-- Czy wykrywanie duplikatów wchodzi do pierwszej wersji, czy kolejnej (domyślnie: pierwsza, bo dotyczy zapisu z podglądu).
+- Nowa zależność: `golang.org/x/net` (parser HTML `html` i dekodowanie stron w `html/charset`).
 - Lematyzacja nazw ("jajka" → "jajko") celowo pominięta; scalanie na liście zakupów korzysta z `units.NormalizeName`.

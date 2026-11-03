@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Import przepisów
+
+- Import przepisu z linku (`POST /recipes/import/url`) lub wklejonego tekstu (`POST /recipes/import/text`, do 100 KB). Źródła strony: JSON-LD, microdata, a w ostateczności tekst strony (min. 2 składniki i 1 krok, z ostrzeżeniem). Parser linii składnika (ilość, jednostka, nazwa, notatka; `ok`/`guess`/`unparsed`). Import niczego nie zapisuje.
+- Podgląd w edytorze przepisu: niepewne wiersze (`guess`, `unparsed`) są podświetlone, linia `unparsed` zachowuje oryginalny tekst jako nazwę, notatka składnika jest tylko podglądem i nie jest zapisywana. Wykrywanie duplikatów (ten sam adres źródła lub tytuł) z wyborem „Zaktualizuj istniejący" albo „Dodaj jako nowy".
+- Ochrona SSRF: blokada zakresów prywatnych, loopback, link-local i `100.64.0.0/10`, kontrola w dialerze po rozwiązaniu DNS (także przekierowania i rebinding), porty 80/443, bez proxy z otoczenia, limity 2 MB, 10 s i 5 przekierowań. Limit 10 importów z linku na minutę na użytkownika (`429 rate_limited`). Nowe kody błędów `import_blocked`, `import_unparsable`, `import_failed`, `import_timeout`.
+- Nowa zależność: `golang.org/x/net` (parser HTML i dekodowanie kodowań stron). Opis: `docs/import.md`.
+
 ### Nowy wygląd
 
 - Ekran „Dziś" jako strona startowa: najbliższy niegotowy posiłek dnia, pasek dni tygodnia, lista posiłków z kucharzem i przycisk „Zrobione" (`plan_entry.done`, migracja 0003, pole `done` w API; kopiowanie tygodnia zeruje stan). Siatka tygodnia przeniesiona na `/plan`.
