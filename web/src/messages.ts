@@ -54,6 +54,8 @@ export const t = {
   addStep: 'Dodaj krok',
   save: 'Zapisz',
   cancel: 'Anuluj',
+  back: 'Wróć',
+  importedUpdateNote: 'Zapisanie zastąpi składniki, kroki i tytuł istniejącego przepisu.',
   delete: 'Usuń',
   confirmDelete: 'Na pewno usunąć?',
   noRecipes: 'Nie masz jeszcze przepisów.',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { draftToRecipe, findDuplicate, normalizeUrl } from './importDraft'
+import { draftToRecipe, findDuplicate, keepsDraft, normalizeUrl } from './importDraft'
 import type { Recipe, RecipeDraft } from './api/types'
 
 function draft(over: Partial<RecipeDraft> = {}): RecipeDraft {
@@ -66,5 +66,13 @@ describe('findDuplicate', () => {
   it('does not match unrelated recipes or empty values', () => {
     expect(findDuplicate(draft({ sourceUrl: '', title: '' }), [recipe({ title: '', sourceUrl: '' })])).toBeUndefined()
     expect(findDuplicate(draft(), [recipe({})])).toBeUndefined()
+  })
+})
+
+describe('keepsDraft', () => {
+  it('keeps the draft only when heading to the recipe editor', () => {
+    expect(keepsDraft('recipe-new')).toBe(true)
+    expect(keepsDraft('recipe-edit')).toBe(true)
+    for (const n of ['recipes', 'home', 'recipe-import', undefined]) expect(keepsDraft(n)).toBe(false)
   })
 })

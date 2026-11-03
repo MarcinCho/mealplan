@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { findDuplicate } from '../importDraft'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { findDuplicate, keepsDraft } from '../importDraft'
 import { useImport } from '../stores/import'
 import { useRecipes } from '../stores/recipes'
 import type { Recipe } from '../api/types'
@@ -21,17 +21,31 @@ onMounted(() => {
   imports.clear()
 })
 
+onBeforeRouteLeave((to) => {
+  if (!keepsDraft(to.name)) imports.clear()
+})
+
+function back() {
+  duplicate.value = null
+  imports.clear()
+}
+
 async function analyze() {
+  if (busy.value) return
   error.value = ''
   duplicate.value = null
   busy.value = true
   try {
-    const draft = tab.value === 'url' ? await imports.fromUrl(url.value) : await imports.fromText(text.value)
-    if (!recipes.loaded) await recipes.load()
-    const dup = findDuplicate(draft, recipes.items)
-    if (dup) {
-      duplicate.value = dup
-      return
+    const draft = tab.value === 'url' ? await imports.fromUrl(url.value.trim()) : await imports.fromText(text.value)
+    try {
+      if (!recipes.loaded) await recipes.load()
+      const dup = findDuplicate(draft, recipes.items)
+      if (dup) {
+        duplicate.value = dup
+        return
+      }
+    } catch {
+      // The duplicate check is best effort; a good draft must not be lost because the list failed to load.
     }
     await router.push({ name: 'recipe-new' })
   } catch (e) {
@@ -63,6 +77,7 @@ async function choose(update: boolean) {
     <div class="d-flex ga-3 flex-wrap">
       <v-btn color="primary" @click="choose(true)">{{ t.importUpdate }}</v-btn>
       <v-btn variant="tonal" @click="choose(false)">{{ t.importAddNew }}</v-btn>
+      <v-btn variant="text" @click="back">{{ t.back }}</v-btn>
     </div>
   </v-card>
 

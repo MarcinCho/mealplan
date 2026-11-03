@@ -37,3 +37,8 @@ export function findDuplicate(d: RecipeDraft, existing: Recipe[]): Recipe | unde
     (r) => (url !== '' && normalizeUrl(r.sourceUrl) === url) || (title !== '' && r.title.trim().toLowerCase() === title),
   )
 }
+
+// Routes that consume the import draft; leaving the import screen anywhere else must drop it.
+export function keepsDraft(name: unknown): boolean {
+  return name === 'recipe-new' || name === 'recipe-edit'
+}

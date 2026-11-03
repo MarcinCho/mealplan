@@ -27,7 +27,15 @@ onMounted(async () => {
   }
   try {
     const existing = await recipes.get(String(route.params.id))
-    recipe.value = d && imports.targetId === existing.id ? draftToRecipe(d, existing.id) : existing
+    if (d && imports.targetId === existing.id) {
+      const merged = draftToRecipe(d, existing.id)
+      // Do not silently drop what the draft did not carry.
+      if (!merged.sourceUrl) merged.sourceUrl = existing.sourceUrl
+      if (!merged.tags.length) merged.tags = [...existing.tags]
+      recipe.value = merged
+    } else {
+      recipe.value = existing
+    }
     loaded.value = true
   } catch (e) {
     error.value = errorText(e)
@@ -78,8 +86,9 @@ async function remove() {
   <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
   <v-alert v-if="loaded && fromImport" type="info" variant="tonal" class="mb-4">
     {{ t.importedBanner }}
+    <div v-if="!isNew" class="mt-2">{{ t.importedUpdateNote }}</div>
     <ul v-if="imports.draft?.warnings.length" class="mt-2 ps-4">
-      <li v-for="w in imports.draft.warnings" :key="w">{{ w }}</li>
+      <li v-for="(w, wi) in imports.draft.warnings" :key="wi">{{ w }}</li>
     </ul>
   </v-alert>
   <v-progress-linear v-if="!loaded && !error" indeterminate class="mb-4" :aria-label="t.loading" />
