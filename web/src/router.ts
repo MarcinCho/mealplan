@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { resolveRoute } from './guard'
 import { useSession } from './stores/session'
 import AppShell from './layouts/AppShell.vue'
+import ImportView from './views/ImportView.vue'
 import InviteAcceptView from './views/InviteAcceptView.vue'
 import LoginView from './views/LoginView.vue'
 import MembersView from './views/MembersView.vue'
@@ -25,6 +26,7 @@ export const router = createRouter({
         { path: '', name: 'home', component: TodayView },
         { path: 'plan', name: 'plan', component: PlanView },
         { path: 'recipes', name: 'recipes', component: RecipesView },
+        { path: 'recipes/import', name: 'recipe-import', component: ImportView },
         { path: 'recipes/new', name: 'recipe-new', component: RecipeEditView },
         { path: 'recipes/:id', name: 'recipe-edit', component: RecipeEditView },
         { path: 'shopping', name: 'shopping', component: ShoppingView },

@@ -108,6 +108,22 @@ export const t = {
   noRecipesHint: 'Dodaj pierwszy przepis, a potem zaplanuj go na dziś.',
   noItemsTitle: 'Lista jest pusta',
   account: 'Konto',
+  importRecipe: 'Importuj',
+  importTitle: 'Importuj przepis',
+  importLink: 'Link',
+  importText: 'Tekst',
+  importUrlLabel: 'Adres przepisu',
+  importUrlHint: 'Wklej link do strony z przepisem.',
+  importTextLabel: 'Wklej przepis',
+  importTextHint: 'Tytuł, składniki i kroki w dowolnej formie.',
+  analyze: 'Analizuj',
+  importDuplicateTitle: 'Taki przepis już istnieje',
+  importDuplicateHint: 'Znaleziono przepis o tym samym adresie lub tytule:',
+  importUpdate: 'Zaktualizuj istniejący',
+  importAddNew: 'Dodaj jako nowy',
+  importedBanner: 'Przepis wczytany z importu. Sprawdź wiersze oznaczone kolorem, zanim go zapiszesz.',
+  fromText: 'Z tekstu',
+  ingredientNote: 'Notatka (nie jest zapisywana)',
 }
 
 const errors: Record<string, string> = {
@@ -128,6 +144,10 @@ const errors: Record<string, string> = {
   in_use: 'Ten przepis jest użyty w planie. Najpierw usuń go z planu.',
   conflict: 'Nie można wykonać operacji: element już istnieje lub tydzień nie jest pusty.',
   last_admin: 'Gospodarstwo musi mieć co najmniej jednego administratora.',
+  import_blocked: 'Ten adres jest niedozwolony (sieć lokalna lub prywatna).',
+  import_unparsable: 'Nie udało się odczytać przepisu. Spróbuj wkleić jego tekst w zakładce „Tekst".',
+  import_failed: 'Nie udało się pobrać strony. Sprawdź adres albo wklej tekst przepisu.',
+  import_timeout: 'Strona odpowiada zbyt wolno. Spróbuj ponownie lub wklej tekst przepisu.',
   cookie_not_stored:
     'Przeglądarka nie zapisała sesji. Jeśli otwierasz aplikację przez zwykłe HTTP, ustaw MEALPLAN_COOKIE_SECURE=false lub użyj HTTPS (np. tailscale serve).',
 }

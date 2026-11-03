@@ -82,4 +82,15 @@ describe('useRecipes', () => {
     const body = JSON.parse(spy.mock.calls[0][1]!.body as string)
     expect(body.ingredients[0].quantity).toBeNull()
   })
+
+  it('sends only schema fields when saving an imported recipe', async () => {
+    const spy = mockFetch(201, { id: 'n' })
+    const s = useRecipes()
+    await s.save({
+      id: '', title: 'Zupa', baseServings: 4, sourceUrl: '', tags: [], steps: [],
+      ingredients: [{ name: 'woda', quantity: 1, unit: 'l', raw: '1 l wody', note: 'zimna', confidence: 'guess' }],
+    })
+    const body = JSON.parse(String(spy.mock.calls[0][1]?.body))
+    expect(body.ingredients[0]).toEqual({ name: 'woda', quantity: 1, unit: 'l' })
+  })
 })
