@@ -131,26 +131,41 @@ func ingredientLines(raw []string) []IngredientLine {
 // --- JSON-LD ---
 
 func fromJSONLD(doc *xhtml.Node) (Draft, bool) {
-	var found map[string]any
+	var cands []map[string]any
 	walk(doc, func(n *xhtml.Node) bool {
-		if found != nil {
-			return false
-		}
 		if n.Type == xhtml.ElementNode && n.Data == "script" && strings.EqualFold(attr(n, "type"), "application/ld+json") {
 			if n.FirstChild != nil {
 				var v any
-				if json.Unmarshal([]byte(n.FirstChild.Data), &v) == nil {
-					found = findRecipe(v)
+				if json.Unmarshal([]byte(cleanJSONLD(n.FirstChild.Data)), &v) == nil {
+					cands = findRecipes(v, cands)
 				}
 			}
 			return false
 		}
 		return true
 	})
-	if found == nil {
+	if len(cands) == 0 {
 		return Draft{}, false
 	}
-	return draftFromLD(found), true
+	first := draftFromLD(cands[0])
+	for i, c := range cands {
+		d := first
+		if i > 0 {
+			d = draftFromLD(c)
+		}
+		if usable(d) {
+			return d, true
+		}
+	}
+	return first, true
+}
+
+var ldMarkers = strings.NewReplacer("<!--", "", "-->", "", "//<![CDATA[", "", "<![CDATA[", "", "//]]>", "", "]]>", "")
+
+// cleanJSONLD removes a BOM and the comment/CDATA wrappers some sites put around JSON-LD.
+func cleanJSONLD(s string) string {
+	s = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(s), "\ufeff"))
+	return strings.TrimSpace(ldMarkers.Replace(s))
 }
 
 func isRecipeType(t any) bool {
@@ -167,23 +182,22 @@ func isRecipeType(t any) bool {
 	return false
 }
 
-func findRecipe(v any) map[string]any {
+// findRecipes appends every Recipe node reachable from v (top-level arrays, @graph, mainEntity).
+func findRecipes(v any, out []map[string]any) []map[string]any {
 	switch x := v.(type) {
 	case []any:
 		for _, e := range x {
-			if r := findRecipe(e); r != nil {
-				return r
-			}
+			out = findRecipes(e, out)
 		}
 	case map[string]any:
 		if isRecipeType(x["@type"]) {
-			return x
+			return append(out, x)
 		}
-		if g, ok := x["@graph"]; ok {
-			return findRecipe(g)
+		for _, k := range []string{"@graph", "mainEntity", "mainEntityOfPage"} {
+			out = findRecipes(x[k], out)
 		}
 	}
-	return nil
+	return out
 }
 
 func ldString(v any) string {

@@ -100,3 +100,24 @@ func TestParseHTMLIgnoresEmptyJSONLDRecipe(t *testing.T) {
 		t.Fatalf("%+v %v", d, err)
 	}
 }
+
+func TestParseHTMLJSONLDWrappersAndCandidates(t *testing.T) {
+	rec := `{"@type":"Recipe","name":"R","recipeIngredient":["1 jajko"],"recipeInstructions":"Usmaż."}`
+	ld := func(body string) string { return `<script type="application/ld+json">` + body + `</script>` }
+	cases := map[string]string{
+		"mainEntity":         ld(`{"@type":"WebPage","mainEntity":` + rec + `}`),
+		"mainEntityOfPage":   ld(`{"@type":"Article","mainEntityOfPage":` + rec + `}`),
+		"graph then main":    ld(`{"@graph":[{"@type":"WebSite"}],"mainEntity":` + rec + `}`),
+		"bom":                ld("\ufeff" + rec),
+		"comment wrapper":    ld("<!--\n" + rec + "\n-->"),
+		"cdata wrapper":      ld("//<![CDATA[\n" + rec + "\n//]]>"),
+		"empty then full":    ld(`{"@type":"Recipe","name":"Puste"}`) + ld(rec),
+		"empty in array too": ld(`[{"@type":"Recipe","name":"Puste"},` + rec + `]`),
+	}
+	for name, page := range cases {
+		d, err := ParseHTML([]byte(page))
+		if err != nil || d.Title != "R" || len(d.Ingredients) != 1 || len(d.Steps) != 1 {
+			t.Errorf("%s: %+v %v", name, d, err)
+		}
+	}
+}
