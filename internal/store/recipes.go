@@ -129,7 +129,7 @@ func (s *Store) stringCol(ctx context.Context, q string, args ...any) ([]string,
 // ListRecipes returns summaries (title, servings, source, tags) ordered by title.
 func (s *Store) ListRecipes(ctx context.Context, householdID string) ([]domain.Recipe, error) {
 	rows, err := s.db.QueryContext(ctx, s.db.Rebind(
-		`SELECT id, household_id, title, base_servings, source_url, created_at, updated_at FROM recipe WHERE household_id = ? ORDER BY title, id`), householdID)
+		`SELECT id, household_id, title, base_servings, source_url, kcal, protein, carbs, fat, created_at, updated_at FROM recipe WHERE household_id = ? ORDER BY title, id`), householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -138,10 +138,12 @@ func (s *Store) ListRecipes(ctx context.Context, householdID string) ([]domain.R
 	for rows.Next() {
 		var r domain.Recipe
 		var created, updated int64
-		if err := rows.Scan(&r.ID, &r.HouseholdID, &r.Title, &r.BaseServings, &r.SourceURL, &created, &updated); err != nil {
+		var nk, np, nc, nfat sql.NullFloat64
+		if err := rows.Scan(&r.ID, &r.HouseholdID, &r.Title, &r.BaseServings, &r.SourceURL, &nk, &np, &nc, &nfat, &created, &updated); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}
+		r.Nutrition = domain.Macros{Kcal: pf(nk), Protein: pf(np), Carbs: pf(nc), Fat: pf(nfat)}
 		r.CreatedAt, r.UpdatedAt = fromTS(created), fromTS(updated)
 		idx[r.ID] = len(out)
 		out = append(out, r)

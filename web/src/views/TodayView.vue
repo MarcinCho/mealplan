@@ -86,7 +86,11 @@ async function init() {
     await Promise.all([recipes.load(), members.load()])
     ready.value = true
     await plan.load(week)
-    await nutrition.loadSettings()
+    try {
+      await nutrition.loadSettings()
+    } catch {
+      /* nutrition stays hidden; the day loads regardless */
+    }
     await refreshDays()
   } catch (e) {
     error.value = errorText(e)

@@ -218,7 +218,7 @@ const errors: Record<string, string> = {
 }
 
 const productErrors: Record<string, string> = {
-  in_use: 'Ten produkt jest użyty w dzienniku jedzenia. Najpierw usuń go z dziennika.',
+  in_use: 'Ten produkt jest używany w dzienniku posiłków domowników, więc nie można go usunąć.',
   conflict: 'Produkt o takiej nazwie lub aliasie już istnieje.',
 }
 

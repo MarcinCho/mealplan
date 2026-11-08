@@ -23,6 +23,10 @@ func TestParseNutritionLine(t *testing.T) {
 	if !ok || !eqf(m.Kcal, 300) || !eqf(m.Protein, 20) || !eqf(m.Carbs, 30) || !eqf(m.Fat, 10) {
 		t.Fatalf("%+v %v", m, ok)
 	}
+	m, ok = parseNutritionLine("Wartości na porcję: 500 kcal, tłuszcz 14 g, w tym kwasy tłuszczowe nasycone 3 g")
+	if !ok || !eqf(m.Fat, 14) {
+		t.Fatalf("saturated fat overwrote fat: %+v %v", m, ok)
+	}
 	if _, ok = parseNutritionLine("Wartości na porcję:"); ok {
 		t.Error("no numbers must not be ok")
 	}

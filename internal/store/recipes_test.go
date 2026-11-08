@@ -206,3 +206,22 @@ func TestRecipeNutritionRoundTrip(t *testing.T) {
 		t.Fatalf("after update %+v", got)
 	}
 }
+
+func TestListRecipesIncludesNutrition(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedTwoHouseholds(t, s)
+	r := sampleRecipe("r1", "hA")
+	r.Nutrition = domain.Macros{Kcal: f(500), Fat: f(12)}
+	if err := s.CreateRecipe(ctx, r); err != nil {
+		t.Fatal(err)
+	}
+	list, err := s.ListRecipes(ctx, "hA")
+	if err != nil || len(list) != 1 {
+		t.Fatalf("%v %v", list, err)
+	}
+	n := list[0].Nutrition
+	if n.Kcal == nil || *n.Kcal != 500 || n.Fat == nil || *n.Fat != 12 || n.Protein != nil || n.Carbs != nil {
+		t.Fatalf("nutrition %+v", n)
+	}
+}

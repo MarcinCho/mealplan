@@ -44,7 +44,7 @@ describe('errorText new codes', () => {
 
 describe('productErrorText', () => {
   it('uses product wording for in_use and conflict', () => {
-    expect(productErrorText(new ApiError(409, 'in_use', 'x'))).toContain('dzienniku')
+    expect(productErrorText(new ApiError(409, 'in_use', 'x'))).toBe('Ten produkt jest używany w dzienniku posiłków domowników, więc nie można go usunąć.')
     expect(productErrorText(new ApiError(409, 'conflict', 'x'))).toContain('Produkt o takiej nazwie')
   })
   it('falls back to the generic texts', () => {
