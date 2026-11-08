@@ -39,7 +39,7 @@ func TestMigrateIsIdempotentAndCreatesTables(t *testing.T) {
 		}
 	}
 	var applied int
-	if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM schema_migrations").Scan(&applied); err != nil || applied != 5 {
+	if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM schema_migrations").Scan(&applied); err != nil || applied != 6 {
 		t.Fatalf("schema_migrations: n=%d err=%v", applied, err)
 	}
 }

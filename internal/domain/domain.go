@@ -142,6 +142,24 @@ type ShoppingItem struct {
 	Unit           string
 	Checked        bool
 	Manual         bool
+	HaveQuantity   *float64
+	Moved          bool
+}
+
+// PantryItem is household stock of a product in one unit. Quantity is nil for a staple.
+type PantryItem struct {
+	ID, HouseholdID, ProductID, Name string
+	Quantity                         *float64
+	Unit                             string
+	ExpiresOn                        string // "" or YYYY-MM-DD
+	Staple                           bool
+	UpdatedAt                        time.Time
+}
+
+// PantryMovement is a signed change of stock caused by a plan entry.
+type PantryMovement struct {
+	EntryID, ProductID, Unit string
+	Amount                   float64
 }
 
 // NutritionSettings are per-user, per-household nutrition preferences.
