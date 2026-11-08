@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"mealplan/internal/auth"
 	"mealplan/internal/domain"
+	"mealplan/internal/nutrition"
+	"mealplan/internal/pantry"
 	"mealplan/internal/plan"
 	"mealplan/internal/units"
 )
@@ -26,6 +29,18 @@ type Repo interface {
 	UpdateShoppingItem(ctx context.Context, it domain.ShoppingItem) error
 	DeleteShoppingItem(ctx context.Context, householdID, id string) error
 	ShoppingItemByID(ctx context.Context, householdID, id string) (domain.ShoppingItem, error)
+	SetShoppingItemsMoved(ctx context.Context, householdID string, ids []string) error
+}
+
+// Pantry is the part of pantry.Service the list needs.
+type Pantry interface {
+	List(ctx context.Context, householdID string) ([]domain.PantryItem, *time.Time, error)
+	Add(ctx context.Context, householdID string, in pantry.Input) (domain.PantryItem, error)
+}
+
+// Products is the part of product.Service the list needs.
+type Products interface {
+	All(ctx context.Context, householdID string) ([]domain.Product, error)
 }
 
 type PlanSource interface {
@@ -40,11 +55,15 @@ type ItemInput struct {
 }
 
 type Service struct {
-	repo  Repo
-	plans PlanSource
+	repo     Repo
+	plans    PlanSource
+	pantry   Pantry
+	products Products
 }
 
-func New(repo Repo, plans PlanSource) *Service { return &Service{repo: repo, plans: plans} }
+func New(repo Repo, plans PlanSource, pan Pantry, products Products) *Service {
+	return &Service{repo: repo, plans: plans, pantry: pan, products: products}
+}
 
 func invalid(format string, a ...any) error {
 	return fmt.Errorf("%w: "+format, append([]any{domain.ErrInvalid}, a...)...)
@@ -125,7 +144,26 @@ func (s *Service) Generate(ctx context.Context, householdID, week, from, to stri
 	if err != nil {
 		return nil, err
 	}
-	lines, err := Build(entries, recipes, nil) // pantry stock is wired in during Stage 3
+	prods, err := s.products.All(ctx, householdID)
+	if err != nil {
+		return nil, err
+	}
+	matcher := nutrition.NewMatcher(prods)
+	productOf := func(ing domain.Ingredient) string {
+		if p, ok := matcher.Match(ing); ok {
+			return p.ID
+		}
+		return ""
+	}
+	pantryItems, _, err := s.pantry.List(ctx, householdID)
+	if err != nil {
+		return nil, err
+	}
+	stock := make([]StockLine, 0, len(pantryItems))
+	for _, p := range pantryItems {
+		stock = append(stock, StockLine{ProductID: p.ProductID, Quantity: p.Quantity, Unit: p.Unit, Staple: p.Staple})
+	}
+	lines, err := Build(entries, recipes, productOf, stock)
 	if err != nil {
 		return nil, err
 	}
@@ -142,10 +180,11 @@ func (s *Service) Generate(ctx context.Context, householdID, week, from, to stri
 	}
 	fresh := make([]domain.ShoppingItem, 0, len(lines))
 	for _, l := range lines {
-		it := domain.ShoppingItem{ID: auth.NewID(), Week: week, Name: l.Name, NormalizedName: l.NormalizedName, Quantity: l.Quantity, Unit: l.Unit}
+		it := domain.ShoppingItem{ID: auth.NewID(), Week: week, Name: l.Name, NormalizedName: l.NormalizedName, Quantity: l.Quantity, Unit: l.Unit, HaveQuantity: l.Have}
 		if old, ok := prev[itemKey(l.NormalizedName, l.Unit, l.Quantity != nil)]; ok {
 			it.ID = old.ID
 			it.Checked = old.Checked && sameQty(old.Quantity, l.Quantity)
+			it.Moved = old.Moved && sameQty(old.Quantity, l.Quantity)
 		}
 		fresh = append(fresh, it)
 	}
@@ -201,4 +240,35 @@ func (s *Service) Edit(ctx context.Context, householdID, id string, in ItemInput
 
 func (s *Service) Remove(ctx context.Context, householdID, id string) error {
 	return s.repo.DeleteShoppingItem(ctx, householdID, id)
+}
+
+// MoveCheckedToPantry adds every checked, not yet moved item that has a quantity to the pantry and
+// marks it moved, so a second call moves nothing. Covered lines (quantity 0) stay out. An item
+// without a unit is stocked as pieces.
+func (s *Service) MoveCheckedToPantry(ctx context.Context, householdID, week string) (int, error) {
+	items, err := s.List(ctx, householdID, week)
+	if err != nil {
+		return 0, err
+	}
+	var moved []string
+	for _, it := range items {
+		if !it.Checked || it.Moved || it.Quantity == nil || *it.Quantity <= 0 {
+			continue
+		}
+		unit := it.Unit
+		if unit == "" {
+			unit = "szt"
+		}
+		if _, err := s.pantry.Add(ctx, householdID, pantry.Input{Name: it.Name, Quantity: it.Quantity, Unit: unit}); err != nil {
+			return 0, err
+		}
+		moved = append(moved, it.ID)
+	}
+	if len(moved) == 0 {
+		return 0, nil
+	}
+	if err := s.repo.SetShoppingItemsMoved(ctx, householdID, moved); err != nil {
+		return len(moved), err
+	}
+	return len(moved), nil
 }
