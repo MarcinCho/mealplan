@@ -58,10 +58,37 @@ func TestUnmatchedMakesApproximate(t *testing.T) {
 	}
 }
 
-func TestNoQuantityIsZeroWithoutFlag(t *testing.T) {
-	r := domain.Recipe{BaseServings: 2, Ingredients: []domain.Ingredient{{Name: "sól"}}}
+func TestNegligibleWithoutQuantityIsNotFlagged(t *testing.T) {
+	m := NewMatcher([]domain.Product{
+		{ID: "mak", Name: "makaron", Per100g: macros(350, 12, 72, 1.5)},
+		{ID: "w", Name: "woda", Per100g: macros(0, 0, 0, 0)},
+	})
+	for _, name := range []string{"sól do smaku", "pieprz do smaku", "woda", "natka do dekoracji"} {
+		r := domain.Recipe{BaseServings: 2, Ingredients: []domain.Ingredient{ing("makaron", 200, "g"), {Name: name}}}
+		n := ForRecipe(r, m)
+		if n.Approximate || len(n.Unmatched) != 0 {
+			t.Fatalf("%s: %+v", name, n)
+		}
+	}
+	r := domain.Recipe{BaseServings: 2, Ingredients: []domain.Ingredient{ing("makaron", 200, "g"), {Name: "ser", Note: "opcjonalnie"}}}
+	if n := ForRecipe(r, m); n.Approximate {
+		t.Fatalf("note: %+v", n)
+	}
+}
+
+func TestNoQuantityIsFlagged(t *testing.T) {
+	r := domain.Recipe{BaseServings: 2, Ingredients: []domain.Ingredient{
+		ing("makaron", 200, "g"), {Name: "makaron"}, {Name: "olej", Note: "do smażenia"}}}
 	n := ForRecipe(r, testMatcher())
-	if n.Approximate || len(n.Unmatched) != 0 {
+	if !n.Approximate || len(n.Unmatched) != 2 || n.Unmatched[0] != "makaron" || n.Unmatched[1] != "olej" {
+		t.Fatalf("%+v", n)
+	}
+}
+
+func TestAllGivenIsNotApproximate(t *testing.T) {
+	r := domain.Recipe{BaseServings: 2, Nutrition: macros(500, 30, 50, 10), Ingredients: []domain.Ingredient{ing("woda", 500, "ml")}}
+	n := ForRecipe(r, testMatcher())
+	if n.Approximate {
 		t.Fatalf("%+v", n)
 	}
 }

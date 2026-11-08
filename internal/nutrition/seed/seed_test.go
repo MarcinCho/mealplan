@@ -78,7 +78,7 @@ func TestSeedProductsAreConsistent(t *testing.T) {
 	required := []string{
 		"mąka pszenna", "jajko", "ryż biały", "makaron", "pierś z kurczaka", "mleko", "masło", "oliwa",
 		"cukier", "ziemniaki", "cebula", "czosnek", "pomidor", "marchew", "ser żółty", "jogurt naturalny",
-		"płatki owsiane", "banan", "jabłko", "fasola czerwona",
+		"płatki owsiane", "banan", "jabłko", "fasola czerwona", "woda",
 	}
 	for _, r := range required {
 		if _, ok := byName[r]; !ok {

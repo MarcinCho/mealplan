@@ -2,6 +2,7 @@ package nutrition
 
 import (
 	"slices"
+	"strings"
 
 	"mealplan/internal/domain"
 )
@@ -37,10 +38,13 @@ func ForRecipe(r domain.Recipe, m *Matcher) RecipeNutrition {
 	var lacks []lack
 	var out RecipeNutrition
 	for _, ing := range r.Ingredients {
+		p, ok := m.Match(ing)
 		if ing.Quantity == nil {
+			if !negligibleWithoutQuantity(ing, p, ok) {
+				out.Unmatched = append(out.Unmatched, ing.Name)
+			}
 			continue
 		}
-		p, ok := m.Match(ing)
 		if !ok || !hasMacros(p.Per100g) {
 			out.Unmatched = append(out.Unmatched, ing.Name)
 			continue
@@ -70,7 +74,8 @@ func ForRecipe(r domain.Recipe, m *Matcher) RecipeNutrition {
 			}
 		}
 	}
-	out.Approximate = len(out.Unmatched) > 0
+	// Approximate only when a computed value could be understated.
+	out.Approximate = len(out.Unmatched) > 0 && !(given[0] && given[1] && given[2] && given[3])
 	servings := float64(r.BaseServings)
 	if servings < 1 {
 		servings = 1
@@ -95,4 +100,22 @@ func ForRecipe(r domain.Recipe, m *Matcher) RecipeNutrition {
 
 func hasMacros(m domain.Macros) bool {
 	return m.Kcal != nil || m.Protein != nil || m.Carbs != nil || m.Fat != nil
+}
+
+var negligibleMarkers = []string{"do smaku", "do dekoracji", "do posypania", "opcjonalnie"}
+
+// negligibleWithoutQuantity reports whether an ingredient without a quantity
+// may count as 0: it matched a zero-kcal product (salt, water) or is marked
+// as to-taste/decoration/optional in its name or note.
+func negligibleWithoutQuantity(ing domain.Ingredient, p domain.Product, matched bool) bool {
+	if matched && p.Per100g.Kcal != nil && *p.Per100g.Kcal == 0 {
+		return true
+	}
+	text := strings.ToLower(ing.Name + " " + ing.Note)
+	for _, mk := range negligibleMarkers {
+		if strings.Contains(text, mk) {
+			return true
+		}
+	}
+	return false
 }

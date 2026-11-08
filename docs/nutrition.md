@@ -37,7 +37,7 @@ Import czyta linię tekstu (`Wartości na porcję: 520 kcal, białko 32 g, węgl
 | `szczypta` | 0,5 g |
 | `garść` | 30 g |
 
-Składnik bez ilości (np. „sól do smaku") liczy się jako 0 i nie oznacza wyniku jako przybliżonego. Składnik bez dopasowanego produktu albo z ilością, której nie da się przeliczyć, powoduje oznaczenie **przybliżone**: wynik jest wtedy dolną granicą, bo część składników jest nieznana.
+Składnik bez ilości liczy się jako 0 bez oznaczania wyniku tylko wtedy, gdy jest pomijalny: dopasował się do produktu o 0 kcal na 100 g (sól, woda) albo jego nazwa lub notatka zawiera „do smaku", „do dekoracji", „do posypania" lub „opcjonalnie". Inny składnik bez ilości (np. „olej" z notatką „do smażenia"), składnik bez dopasowanego produktu albo z ilością, której nie da się przeliczyć, powoduje oznaczenie **przybliżone**: wynik jest wtedy dolną granicą, bo część składników jest nieznana.
 
 ## Dopasowanie produktu
 
@@ -45,9 +45,9 @@ Dla każdego składnika aplikacja najpierw bierze produkt zapamiętany przy tym 
 
 ## Produkty i dane startowe
 
-Produkty należą do gospodarstwa (wartości na 100 g, opcjonalnie gęstość i waga sztuki, aliasy) i można je dodawać, zmieniać i usuwać. Przy pierwszym użyciu do gospodarstwa kopiuje się ok. 197 produktów startowych wygenerowanych z **USDA FoodData Central, SR Legacy (kwiecień 2018)**, licencja **CC0 1.0**. Generator i mapowanie nazw (`mapping.csv`) są w `internal/nutrition/seed/gen`.
+Produkty należą do gospodarstwa (wartości na 100 g, opcjonalnie gęstość i waga sztuki, aliasy) i można je dodawać, zmieniać i usuwać. Przy pierwszym użyciu do gospodarstwa kopiuje się ok. 198 produktów startowych wygenerowanych z **USDA FoodData Central, SR Legacy (kwiecień 2018)**, licencja **CC0 1.0**. Generator i mapowanie nazw (`mapping.csv`) są w `internal/nutrition/seed/gen`.
 
-Znane ograniczenie: w danych startowych nie ma suszonych przypraw (ich błonnik psuje kontrolę zgodności energii) ani wody. Przepisy z przyprawami lub wodą są „przybliżone", dopóki nie dodasz tych produktów.
+Znane ograniczenie: w danych startowych nie ma suszonych przypraw (ich błonnik psuje kontrolę zgodności energii). Przepisy z suszonymi przyprawami są „przybliżone", dopóki nie dodasz tych produktów.
 
 ## Konto: śledzenie, cel i dziennik
 
