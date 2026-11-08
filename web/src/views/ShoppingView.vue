@@ -95,16 +95,20 @@ function add() {
 
 <template>
   <div class="d-flex align-center flex-wrap ga-2 mb-4">
-    <v-btn icon="mdi-chevron-left" variant="text" :title="t.prevWeek" @click="go(-1)" />
-    <h1 class="text-subtitle-1 text-md-h6">{{ t.shopping }}: {{ formatDay(dates[0]) }} – {{ formatDay(dates[6]) }}</h1>
-    <v-btn icon="mdi-chevron-right" variant="text" :title="t.nextWeek" @click="go(1)" />
+    <div class="d-flex align-center ga-1" style="min-width: 0">
+      <v-btn icon="mdi-chevron-left" variant="text" :title="t.prevWeek" @click="go(-1)" />
+      <h1 class="text-subtitle-1 text-md-h6">{{ t.shopping }}: {{ formatDay(dates[0]) }} – {{ formatDay(dates[6]) }}</h1>
+      <v-btn icon="mdi-chevron-right" variant="text" :title="t.nextWeek" @click="go(1)" />
+    </div>
     <v-spacer />
-    <v-btn variant="tonal" :disabled="!ready || busy || !movable" prepend-icon="mdi-package-down" @click="moveBought">
-      {{ t.moveToPantry }}
-    </v-btn>
-    <v-btn color="primary" :loading="busy" :disabled="!ready" prepend-icon="mdi-cart-arrow-down" @click="generate">
-      {{ shop.items.length ? t.regenerate : t.generate }}
-    </v-btn>
+    <div class="d-flex flex-wrap ga-2">
+      <v-btn variant="tonal" :disabled="!ready || busy || !movable" prepend-icon="mdi-package-down" @click="moveBought">
+        {{ t.moveToPantry }}
+      </v-btn>
+      <v-btn color="primary" :loading="busy" :disabled="!ready" prepend-icon="mdi-cart-arrow-down" @click="generate">
+        {{ shop.items.length ? t.regenerate : t.generate }}
+      </v-btn>
+    </div>
   </div>
   <v-alert v-if="movedMsg" type="success" variant="tonal" class="mb-4" closable @click:close="movedMsg = ''">{{ movedMsg }}</v-alert>
   <v-alert v-if="ready && shop.previousWeekUndone > 0" type="warning" variant="tonal" class="mb-4" data-testid="undone-warning">{{ undonePreviousText(shop.previousWeekUndone) }}</v-alert>
