@@ -16,10 +16,13 @@ type itemJSON struct {
 	Unit     string   `json:"unit"`
 	Checked  bool     `json:"checked"`
 	Manual   bool     `json:"manual"`
+
+	HaveQuantity *float64 `json:"haveQuantity"`
+	Moved        bool     `json:"moved"`
 }
 
 func toItemJSON(it domain.ShoppingItem) itemJSON {
-	return itemJSON{ID: it.ID, Week: it.Week, Name: it.Name, Quantity: it.Quantity, Unit: it.Unit, Checked: it.Checked, Manual: it.Manual}
+	return itemJSON{ID: it.ID, Week: it.Week, Name: it.Name, Quantity: it.Quantity, Unit: it.Unit, Checked: it.Checked, Manual: it.Manual, HaveQuantity: it.HaveQuantity, Moved: it.Moved}
 }
 
 func writeList(w http.ResponseWriter, week string, items []domain.ShoppingItem) {

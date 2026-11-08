@@ -675,6 +675,113 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/shopping/move-to-pantry:
+    post:
+      summary: Move the checked, not yet moved items of a week into the pantry
+      description: Idempotent; items already moved are skipped, so a repeat call returns `moved` 0.
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [week]
+              properties:
+                week: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [moved]
+                properties:
+                  moved: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/pantry:
+    get:
+      summary: List the pantry and when it was last reviewed
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PantryList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Add stock; merges into an existing row of the same product and unit
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PantryItemInput" }
+      responses:
+        "201":
+          description: Created (or merged)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PantryItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/pantry/review:
+    post:
+      summary: Mark the pantry as reviewed now
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reviewedAt]
+                properties:
+                  reviewedAt: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/v1/pantry/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    put:
+      summary: Replace a pantry item
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PantryItemInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PantryItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Delete a pantry item
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
 components:
   securitySchemes:
     session: { type: apiKey, in: cookie, name: mealplan_session }
@@ -1066,7 +1173,7 @@ components:
         entries: { type: array, items: { $ref: "#/components/schemas/PlanEntry" } }
     ShoppingItem:
       type: object
-      required: [id, week, name, quantity, unit, checked, manual]
+      required: [id, week, name, quantity, unit, checked, manual, haveQuantity, moved]
       properties:
         id: { type: string }
         week: { type: string, format: date }
@@ -1075,6 +1182,35 @@ components:
         unit: { type: string }
         checked: { type: boolean }
         manual: { type: boolean }
+        haveQuantity: { type: number, nullable: true, description: Stock on hand in the item's unit; null when unknown }
+        moved: { type: boolean, description: Already moved to the pantry }
+    PantryItem:
+      type: object
+      required: [id, productId, name, quantity, unit, expiresOn, staple]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        name: { type: string }
+        quantity: { type: number, nullable: true }
+        unit: { type: string }
+        expiresOn: { type: string, description: "YYYY-MM-DD or empty" }
+        staple: { type: boolean }
+    PantryItemInput:
+      type: object
+      description: productId or name is required
+      properties:
+        productId: { type: string }
+        name: { type: string }
+        quantity: { type: number, nullable: true, minimum: 0 }
+        unit: { type: string }
+        expiresOn: { type: string, description: "YYYY-MM-DD or empty" }
+        staple: { type: boolean }
+    PantryList:
+      type: object
+      required: [items, reviewedAt]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/PantryItem" } }
+        reviewedAt: { type: string, format: date-time, nullable: true }
     ShoppingList:
       type: object
       required: [week, items]

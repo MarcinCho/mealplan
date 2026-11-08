@@ -69,7 +69,7 @@ func run(log *slog.Logger) error {
 	planSvc.SetDoneHook(pantrySvc)
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.New(svc, httpapi.Deps{Recipes: recipe.New(st, nil), Products: products, Plan: planSvc, Nutrition: nutrition.New(st, products, nil), Shopping: shopping.New(st, st, pantrySvc, products), Importer: importer.New()}, cfg, spa.Handler(dist), log).Handler(),
+		Handler:           httpapi.New(svc, httpapi.Deps{Recipes: recipe.New(st, nil), Products: products, Plan: planSvc, Nutrition: nutrition.New(st, products, nil), Pantry: pantrySvc, Shopping: shopping.New(st, st, pantrySvc, products), Importer: importer.New()}, cfg, spa.Handler(dist), log).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,

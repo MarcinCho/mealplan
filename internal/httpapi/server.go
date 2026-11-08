@@ -9,6 +9,7 @@ import (
 	"mealplan/internal/auth"
 	"mealplan/internal/config"
 	"mealplan/internal/nutrition"
+	"mealplan/internal/pantry"
 	"mealplan/internal/plan"
 	"mealplan/internal/product"
 	"mealplan/internal/recipe"
@@ -22,6 +23,7 @@ type Deps struct {
 	Plan      *plan.Service
 	Shopping  *shopping.Service
 	Nutrition *nutrition.Service
+	Pantry    *pantry.Service
 	Importer  Importer
 }
 
@@ -85,6 +87,12 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/shopping/items", s.private(s.handleAddShoppingItem)},
 		{"PATCH /api/v1/shopping/items/{id}", s.private(s.handlePatchShoppingItem)},
 		{"DELETE /api/v1/shopping/items/{id}", s.private(s.handleDeleteShoppingItem)},
+		{"POST /api/v1/shopping/move-to-pantry", s.private(s.handleMoveToPantry)},
+		{"GET /api/v1/pantry", s.private(s.handleListPantry)},
+		{"POST /api/v1/pantry", s.private(s.handleAddPantry)},
+		{"POST /api/v1/pantry/review", s.private(s.handleReviewPantry)},
+		{"PUT /api/v1/pantry/{id}", s.private(s.handleUpdatePantry)},
+		{"DELETE /api/v1/pantry/{id}", s.private(s.handleDeletePantry)},
 	}
 }
 

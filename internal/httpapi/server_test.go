@@ -67,7 +67,11 @@ func newEnv(t *testing.T) *env {
 	cfg := config.Config{Mode: config.ModeSelfhost, CookieSecure: false}
 	recipes := recipe.New(st, clock.Now)
 	imp := &fakeImporter{}
-	deps := httpapi.Deps{Recipes: recipes, Products: product.New(st, clock.Now), Plan: plan.New(st, st), Nutrition: nutrition.New(st, product.New(st, clock.Now), clock.Now), Shopping: shopping.New(st, st, pantry.New(st, st, product.New(st, clock.Now), clock.Now), product.New(st, clock.Now)), Importer: imp}
+	products := product.New(st, clock.Now)
+	planSvc := plan.New(st, st)
+	pantrySvc := pantry.New(st, st, products, clock.Now)
+	planSvc.SetDoneHook(pantrySvc)
+	deps := httpapi.Deps{Recipes: recipes, Products: products, Plan: planSvc, Nutrition: nutrition.New(st, products, clock.Now), Pantry: pantrySvc, Shopping: shopping.New(st, st, pantrySvc, products), Importer: imp}
 	srv := httpapi.New(svc, deps, cfg, http.NotFoundHandler(), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	return &env{srv: srv, st: st, svc: svc, clock: clock, imp: imp}
 }
