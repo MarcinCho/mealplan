@@ -5,6 +5,8 @@ import { api } from '../api/client'
 import type { PlanEntry, Slot } from '../api/types'
 import EntryDialog from '../components/EntryDialog.vue'
 import { errorText, t } from '../messages'
+import { dayLine, dayWarnings } from '../nutrition'
+import { useNutrition } from '../stores/nutrition'
 import { usePlan, type EntryInput } from '../stores/plan'
 import { useRecipes } from '../stores/recipes'
 import { formatDay, mondayOf, shiftWeek, SLOTS, weekDates } from '../weeks'
@@ -14,6 +16,7 @@ interface Member { id: string; displayName: string }
 const { mdAndUp } = useDisplay()
 const plan = usePlan()
 const recipes = useRecipes()
+const nutrition = useNutrition()
 const members = ref<Member[]>([])
 const week = ref(mondayOf(new Date()))
 const error = ref('')
@@ -25,6 +28,18 @@ const initial = ref<{ date: string; slot: Slot }>({ date: week.value, slot: 'din
 
 const dates = computed(() => weekDates(week.value))
 const recipeTitle = computed(() => Object.fromEntries(recipes.items.map((r) => [r.id, r.title])))
+const tracking = computed(() => nutrition.settings?.enabled === true)
+const warnOf = (d: string) => (tracking.value && nutrition.days[d] ? dayWarnings(nutrition.days[d]).join(' · ') : '')
+const lineOf = (d: string) => (tracking.value && nutrition.days[d] ? dayLine(nutrition.days[d]) : '')
+// A failed summary must not break the plan, so its errors are swallowed here.
+async function refreshDays() {
+  if (!tracking.value) return
+  try {
+    await nutrition.loadDays(dates.value[0], dates.value[6])
+  } catch {
+    /* the plan itself still works */
+  }
+}
 const memberName = computed(() => Object.fromEntries(members.value.map((m) => [m.id, m.displayName])))
 
 async function load() {
@@ -32,6 +47,7 @@ async function load() {
   const target = week.value
   try {
     await plan.load(target)
+    if (target === week.value) await refreshDays()
   } catch (e) {
     // a failure of a week the user already navigated away from is irrelevant
     if (target === week.value) error.value = errorText(e)
@@ -46,6 +62,11 @@ async function init() {
   } catch (e) {
     error.value = errorText(e)
     return
+  }
+  try {
+    await nutrition.loadSettings()
+  } catch {
+    /* nutrition stays hidden; the plan loads regardless */
   }
   await load()
 }
@@ -91,6 +112,7 @@ async function save(input: EntryInput) {
     if (editing.value) await plan.edit(editing.value.id, input)
     else await plan.add(input)
     dialog.value = false
+    await refreshDays()
   } catch (e) {
     error.value = errorText(e)
   }
@@ -102,6 +124,7 @@ async function removeEntry() {
   try {
     await plan.remove(editing.value.id)
     dialog.value = false
+    await refreshDays()
   } catch (e) {
     error.value = errorText(e)
   }
@@ -113,6 +136,7 @@ async function copyPrev() {
   try {
     await plan.copyFrom(shiftWeek(week.value, -1))
     notice.value = t.weekCopied
+    await refreshDays()
   } catch (e) {
     error.value = errorText(e)
   }
@@ -141,7 +165,13 @@ async function copyPrev() {
     <thead>
       <tr>
         <th />
-        <th v-for="d in dates" :key="d">{{ formatDay(d) }}</th>
+        <th v-for="d in dates" :key="d">
+          {{ formatDay(d) }}
+          <div v-if="lineOf(d)" class="day-line">
+            {{ lineOf(d) }}
+            <v-icon v-if="warnOf(d)" icon="mdi-alert-outline" size="x-small" color="warning" :title="warnOf(d)" :aria-label="warnOf(d)" />
+          </div>
+        </th>
       </tr>
     </thead>
     <tbody>
@@ -168,6 +198,11 @@ async function copyPrev() {
   <div v-else>
     <v-card v-for="d in dates" :key="d" class="mb-3">
       <v-card-title class="text-subtitle-1">{{ formatDay(d) }}</v-card-title>
+      <v-card-subtitle v-if="lineOf(d)" class="text-wrap">
+        {{ lineOf(d) }}
+        <v-icon v-if="warnOf(d)" icon="mdi-alert-outline" size="small" color="warning" :title="warnOf(d)" :aria-label="warnOf(d)" />
+        <span v-if="warnOf(d)" class="d-block">{{ warnOf(d) }}</span>
+      </v-card-subtitle>
       <v-list density="compact" bg-color="transparent">
         <template v-for="s in SLOTS" :key="s.value">
           <v-list-item
@@ -200,4 +235,5 @@ async function copyPrev() {
 
 <style scoped>
 .plan-grid td { min-width: 120px; }
+.day-line { font-size: 11px; font-weight: 400; opacity: 0.7; white-space: normal; }
 </style>

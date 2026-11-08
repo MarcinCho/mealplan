@@ -21,6 +21,7 @@ Każda linia składnika, niezależnie od źródła, przechodzi przez ten sam par
 `POST /recipes/import/url` z `{"url": "…"}`. Źródła sprawdzane po kolei, pierwsze użyteczne wygrywa:
 
 1. **JSON-LD** `Recipe` (także w `@graph` i tablicach): tytuł, porcje, składniki, kroki, tagi (`keywords`, `recipeCategory`).
+   Pole `nutrition` (`NutritionInformation`: `calories`, `proteinContent`, `carbohydrateContent`, `fatContent`) trafia do szkicu jako wartości na porcję; wartości w kJ są ignorowane. Wartości poza zakresem (kcal 0-5000, białko, węglowodany i tłuszcz 0-500 g na porcję) są pomijane z ostrzeżeniem.
 2. **Microdata** `itemtype=…/Recipe`, jeśli nie ma JSON-LD.
 3. **Tekst strony** (bez `script`, `style`, `nav`, `footer` itp.) przepuszczony przez parser tekstu. Wynik dostaje ostrzeżenie, że opiera się na tekście strony. Tę ścieżkę przyjmujemy tylko, gdy znaleziono co najmniej 2 składniki i co najmniej 1 krok; inaczej `422 import_unparsable`, żeby nawigacja i proza nie zamieniły się w fałszywy przepis.
 
@@ -54,6 +55,7 @@ Błędy:
 - **Nagłówki sekcji** (PL i EN, wielkość liter bez znaczenia, z dwukropkiem lub bez, z `#`, `*`): `Składniki`, `Ingredients` oraz `Przygotowanie`, `Sposób przygotowania`, `Sposób wykonania`, `Wykonanie`, `Kroki`, `Instrukcje`, `Method`, `Instructions`, `Directions`, `Preparation`, `Jak zrobić`. Etykiety grup wewnątrz składników (`Na ciasto:`) są pomijane.
 - **Tytuł**: nagłówek `# …` ma pierwszeństwo; inaczej pierwsza linia, jeśli nie jest nagłówkiem sekcji, składnikiem, wypunktowaniem ani numerowanym krokiem (do 15 słów).
 - **Porcje**: `Porcje: 4`, `4 porcje`, `dla 4 osób`, `serves 4`, `servings 4`, `yield 4`. Brak liczby daje `0` i ostrzeżenie, a edytor podstawia 4.
+- **Wartości odżywcze**: linia zaczynająca się od `Wartości na porcję`, `Wartości odżywcze`, `Wartości odżywcze na porcję`, `Wartości odżywcze (na porcję)`, `Na porcję`, `Per serving` lub `Nutrition per serving` (wielkość liter bez znaczenia), po której jest dwukropek lub myślnik, np. `Wartości na porcję: 520 kcal, białko 32 g, węglowodany 60 g, tłuszcz 14 g`. Wartości mogą być w dowolnej kolejności i w dowolnym podzbiorze (`białko`/`protein`, `węglowodany`/`carbs`, `tłuszcz`/`fat`), z przecinkiem dziesiętnym. Kalorie to liczba tuż przed `kcal`, więc `2184 kJ / 520 kcal` daje 520. Wartości zawsze oznaczają jedną porcję. Szczegóły: [nutrition.md](nutrition.md).
 - **Numeracja i wypunktowania** (`1.`, `1)`, `Krok 1:`, `-`, `*`, `•`) są usuwane z tekstu kroku.
 - **Kroki**: jeśli w sekcji kroków jest choć jedna numerowana lub wypunktowana linia, nieoznaczone linie są traktowane jako ciąg dalszy poprzedniego kroku (łączenie zawiniętych linii). Bez żadnej numeracji każda linia jest osobnym krokiem.
 - **Bez nagłówków** linia jest klasyfikowana: numerowana to krok, wypunktowana krótka (do 8 słów) lub zaczynająca się od ilości to składnik, dłuższa (od 4 słów) to krok. Krótkie linie, których nie da się sklasyfikować, są pomijane z ostrzeżeniem; przy nagłówkach ostrzeżenie dotyczy linii spoza sekcji.

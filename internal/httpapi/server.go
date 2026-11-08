@@ -8,17 +8,21 @@ import (
 
 	"mealplan/internal/auth"
 	"mealplan/internal/config"
+	"mealplan/internal/nutrition"
 	"mealplan/internal/plan"
+	"mealplan/internal/product"
 	"mealplan/internal/recipe"
 	"mealplan/internal/shopping"
 )
 
 // Deps carries the use-case services the handlers call.
 type Deps struct {
-	Recipes  *recipe.Service
-	Plan     *plan.Service
-	Shopping *shopping.Service
-	Importer Importer
+	Recipes   *recipe.Service
+	Products  *product.Service
+	Plan      *plan.Service
+	Shopping  *shopping.Service
+	Nutrition *nutrition.Service
+	Importer  Importer
 }
 
 type Server struct {
@@ -60,6 +64,10 @@ func (s *Server) routes() []route {
 		{"DELETE /api/v1/recipes/{id}", s.private(s.handleDeleteRecipe)},
 		{"POST /api/v1/recipes/import/url", s.private(s.handleImportURL)},
 		{"POST /api/v1/recipes/import/text", s.private(s.handleImportText)},
+		{"GET /api/v1/products", s.private(s.handleListProducts)},
+		{"POST /api/v1/products", s.private(s.handleCreateProduct)},
+		{"PUT /api/v1/products/{id}", s.private(s.handleUpdateProduct)},
+		{"DELETE /api/v1/products/{id}", s.private(s.handleDeleteProduct)},
 		{"PATCH /api/v1/household/members/{id}", s.private(s.handleChangeRole)},
 		{"DELETE /api/v1/household/members/{id}", s.private(s.handleRemoveMember)},
 		{"GET /api/v1/plan/{week}", s.private(s.handleGetWeek)},
@@ -67,6 +75,11 @@ func (s *Server) routes() []route {
 		{"PUT /api/v1/plan/{week}/entries/{id}", s.private(s.handleEditEntry)},
 		{"DELETE /api/v1/plan/{week}/entries/{id}", s.private(s.handleRemoveEntry)},
 		{"POST /api/v1/plan/{week}/copy", s.private(s.handleCopyWeek)},
+		{"GET /api/v1/me/nutrition", s.private(s.handleGetNutrition)},
+		{"PUT /api/v1/me/nutrition", s.private(s.handlePutNutrition)},
+		{"GET /api/v1/me/nutrition/days", s.private(s.handleNutritionDays)},
+		{"POST /api/v1/me/food-log", s.private(s.handleAddFoodLog)},
+		{"DELETE /api/v1/me/food-log/{id}", s.private(s.handleDeleteFoodLog)},
 		{"GET /api/v1/shopping", s.private(s.handleListShopping)},
 		{"POST /api/v1/shopping/generate", s.private(s.handleGenerateShopping)},
 		{"POST /api/v1/shopping/items", s.private(s.handleAddShoppingItem)},

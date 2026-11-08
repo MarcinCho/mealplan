@@ -24,6 +24,7 @@ The user pastes your result into **Przepisy → Importuj → Tekst → Analizuj*
 ```
 Tytuł przepisu
 Porcje: 4
+Wartości na porcję: 520 kcal, białko 32 g, węglowodany 60 g, tłuszcz 14 g
 
 Składniki:
 200 g mąka pszenna
@@ -40,6 +41,10 @@ Rules the parser relies on (the headings and shapes are literal):
 
 - **Line 1 is the title.** Plain text, only the dish name, at most 200 characters. No "Przepis na", no site or author name, no quotes, no `#`.
 - **`Porcje: N`** on its own line: a whole number from 1 to 100, the number of servings the ingredient amounts make. If the source gives no number, estimate from the amounts and say so in the notes. Never write 0, a range or text.
+- **`Wartości na porcję: 520 kcal, białko 32 g, węglowodany 60 g, tłuszcz 14 g`** is an **optional** line right after `Porcje:`. Write it only when the source states nutrition values (JSON-LD `nutrition`, or a nutrition line or table in the text):
+  - Values are always for **one portion**. If the source gives them per 100 g or for the whole dish, convert only when the portion weight or the number of servings is known; otherwise omit the line.
+  - Use **kcal**, never kJ (`2184 kJ / 520 kcal` means write `520 kcal`). Grams for protein, carbs and fat; a decimal comma is fine. Any subset of the four values is allowed, in any order.
+  - **Never guess or estimate** values. When the source gives none, omit the whole line: the app computes the values itself from the ingredients.
 - **`Składniki:`** on its own line, exactly this word. One ingredient per line until the next heading.
 - **`Przygotowanie:`** on its own line, exactly this word. One step per line, numbered `1.`, `2.`, …
 - A blank line between the three parts. No other headings, no bold, no tables.
@@ -65,7 +70,7 @@ Shape: `ilość jednostka nazwa`, optionally followed by `, notatka` or `(notatk
 - One step per line, in order, numbered `1.`, `2.`, …, written as a **single line** (no hard line breaks inside a step).
 - Imperative, complete sentences, in the same language as the ingredients. One action group per step: split a wall of text, merge fragments that are not steps on their own.
 - Keep times, temperatures, pan or oven settings and doneness cues inside the step text: the app does not store preparation times separately.
-- Fold tips ("Porada:") into the relevant step or drop them. Remove ads, comments, ratings, nutrition tables, author stories, "Smacznego!", "Subscribe", and "Krok 1:"-style labels.
+- Fold tips ("Porada:") into the relevant step or drop them. Remove ads, comments, ratings, nutrition tables (their per-portion values go into the `Wartości na porcję:` line instead), author stories, "Smacznego!", "Subscribe", and "Krok 1:"-style labels.
 - At most 100 steps, each under 2000 characters; at most 200 ingredients; the whole text under 100 KB.
 
 ## Language
@@ -84,27 +89,29 @@ The app can also do this itself: **Importuj → Link** fetches the page on the s
 
 ## What the app does not take from text
 
-Tags, the source link, preparation times and photos. Say so briefly in the notes and offer the tags you would add; the user sets the source link in the editor.
+Tags, the source link, preparation times and photos. (Nutrition values **are** read, from the optional `Wartości na porcję:` line.) Say so briefly in the notes and offer the tags you would add; the user sets the source link in the editor.
 
 ## Before you answer, check
 
-- The block starts with the title line, then `Porcje: N`, a blank line, `Składniki:`, the ingredient lines, a blank line, `Przygotowanie:`, the numbered steps.
+- The block starts with the title line, then `Porcje: N`, optionally `Wartości na porcję: …` (only when the source states values, per one portion, in kcal), a blank line, `Składniki:`, the ingredient lines, a blank line, `Przygotowanie:`, the numbered steps.
 - Every ingredient line is `ilość jednostka nazwa` (or a bare name for "to taste" items), at most 10 words per line (up to 30 when the line starts with an amount), no ranges, no bullets needed.
 - Names are in the nominative; metric units used where the source had them.
 - Every step is one numbered line; nothing from the page chrome remains.
+- Nutrition values were not guessed: the line is present only if the source gave them.
 - Nothing was invented; every assumption is listed after the block.
 
 ## Example
 
 Input (messy):
 
-> **PLACKI ZIEMNIACZANE – najlepszy przepis babci Zosi!!!** 😍 Dla 4 osób. Potrzebujemy: ok. 1 kg ziemniaków (najlepiej mączystych), 1 średnia cebula, 2-3 jajka, 3 czubate łyżki mąki pszennej, sól i pieprz do smaku, olej do smażenia. Ziemniaki i cebulę ścieramy na drobnej tarce, odlewamy sok. Dodajemy jajka, mąkę i przyprawy. Smażymy na gorącym oleju ok. 3-4 min z każdej strony. Smacznego! Zostaw komentarz i subskrybuj kanał :)
+> **PLACKI ZIEMNIACZANE – najlepszy przepis babci Zosi!!!** 😍 Dla 4 osób. Jedna porcja to ok. 520 kcal, 32 g białka, 60 g węglowodanów i 14 g tłuszczu. Potrzebujemy: ok. 1 kg ziemniaków (najlepiej mączystych), 1 średnia cebula, 2-3 jajka, 3 czubate łyżki mąki pszennej, sól i pieprz do smaku, olej do smażenia. Ziemniaki i cebulę ścieramy na drobnej tarce, odlewamy sok. Dodajemy jajka, mąkę i przyprawy. Smażymy na gorącym oleju ok. 3-4 min z każdej strony. Smacznego! Zostaw komentarz i subskrybuj kanał :)
 
 Output:
 
 ```
 Placki ziemniaczane
 Porcje: 4
+Wartości na porcję: 520 kcal, białko 32 g, węglowodany 60 g, tłuszcz 14 g
 
 Składniki:
 1 kg ziemniaki, najlepiej mączyste

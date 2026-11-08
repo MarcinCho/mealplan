@@ -15,6 +15,7 @@ function draft(over: Partial<RecipeDraft> = {}): RecipeDraft {
       { raw: '???', name: '', quantity: null, unit: '', note: '', confidence: 'unparsed' },
     ],
     steps: ['Gotuj.'],
+    nutrition: { kcal: null, protein: null, carbs: null, fat: null },
     warnings: [],
     ...over,
   }
@@ -35,6 +36,10 @@ describe('draftToRecipe', () => {
     const d = draft({ ingredients: [{ raw: 'ser', name: 'ser', quantity: null, unit: '', note: 'drobno starta', confidence: 'ok' }] })
     expect(draftToRecipe(d).ingredients[0].note).toBe('drobno starta')
     expect(mergeIntoExisting(d, recipe({})).ingredients[0].note).toBe('drobno starta')
+  })
+  it('carries the draft nutrition', () => {
+    const n = { kcal: 450, protein: 20, carbs: null, fat: 0 }
+    expect(draftToRecipe(draft({ nutrition: n })).nutrition).toEqual(n)
   })
   it('defaults unknown servings to 4 and keeps the id when updating', () => {
     const r = draftToRecipe(draft({ servings: 0 }), 'abc')
@@ -81,6 +86,17 @@ describe('keepsDraft', () => {
     expect(keepsDraft('recipe-new')).toBe(true)
     expect(keepsDraft('recipe-edit')).toBe(true)
     for (const n of ['recipes', 'home', 'recipe-import', undefined]) expect(keepsDraft(n)).toBe(false)
+  })
+})
+
+describe('mergeIntoExisting nutrition', () => {
+  it('keeps existing values per value when the draft has null, draft wins otherwise (0 counts)', () => {
+    const existing = recipe({ nutrition: { kcal: 500, protein: 30, carbs: 40, fat: 10 } })
+    const m = mergeIntoExisting(draft({ nutrition: { kcal: null, protein: 0, carbs: 55, fat: null } }), existing)
+    expect(m.nutrition).toEqual({ kcal: 500, protein: 0, carbs: 55, fat: 10 })
+  })
+  it('yields nulls when neither has values', () => {
+    expect(mergeIntoExisting(draft(), recipe({})).nutrition).toEqual({ kcal: null, protein: null, carbs: null, fat: null })
   })
 })
 

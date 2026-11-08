@@ -27,6 +27,8 @@ const (
 	maxNote        = 200
 	maxQuantity    = 1e6
 	maxURL         = 2000
+	maxKcal        = 5000
+	maxGrams       = 500
 )
 
 type Repo interface {
@@ -35,6 +37,7 @@ type Repo interface {
 	RecipeByID(ctx context.Context, householdID, id string) (domain.Recipe, error)
 	ListRecipes(ctx context.Context, householdID string) ([]domain.Recipe, error)
 	DeleteRecipe(ctx context.Context, householdID, id string) error
+	ProductByID(ctx context.Context, householdID, id string) (domain.Product, error)
 }
 
 type IngredientInput struct {
@@ -42,6 +45,8 @@ type IngredientInput struct {
 	Quantity *float64
 	Unit     string
 	Note     string
+	// ProductID is the remembered product ("" = none); it must belong to the household.
+	ProductID string
 }
 
 type Input struct {
@@ -51,6 +56,8 @@ type Input struct {
 	Tags         []string
 	Ingredients  []IngredientInput
 	Steps        []string
+	// Nutrition holds optional given values per portion.
+	Nutrition domain.Macros
 }
 
 type Service struct {
@@ -105,6 +112,10 @@ func build(in Input) (domain.Recipe, error) {
 			return r, invalid("sourceUrl must be an http or https address")
 		}
 	}
+	var err error
+	if r.Nutrition, err = buildNutrition(in.Nutrition); err != nil {
+		return r, err
+	}
 	if len(in.Ingredients) > maxIngredients {
 		return r, invalid("at most %d ingredients", maxIngredients)
 	}
@@ -127,7 +138,7 @@ func build(in Input) (domain.Recipe, error) {
 				return r, invalid("quantity must be greater than 0 and at most %v", maxQuantity)
 			}
 		}
-		r.Ingredients = append(r.Ingredients, domain.Ingredient{Name: name, NormalizedName: units.NormalizeName(name), Quantity: ing.Quantity, Unit: unit, Note: note})
+		r.Ingredients = append(r.Ingredients, domain.Ingredient{Name: name, NormalizedName: units.NormalizeName(name), Quantity: ing.Quantity, Unit: unit, Note: note, ProductID: ing.ProductID})
 	}
 	if len(in.Steps) > maxSteps {
 		return r, invalid("at most %d steps", maxSteps)
@@ -156,9 +167,47 @@ func build(in Input) (domain.Recipe, error) {
 	return r, nil
 }
 
+func checkValue(name string, v *float64, limit float64) error {
+	if v != nil && (math.IsNaN(*v) || math.IsInf(*v, 0) || *v < 0 || *v > limit) {
+		return invalid("%s must be between 0 and %v", name, limit)
+	}
+	return nil
+}
+
+func buildNutrition(m domain.Macros) (domain.Macros, error) {
+	for _, c := range []struct {
+		name  string
+		v     *float64
+		limit float64
+	}{{"kcal", m.Kcal, maxKcal}, {"protein", m.Protein, maxGrams}, {"carbs", m.Carbs, maxGrams}, {"fat", m.Fat, maxGrams}} {
+		if err := checkValue(c.name, c.v, c.limit); err != nil {
+			return domain.Macros{}, err
+		}
+	}
+	return m, nil
+}
+
+// checkProducts rejects a remembered product that is unknown or belongs to another household.
+func (s *Service) checkProducts(ctx context.Context, householdID string, r domain.Recipe) error {
+	ok := map[string]bool{}
+	for _, ing := range r.Ingredients {
+		if ing.ProductID == "" || ok[ing.ProductID] {
+			continue
+		}
+		if _, err := s.repo.ProductByID(ctx, householdID, ing.ProductID); err != nil {
+			return err
+		}
+		ok[ing.ProductID] = true
+	}
+	return nil
+}
+
 func (s *Service) Create(ctx context.Context, householdID string, in Input) (domain.Recipe, error) {
 	r, err := build(in)
 	if err != nil {
+		return domain.Recipe{}, err
+	}
+	if err := s.checkProducts(ctx, householdID, r); err != nil {
 		return domain.Recipe{}, err
 	}
 	r.ID, r.HouseholdID = auth.NewID(), householdID
@@ -177,6 +226,9 @@ func (s *Service) Update(ctx context.Context, householdID, id string, in Input) 
 	}
 	old, err := s.repo.RecipeByID(ctx, householdID, id)
 	if err != nil {
+		return domain.Recipe{}, err
+	}
+	if err := s.checkProducts(ctx, householdID, r); err != nil {
 		return domain.Recipe{}, err
 	}
 	r.ID, r.HouseholdID, r.CreatedAt = id, householdID, old.CreatedAt

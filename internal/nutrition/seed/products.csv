@@ -1,0 +1,204 @@
+# GENERATED FILE - do not edit. Regenerate with:
+#   go run ./internal/nutrition/seed/gen -fdc <dir> -mapping internal/nutrition/seed/mapping.csv -out internal/nutrition/seed/products.csv
+# Source: USDA FoodData Central, SR Legacy (April 2018 release), https://fdc.nal.usda.gov/download-datasets
+# Licence: CC0 1.0 Universal (public domain), https://creativecommons.org/publicdomain/zero/1.0/
+# Macros are grams (kcal for energy) per 100 g edible portion; piece_grams in g; density in g/ml.
+name;aliases;kcal;protein;carbs;fat;piece_grams;density_g_ml
+mąka pszenna;mąka|mąki|mąki pszennej|mąką|mąka tortowa|mąki tortowej|mąka uniwersalna|mąki uniwersalnej;364;10.33;76.31;0.98;;0.528
+mąka żytnia;mąki żytniej|mąką żytnią|mąka żytnia razowa|mąki żytniej razowej;349;10.88;75.43;1.52;;0.431
+mąka pełnoziarnista;mąki pełnoziarnistej|mąka razowa|mąki razowej|mąka pszenna razowa|mąki pszennej razowej|mąka pszenna pełnoziarnista|mąki pszennej pełnoziarnistej;340;13.21;71.97;2.5;;0.507
+mąka ziemniaczana;mąki ziemniaczanej|skrobia ziemniaczana|skrobi ziemniaczanej|skrobią ziemniaczaną;357;6.9;83.1;0.34;;0.676
+skrobia kukurydziana;skrobi kukurydzianej|skrobią kukurydzianą|maizena;381;0.26;91.27;0.05;;0.541
+mąka kukurydziana;mąki kukurydzianej|mąką kukurydzianą;361;6.93;76.85;3.86;;0.495
+kasza gryczana;kaszy gryczanej|kaszą gryczaną|kasza gryka|kaszy gryki|gryka|gryki|kasza gryczana prażona|kaszy gryczanej prażonej;346;11.73;74.95;2.71;;0.693
+kasza jaglana;kaszy jaglanej|kaszą jaglaną|jaglanka|kasza jagielna|kaszy jagielnej|kasza jaglana sucha;378;11.02;72.85;4.22;;0.845
+kasza manna;kaszy manny|kaszą manną|manna|manny;360;12.68;72.83;1.05;;0.706
+kasza jęczmienna;kaszy jęczmiennej|kaszą jęczmienną|kasza perłowa|kaszy perłowej|pęczak|pęczaku|kasza pęczak|kaszy pęczak;352;9.91;77.72;1.16;;0.845
+bulgur;bulguru|bulgurem|kasza bulgur|kaszy bulgur;342;12.29;75.87;1.33;;
+kuskus;kuskusu|kuskusem|kus-kus|kus kus|kus-kusu;376;12.76;77.43;0.64;;0.731
+kasza kukurydziana;kaszy kukurydzianej|kaszą kukurydzianą|polenta|polenty|polentą;362;8.12;76.89;3.59;;0.516
+komosa ryżowa;komosy ryżowej|komosą ryżową|quinoa;368;14.12;64.16;6.07;;
+ryż biały;ryż|ryżu|ryżem|ryżu białego|ryż długoziarnisty|ryżu długoziarnistego|ryż basmati|ryżu basmati|ryż jaśminowy|ryżu jaśminowego|ryż biały sypki;365;7.13;79.95;0.66;;0.782
+ryż brązowy;ryżu brązowego|ryżem brązowym|ryż pełnoziarnisty|ryżu pełnoziarnistego|ryż brunatny|ryżu brunatnego;367;7.54;76.25;3.2;;
+ryż krótkoziarnisty;ryżu krótkoziarnistego|ryż arborio|ryżu arborio|ryż do risotto|ryżu do risotto|ryż okrągły|ryżu okrągłego;358;6.5;79.15;0.52;;
+makaron;makaronu|makaronem|makarony|makaronów|makaron spaghetti|makaronu spaghetti|spaghetti|makaron penne|makaronu penne|penne|makaron świderki|świderki|świderków|kokardki|kokardek|makaron rurki|makaronu rurki|rurki|makaron fusilli|fusilli|makaron do lasagne|płaty lasagne|płatów lasagne|lasagne|lasagna;371;13.04;74.67;1.51;;
+makaron jajeczny;makaronu jajecznego|makaron nitki|makaronu nitki|nitki|nitek|makaron tagliatelle|makaronu tagliatelle|tagliatelle|makaron wstążki|makaronu wstążki|makaron jajeczny wstążki|kluski jajeczne;384;14.16;71.27;4.44;;
+makaron pełnoziarnisty;makaronu pełnoziarnistego|makaron razowy|makaronu razowego|makaron z pełnego ziarna|makaronu z pełnego ziarna;352;13.87;73.37;2.93;;
+płatki owsiane;płatków owsianych|płatkami owsianymi|płatki owsiane błyskawiczne|płatków owsianych błyskawicznych|płatki owsiane górskie|płatków owsianych górskich|płatki owsiane zwykłe|płatków owsianych zwykłych;379;13.15;67.7;6.52;;0.342
+płatki kukurydziane;płatków kukurydzianych|płatkami kukurydzianymi|corn flakes;384;5.9;88.01;0.91;;
+bułka tarta;bułki tartej|bułką tartą|panierka|panierki|bułka do panierowania|bułki do panierowania;395;13.35;71.98;5.3;;0.456
+chleb pszenny;chleb|chleba|chlebem|chleb biały|chleba białego|chleba pszennego|chleb jasny|chleba jasnego|chleb tostowy|chleba tostowego|pieczywo|pieczywa|kromka chleba|kromki chleba|kromek chleba|kromki|kromek;274;10.67;47.54;4.53;29;
+chleb żytni;chleba żytniego|chleb razowy|chleba razowego|chleb ciemny|chleba ciemnego|chleb pełnoziarnisty|chleba pełnoziarnistego;259;8.5;48.3;3.3;32;
+bułka;bułki|bułek|bułkę|bułką|bułka pszenna|bułki pszennej|kajzerka|kajzerki|kajzerkę|bułka kajzerka|bułki kajzerki;293;9.9;52.7;4.3;57;
+tortilla;tortilli|tortille|placki tortilla|placków tortilla|placek tortilla|placka tortilla|tortillę;325;8.7;55.6;7.1;49;
+migdały;migdałów|migdałami|migdał|płatki migdałowe|płatków migdałowych|migdały w płatkach|migdałów w płatkach;579;21.15;21.55;49.93;;
+orzechy włoskie;orzechów włoskich|orzechami włoskimi|orzech włoski|orzecha włoskiego|włoskie orzechy|orzechy włoskie łuskane;654;15.23;13.71;65.21;;0.495
+orzechy laskowe;orzechów laskowych|orzechami laskowymi|orzech laskowy|orzecha laskowego|laskowe;628;14.95;16.7;60.75;;
+orzechy nerkowca;orzechów nerkowca|orzechami nerkowca|nerkowce|nerkowców|nerkowcami|orzechy nerkowca;553;18.22;30.19;43.85;;
+orzeszki ziemne;orzeszków ziemnych|orzeszkami ziemnymi|orzechy ziemne|orzechów ziemnych|orzeszki arachidowe|orzeszków arachidowych|arachidy|arachidów|orzeszki;567;25.8;16.13;49.24;;0.617
+masło orzechowe;masła orzechowego|masłem orzechowym;598;22.21;22.31;51.36;;1.091
+pestki słonecznika;pestek słonecznika|pestkami słonecznika|słonecznik|słonecznika|ziarna słonecznika|ziaren słonecznika|słonecznik łuskany|słonecznika łuskanego;584;20.78;20;51.46;;0.592
+pestki dyni;pestek dyni|pestkami dyni|ziarna dyni|ziaren dyni|dynia pestki|pestki z dyni|pestek z dyni;559;30.23;10.71;49.05;;
+siemię lniane;siemienia lnianego|siemieniem lnianym|len|lnu|nasiona lnu|nasion lnu|siemię;534;18.29;28.88;42.16;;
+nasiona chia;nasion chia|chia|nasionami chia|nasiona szałwii hiszpańskiej;486;16.54;42.12;30.74;;
+sezam;sezamu|sezamem|nasiona sezamu|nasion sezamu|sezam biały|sezamu białego;573;17.73;23.45;49.67;;
+mak;maku|makiem|mak niebieski|maku niebieskiego;525;17.99;28.13;41.56;;
+tahini;pasta sezamowa|pasty sezamowej|pastą sezamową|tahini sezamowe;595;17;21.19;53.76;;
+czekolada gorzka;czekolady gorzkiej|czekoladą gorzką|czekolada|czekolady|czekoladę|czekoladą|czekolada deserowa|czekolady deserowej;598;7.79;45.9;42.63;;
+czekolada mleczna;czekolady mlecznej|czekoladą mleczną;535;7.65;59.4;29.66;;
+mleko;mleka|mlekiem|mleko pełne|mleka pełnego|mleko 3,2%|mleka 3,2%|mleko 3.2%|mleka 3.2%|mleko 3,5%|mleka 3,5%|mleko świeże|mleka świeżego;61;3.15;4.8;3.25;;1.031
+mleko 2%;mleka 2%|mlekiem 2%|mleko półtłuste|mleka półtłustego|mleko 1,5%|mleka 1,5%|mleko 1.5%|mleka 1.5%|mleko 2 %;50;3.3;4.8;1.98;;1.031
+mleko skondensowane;mleka skondensowanego|mlekiem skondensowanym|mleko skondensowane słodzone|mleka skondensowanego słodzonego|mleko słodzone|mleka słodzonego;321;7.91;54.4;8.7;;
+mleko w proszku;mleka w proszku|mlekiem w proszku|mleko sproszkowane|mleka sproszkowanego;496;26.32;38.42;26.71;;0.541
+mleko kokosowe;mleka kokosowego|mlekiem kokosowym|mleczko kokosowe|mleczka kokosowego;197;2.02;2.81;21.33;;
+napój migdałowy;napoju migdałowego|napojem migdałowym|mleko migdałowe|mleka migdałowego|mlekiem migdałowym;15;0.4;1.31;0.96;;
+śmietana 18%;śmietany 18%|śmietaną 18%|śmietana|śmietany|śmietanę|śmietaną|śmietana kwaśna|śmietany kwaśnej|śmietana 12%|śmietany 12%|śmietana 15%|śmietany 15%|śmietana 20%|śmietany 20%|śmietana do zup|śmietany do zup;198;2.44;4.63;19.35;;0.972
+śmietana 30%;śmietany 30%|śmietaną 30%|śmietanka|śmietanki|śmietanką|śmietanka 30%|śmietanki 30%|kremówka|kremówki|śmietana kremówka|śmietany kremówki|śmietana do ubijania|śmietany do ubijania|śmietana 36%|śmietany 36%|śmietanka 36%|śmietanki 36%|śmietana słodka|śmietany słodkiej;292;2.17;2.96;30.91;;1.01
+jogurt naturalny;jogurtu naturalnego|jogurtem naturalnym|jogurt|jogurtu|jogurtem|jogurty|jogurtów|jogurt biały|jogurtu białego;61;3.47;4.66;3.25;;1.036
+kefir;kefiru|kefirem|kefir naturalny|kefiru naturalnego;43;3.79;4.77;1.02;;1.027
+maślanka;maślanki|maślanką|maślanka naturalna|maślanki naturalnej;40;3.31;4.79;1.07;;1.036
+twaróg;twarogu|twarogiem|ser biały|sera białego|serem białym|twaróg półtłusty|twarogu półtłustego|twaróg tłusty|twarogu tłustego|ser twarogowy|sera twarogowego|twaróg sernikowy|twarogu sernikowego|twaróg mielony|twarogu mielonego;98;11.12;3.38;4.3;;
+ser żółty;sera żółtego|serem żółtym|ser gouda|sera gouda|gouda|goudy|ser edam|sera edam|edam|edamu|ser w plastrach|sera w plastrach|ser w plasterkach|sera w plasterkach|plastry sera|plastrów sera|ser tarty|sera tartego|ser cheddar|sera cheddar|cheddar|cheddara;356;24.94;2.22;27.44;;
+mozzarella;mozzarelli|mozzarellą|ser mozzarella|sera mozzarella|serem mozzarella|kulka mozzarelli|kulki mozzarelli|kulek mozzarelli;299;22.17;2.4;22.14;;
+parmezan;parmezanu|parmezanem|ser parmezan|sera parmezan|serem parmezan|parmezan tarty|parmezanu tartego|grana padano;392;35.75;3.22;25;;
+feta;fety|fetą|ser feta|sera feta|serem feta|ser typu feta|sera typu feta;265;14.21;3.88;21.49;;
+serek śmietankowy;serka śmietankowego|serkiem śmietankowym|serek kremowy|serka kremowego|ser śmietankowy|sera śmietankowego|serek do smarowania|serka do smarowania|serek homogenizowany|serka homogenizowanego|ser kremowy|sera kremowego;350;6.15;5.52;34.44;;
+ricotta;ricotty|ricottą|ser ricotta|sera ricotta;150;7.54;7.27;10.18;;
+masło;masła|masłem|masło extra|masła extra|masło osełkowe|masła osełkowego|masło klarowane|masła klarowanego;717;0.85;0.06;81.11;;0.959
+margaryna;margaryny|margaryną|margaryna do pieczenia|margaryny do pieczenia|margaryna kostka|margaryny kostka;717;0.16;0.7;80.71;;0.959
+jajko;jajka|jajek|jaja|jajo|jajkiem|jajkami|jajami|jajko kurze|jajka kurze|jaj|jajku|jajka całe|jajek całych|jajko całe;143;12.56;0.72;9.51;50;
+żółtko;żółtka|żółtek|żółtkiem|żółtko jajka|żółtka jajka|żółtko jaja|żółtka jaja;322;15.86;3.59;26.54;17;
+białko jaja;białka jaja|białko|białka|białek|białkiem|białko jajka|białka jajka|białko jajka kurzego|białko z jajka|białka z jajka;52;10.9;0.73;0.17;33;
+pierś z kurczaka;piersi z kurczaka|piersią z kurczaka|pierś kurczaka|piersi kurczaka|filet z kurczaka|fileta z kurczaka|filetem z kurczaka|filety z kurczaka|filetów z kurczaka|filet z piersi kurczaka|fileta z piersi kurczaka|filetów z piersi kurczaka|pierś drobiowa|piersi drobiowej|filet drobiowy|fileta drobiowego|kurczak filet|kurczaka filet|kurczak|kurczaka|kurczakiem|mięso z kurczaka|mięsa z kurczaka|mięso drobiowe|mięsa drobiowego;120;22.5;0;2.62;;
+udko z kurczaka;udka z kurczaka|udkiem z kurczaka|udko kurczaka|udka kurczaka|udek z kurczaka|udek kurczaka|udo z kurczaka|uda z kurczaka|ud z kurczaka|udo kurczaka|uda kurczaka|podudzie z kurczaka|podudzia z kurczaka|podudzi z kurczaka|podudzie|podudzia|podudzi;221;16.52;0.25;16.61;;
+skrzydełka z kurczaka;skrzydełek z kurczaka|skrzydełkami z kurczaka|skrzydełka kurczaka|skrzydełek kurczaka|skrzydełka|skrzydełek|skrzydełko z kurczaka|skrzydełko kurczaka;191;17.52;0;12.85;;
+wątróbka drobiowa;wątróbki drobiowej|wątróbką drobiową|wątróbka z kurczaka|wątróbki z kurczaka|wątróbka kurczaka|wątróbki kurczaka|wątróbka|wątróbki|wątróbkę|wątróbką;119;16.92;0.73;4.83;;
+pierś z indyka;piersi z indyka|piersią z indyka|pierś indyka|piersi indyka|filet z indyka|fileta z indyka|filetem z indyka|filety z indyka|filetów z indyka|indyk|indyka|indykiem|mięso z indyka|mięsa z indyka;157;21.89;0;7.02;;
+mięso mielone z indyka;mięsa mielonego z indyka|mielone z indyka|mielonego z indyka|indyk mielony|indyka mielonego|mięso mielone indycze|mięsa mielonego indyczego|mięso mielone drobiowe|mięsa mielonego drobiowego;148;19.66;0;7.66;;
+mięso mielone wieprzowe;mięsa mielonego wieprzowego|mielone wieprzowe|mielonego wieprzowego|wieprzowina mielona|wieprzowiny mielonej|mięso mielone z wieprzowiny|mięsa mielonego z wieprzowiny;263;16.88;0;21.19;;
+mięso mielone wołowe;mięsa mielonego wołowego|mielone wołowe|mielonego wołowego|mięso mielone|mięsa mielonego|mielone|mielonego|wołowina mielona|wołowiny mielonej|mięso mielone z wołowiny|mięsa mielonego z wołowiny|mięso mielone mieszane|mięsa mielonego mieszanego;254;17.17;0;20;;
+schab;schabu|schabem|schab wieprzowy|schabu wieprzowego|schab surowy|schabu surowego|kotlet schabowy|kotleta schabowego|kotlety schabowe|kotletów schabowych|kotlet wieprzowy|kotleta wieprzowego|wieprzowina|wieprzowiny|wieprzowiną|mięso wieprzowe|mięsa wieprzowego;198;19.74;0;12.58;;
+karkówka;karkówki|karkówką|karkówkę|łopatka|łopatki|łopatką|łopatkę|łopatka wieprzowa|łopatki wieprzowej|karkówka wieprzowa|karkówki wieprzowej|szynka wieprzowa surowa|szynki wieprzowej surowej|gulasz wieprzowy|gulaszu wieprzowego;236;17.18;0;17.99;;
+polędwiczka wieprzowa;polędwiczki wieprzowej|polędwiczką wieprzową|polędwiczka|polędwiczki|polędwiczkę|polędwiczką|polędwica wieprzowa|polędwicy wieprzowej;109;20.95;0;2.17;;
+żeberka;żeberek|żeberkami|żeberka wieprzowe|żeberek wieprzowych|żeberko|żeberka z wieprzowiny;277;15.47;0;23.4;;
+wołowina;wołowiny|wołowiną|mięso wołowe|mięsa wołowego|gulasz wołowy|gulaszu wołowego|wołowina na gulasz|wołowiny na gulasz|wołowina gulaszowa|wołowiny gulaszowej|rostbef|rostbefu|antrykot|antrykotu|polędwica wołowa|polędwicy wołowej|udziec wołowy|udźca wołowego|mostek wołowy|mostka wołowego|szponder|szpondra;249;19.14;0;18.57;;
+kaczka;kaczki|kaczką|mięso z kaczki|mięsa z kaczki|pierś z kaczki|piersi z kaczki|udko z kaczki|udka z kaczki;135;18.28;0.94;5.95;;
+szynka;szynki|szynką|szynka gotowana|szynki gotowanej|szynka wędzona|szynki wędzonej|szynka kanapkowa|szynki kanapkowej|plastry szynki|plastrów szynki|szynka w plastrach|szynki w plastrach|szynka drobiowa|szynki drobiowej;164;16.6;3.63;8.8;;
+boczek;boczku|boczkiem|boczek wędzony|boczku wędzonego|boczek surowy|boczku surowego|boczek wieprzowy|boczku wieprzowego|plastry boczku|plastrów boczku|boczek w plastrach|boczku w plastrach;393;13.66;0;37.13;28;
+kiełbasa;kiełbasy|kiełbasą|kiełbasę|kiełbaski|kiełbasek|kiełbaską|kiełbasa wędzona|kiełbasy wędzonej|kiełbasa śląska|kiełbasy śląskiej|kiełbasa podwawelska|kiełbasy podwawelskiej|kiełbasa krakowska|kiełbasy krakowskiej|kiełbasa zwyczajna|kiełbasy zwyczajnej|kiełbasa biała|kiełbasy białej|kiełbasa do grillowania|kiełbasy do grillowania|kabanosy|kabanosów|kabanos|kabanosa;301;12.07;1.98;26.56;;
+parówki;parówek|parówkami|parówka|parówkę|parówki cienkie|parówek cienkich|parówki z indyka|parówek z indyka|parówki drobiowe|parówek drobiowych|wiejskie parówki|parówki wiejskie|parówek wiejskich|serdelki|serdelków|serdelek|serdelka;269;12.81;0.28;23.68;76;
+łosoś;łososia|łososiem|filet z łososia|fileta z łososia|filety z łososia|filetów z łososia|łosoś świeży|łososia świeżego|łosoś atlantycki|łososia atlantyckiego|stek z łososia|steku z łososia|steki z łososia|steków z łososia|łosoś norweski|łososia norweskiego;208;20.42;0;13.42;;
+dorsz;dorsza|dorszem|filet z dorsza|fileta z dorsza|filety z dorsza|filetów z dorsza|dorsz świeży|dorsza świeżego|dorsz atlantycki|dorsza atlantyckiego;82;17.81;0;0.67;;
+tuńczyk z puszki;tuńczyka z puszki|tuńczykiem z puszki|tuńczyk|tuńczyka|tuńczykiem|tuńczyk w wodzie|tuńczyka w wodzie|tuńczyk w sosie własnym|tuńczyka w sosie własnym|tuńczyk konserwowy|tuńczyka konserwowego|puszka tuńczyka|puszki tuńczyka;86;19.44;0;0.96;;
+śledź;śledzia|śledziem|śledzie|śledzi|śledziami|filety śledziowe|filetów śledziowych|filet śledziowy|fileta śledziowego|śledź solony|śledzia solonego|śledź w oleju|śledzia w oleju;158;17.96;0;9.04;;
+makrela;makreli|makrelą|makrela świeża|makreli świeżej|makrela wędzona|makreli wędzonej|filet z makreli|fileta z makreli|filety z makreli|filetów z makreli;205;18.6;0;13.89;;
+pstrąg;pstrąga|pstrągiem|pstrągi|pstrągów|filet z pstrąga|fileta z pstrąga|pstrąg tęczowy|pstrąga tęczowego;141;19.94;0;6.18;;
+krewetki;krewetek|krewetkami|krewetka|krewetkę|krewetki mrożone|krewetek mrożonych|krewetki obrane|krewetek obranych|krewetki tygrysie|krewetek tygrysich;71;13.61;0.91;1.01;;
+ziemniaki;ziemniaków|ziemniakami|ziemniak|ziemniaka|ziemniakiem|ziemniaki młode|ziemniaków młodych|młode ziemniaki|młodych ziemniaków|kartofle|kartofli|kartoflami|kartofel|kartofla|kartoflem|ziemniaki surowe|ziemniaków surowych|ziemniaki obrane|ziemniaków obranych|ziemniaki do puree|ziemniaków do puree|ziemniaki na frytki|ziemniaków na frytki|ziemniaki do pieczenia|ziemniaków do pieczenia;77;2.05;17.49;0.09;213;
+batat;bataty|batatów|batatem|batata|słodkie ziemniaki|słodkich ziemniaków|słodki ziemniak|słodkiego ziemniaka|ziemniak słodki|ziemniaka słodkiego|ziemniaki słodkie|ziemniaków słodkich;86;1.57;20.12;0.05;;
+cebula;cebuli|cebulę|cebulą|cebule|cebul|cebula biała|cebuli białej|cebula żółta|cebuli żółtej|cebula czerwona|cebuli czerwonej|cebulka|cebulki|cebulkę|cebulek|cebula zwyczajna|cebuli zwyczajnej|cebula szklista|cebuli szklistej;40;1.1;9.34;0.1;110;
+szalotka;szalotki|szalotkę|szalotką|szalotek|szalotkami|cebula szalotka|cebuli szalotki;72;2.5;16.8;0.1;;
+szczypiorek;szczypiorku|szczypiorkiem|szczypior|szczypioru|szczypior zielony|szczypioru zielonego|szczypiorek świeży|szczypiorku świeżego|szczypiorek posiekany|szczypiorku posiekanego;30;3.27;4.35;0.73;;
+dymka;dymki|dymką|dymkę|cebula dymka|cebuli dymki|cebulka dymka|cebulki dymki|cebula zielona|cebuli zielonej|zielona cebula|zielonej cebuli|zielona cebulka|zielonej cebulki|dymki zielonej;32;1.83;7.34;0.19;15;
+czosnek;czosnku|czosnkiem|ząbek czosnku|ząbka czosnku|ząbki czosnku|ząbków czosnku|ząbek|ząbki|ząbków|ząbkiem czosnku|czosnek świeży|czosnku świeżego;149;6.36;33.06;0.5;3;
+pomidor;pomidora|pomidorem|pomidory|pomidorów|pomidorami|pomidory świeże|pomidorów świeżych|pomidor malinowy|pomidora malinowego|pomidory malinowe|pomidorów malinowych|pomidorki|pomidorków|pomidorki koktajlowe|pomidorków koktajlowych|pomidor koktajlowy|pomidora koktajlowego|pomidory koktajlowe|pomidorów koktajlowych|pomidory cherry|pomidorów cherry|pomidor cherry|pomidora cherry|pomidor gruntowy|pomidora gruntowego;18;0.88;3.89;0.2;123;
+pomidory z puszki;pomidorów z puszki|pomidorami z puszki|pomidory krojone|pomidorów krojonych|pomidory w puszce|pomidorów w puszce|pomidory w sosie własnym|pomidorów w sosie własnym|krojone pomidory|krojonych pomidorów|puszka pomidorów|puszki pomidorów|pomidory pelati|pomidorów pelati|pomidory obrane|pomidorów obranych|pomidory konserwowe|pomidorów konserwowych|pomidory w kawałkach|pomidorów w kawałkach;16;0.79;3.47;0.25;;
+koncentrat pomidorowy;koncentratu pomidorowego|koncentratem pomidorowym|koncentrat|koncentratu|koncentratem|koncentrat z pomidorów|koncentratu z pomidorów|pasta pomidorowa|pasty pomidorowej;82;4.32;18.91;0.47;;1.082
+przecier pomidorowy;przecieru pomidorowego|przecierem pomidorowym|passata|passaty|passatą|przecier|przecieru|przecierem|sos pomidorowy|sosu pomidorowego|sos pomidorowy z puszki|sosu pomidorowego z puszki|passata pomidorowa|passaty pomidorowej;38;1.65;8.98;0.21;;1.057
+marchew;marchewki|marchewka|marchewkę|marchwi|marchewek|marchewką|marchewkami|marchew świeża|marchwi świeżej|marchewka świeża|marchewki świeżej|marchew surowa|marchwi surowej|marchew młoda|marchwi młodej|marchewka młoda|marchewki młodej;41;0.93;9.58;0.24;61;
+pietruszka korzeń;pietruszki korzeń|pietruszkę korzeń|pietruszka korzeniowa|pietruszki korzeniowej|pietruszkę korzeniową|korzeń pietruszki|korzenia pietruszki|korzeniem pietruszki|pasternak|pasternaku|pasternakiem|pietruszka biała|pietruszki białej;75;1.2;17.99;0.3;;
+pietruszka natka;natka pietruszki|natki pietruszki|natką pietruszki|natkę pietruszki|natka|natki|natką|natkę|pietruszka zielona|pietruszki zielonej|pietruszka świeża|pietruszki świeżej|świeża pietruszka|świeżej pietruszki|zielona pietruszka|zielonej pietruszki|pietruszka listkowa|pietruszki listkowej|pietruszka|pietruszki|pietruszką|pietruszkę;36;2.97;6.33;0.79;;0.257
+seler;selera|selerem|seler korzeń|selera korzenia|selerem korzeniem|korzeń selera|korzenia selera|seler korzeniowy|selera korzeniowego|selerem korzeniowym|seler bulwiasty|selera bulwiastego|seler świeży|selera świeżego;42;1.5;9.2;0.3;;
+seler naciowy;selera naciowego|selerem naciowym|łodyga selera|łodygi selera|łodyg selera|łodygę selera|seler łodygowy|selera łodygowego|naciowy|selery naciowe|selerów naciowych|nać selera|naci selera|seler zielony|selera zielonego;14;0.69;2.97;0.17;40;
+por;pora|porem|pory|porów|porami|por świeży|pora świeżego|biała część pora|białej części pora|część biała pora|części białej pora|zielona część pora|zielonej części pora|por biały|pora białego;61;1.5;14.15;0.3;89;
+koperek;koperku|koperkiem|koperek świeży|koperku świeżego|świeży koperek|świeżego koperku|natka koperku|natki koperku|natką koperku|koper|kopru|koprem|koper świeży|kopru świeżego|koperek posiekany|koperku posiekanego|zielony koperek|zielonego koperku;43;3.46;7.02;1.12;;
+ogórek;ogórka|ogórki|ogórków|ogórkiem|ogórkami|ogórek świeży|ogórka świeżego|ogórki świeże|ogórków świeżych|ogórek gruntowy|ogórka gruntowego|ogórek zielony|ogórka zielonego;15;0.65;3.63;0.11;301;
+ogórki kiszone;ogórków kiszonych|ogórkami kiszonymi|ogórek kiszony|ogórka kiszonego|ogórki konserwowe|ogórków konserwowych|ogórek konserwowy|ogórka konserwowego|korniszony|korniszonów|korniszon|korniszona|ogórki małosolne|ogórków małosolnych|ogórek małosolny|ogórka małosolnego|kiszone ogórki|kiszonych ogórków;12;0.5;2.41;0.3;;
+kapusta kiszona;kapusty kiszonej|kapustą kiszoną|kapustę kiszoną|kiszona kapusta|kiszonej kapusty|kiszoną kapustę|kapusta kwaszona|kapusty kwaszonej;19;0.91;4.28;0.14;;
+kapusta biała;kapusty białej|kapustą białą|kapusta|kapusty|kapustę|kapustą|kapusta młoda|kapusty młodej|kapusta świeża|kapusty świeżej|kapusta włoska|kapusty włoskiej|główka kapusty|główki kapusty|liście kapusty|liści kapusty;25;1.28;5.8;0.1;908;
+kapusta pekińska;kapusty pekińskiej|kapustą pekińską|kapustę pekińską|pekińska|pekińskiej|kapusta chińska|kapusty chińskiej|pekinka|pekinki;16;1.2;3.23;0.2;;
+papryka;papryki|paprykę|papryką|papryk|paprykami|papryka czerwona|papryki czerwonej|paprykę czerwoną|papryka żółta|papryki żółtej|paprykę żółtą|papryka kolorowa|papryki kolorowej|papryka świeża|papryki świeżej;26;0.99;6.03;0.3;119;
+papryka zielona;papryki zielonej|paprykę zieloną|papryką zieloną|zielona papryka|zielonej papryki|zieloną paprykę;20;0.86;4.64;0.17;119;
+papryczka chili;papryczki chili|papryczką chili|papryczkę chili|chili|papryczka|papryczki|papryczkę|papryczka ostra|papryczki ostrej|papryka chili|papryki chili|chilli|papryczka chilli|papryczki chilli;40;1.87;8.81;0.44;;
+sałata;sałaty|sałatą|sałatę|sałata zielona|sałaty zielonej|sałata masłowa|sałaty masłowej|sałata lodowa|sałaty lodowej|liście sałaty|liści sałaty|mix sałat|mixu sałat|mieszanka sałat|mieszanki sałat|główka sałaty|główki sałaty;15;1.36;2.87;0.15;;
+sałata rzymska;sałaty rzymskiej|sałatę rzymską|rzymska|rzymskiej|sałata romana|sałaty romana;17;1.23;3.29;0.3;;
+rukola;rukoli|rukolą|rukolę|rokietta|rokietty;25;2.58;3.65;0.66;;
+szpinak;szpinaku|szpinakiem|liście szpinaku|liści szpinaku|świeży szpinak|świeżego szpinaku|szpinak świeży|szpinaku świeżego|szpinak baby|szpinaku baby|młody szpinak|młodego szpinaku;23;2.86;3.63;0.39;;
+brokuł;brokuła|brokuły|brokułów|brokułami|brokułem|róże brokułu|róż brokułu|różyczki brokułu|różyczek brokułu|brokuł świeży|brokuła świeżego|brokuł mrożony|brokuła mrożonego|brokuły mrożone|brokułów mrożonych;34;2.82;6.64;0.37;;
+kalafior;kalafiora|kalafiory|kalafiorów|kalafiorem|kalafiorami|róże kalafiora|róż kalafiora|różyczki kalafiora|różyczek kalafiora|kalafior świeży|kalafiora świeżego|kalafior mrożony|kalafiora mrożonego|kalafiory mrożone|kalafiorów mrożonych;25;1.92;4.97;0.28;588;
+cukinia;cukinii|cukinię|cukinią|cukinie|cukinia zielona|cukinii zielonej|cukinia świeża|cukinii świeżej|kabaczek|kabaczka|kabaczkiem|kabaczki|kabaczków;17;1.21;3.11;0.32;196;
+bakłażan;bakłażana|bakłażany|bakłażanów|bakłażanem|bakłażanami|oberżyna|oberżyny|oberżynę|oberżyną|oberżyn;25;0.98;5.88;0.18;548;
+dynia;dyni|dynię|dynią|dynie|dyń|dynia hokkaido|dyni hokkaido|dynia piżmowa|dyni piżmowej|miąższ dyni|miąższu dyni|dynia pieczona|dyni pieczonej;26;1;6.5;0.1;;
+burak;buraka|buraki|buraków|burakiem|burakami|burak czerwony|buraka czerwonego|buraki czerwone|buraków czerwonych|burak ćwikłowy|buraka ćwikłowego|buraki ćwikłowe|buraków ćwikłowych|buraczki|buraczków|buraczek|buraczka|buraki do barszczu|buraków do barszczu;43;1.61;9.56;0.17;82;
+jarmuż;jarmużu|jarmużem|liście jarmużu|liści jarmużu|jarmuż świeży|jarmużu świeżego|kale;35;2.92;4.42;1.49;;
+rzodkiewka;rzodkiewki|rzodkiewek|rzodkiewką|rzodkiewkę|rzodkiewkami|pęczek rzodkiewki|pęczka rzodkiewki|pęczek rzodkiewek|pęczka rzodkiewek;16;0.68;3.4;0.1;4.5;
+kalarepa;kalarepy|kalarepę|kalarepą|kalarepki|kalarepek;27;1.7;6.2;0.1;;
+brukselka;brukselki|brukselek|brukselką|brukselkę|brukselkami|kapusta brukselska|kapusty brukselskiej|brukselki mrożone|brukselek mrożonych;43;3.38;8.95;0.3;;
+szparagi;szparagów|szparagami|szparag|szparaga|szparagi zielone|szparagów zielonych|szparagi białe|szparagów białych;20;2.2;3.88;0.12;;
+kukurydza z puszki;kukurydzy z puszki|kukurydzą z puszki|kukurydza|kukurydzy|kukurydzę|kukurydzą|kukurydza konserwowa|kukurydzy konserwowej|kukurydza słodka|kukurydzy słodkiej|kukurydza w puszce|kukurydzy w puszce|ziarna kukurydzy|ziaren kukurydzy|kukurydza mrożona|kukurydzy mrożonej;67;2.29;14.34;1.22;;
+groszek zielony;groszku zielonego|groszkiem zielonym|groszek|groszku|groszkiem|zielony groszek|zielonego groszku|groszek mrożony|groszku mrożonego|groszek konserwowy|groszku konserwowego|groszek z puszki|groszku z puszki;81;5.42;14.45;0.4;;0.613
+fasolka szparagowa;fasolki szparagowej|fasolką szparagową|fasolkę szparagową|fasolka|fasolki|fasolkę|fasolką|fasolka zielona|fasolki zielonej|fasolka żółta|fasolki żółtej|fasolka mrożona|fasolki mrożonej|fasolka szparagowa mrożona|fasolki szparagowej mrożonej;31;1.83;6.97;0.22;;
+fasola czerwona;fasoli czerwonej|fasolą czerwoną|fasolę czerwoną|czerwona fasola|czerwonej fasoli|czerwoną fasolę|fasola czerwona z puszki|fasoli czerwonej z puszki|fasola kidney|fasoli kidney;337;22.53;61.29;1.06;;0.778
+fasola biała;fasoli białej|fasolą białą|fasolę białą|biała fasola|białej fasoli|białą fasolę|fasola|fasoli|fasolę|fasolą|fasola jaś|fasoli jaś|jaś|jasia|fasola biała z puszki|fasoli białej z puszki|fasola cannellini|fasoli cannellini;333;23.36;60.27;0.85;;0.854
+ciecierzyca;ciecierzycy|ciecierzycą|ciecierzycę|cieciorka|cieciorki|cieciorkę|cieciorką|ciecierzyca z puszki|ciecierzycy z puszki|cieciorka z puszki|cieciorki z puszki;378;20.47;62.95;6.04;;0.845
+soczewica;soczewicy|soczewicą|soczewicę|soczewica czerwona|soczewicy czerwonej|soczewicę czerwoną|soczewica zielona|soczewicy zielonej|soczewicę zieloną|soczewica brązowa|soczewicy brązowej|czerwona soczewica|czerwonej soczewicy|zielona soczewica|zielonej soczewicy;352;24.63;63.35;1.06;;0.812
+groch;grochu|grochem|groch łuskany|grochu łuskanego|groch suchy|grochu suchego|groch połówki|grochu połówki|groch żółty|grochu żółtego;364;23.12;61.63;3.89;;
+bób;bobu|bobem|bób świeży|bobu świeżego|bób mrożony|bobu mrożonego;72;5.6;11.7;0.6;;
+pieczarki;pieczarek|pieczarkami|pieczarka|pieczarkę|pieczarką|pieczarki białe|pieczarek białych|pieczarki świeże|pieczarek świeżych|pieczarki brązowe|pieczarek brązowych|pieczarki krojone|pieczarek krojonych;22;3.09;3.26;0.34;18;
+imbir;imbiru|imbirem|korzeń imbiru|korzenia imbiru|świeży imbir|świeżego imbiru|imbir świeży|imbiru świeżego|imbir tarty|imbiru tartego;80;1.82;17.77;0.75;;
+chrzan;chrzanu|chrzanem|tarty chrzan|tartego chrzanu|chrzan tarty|chrzanu tartego|chrzan ze słoika|chrzanu ze słoika;48;1.18;11.29;0.69;;
+oliwki;oliwek|oliwkami|oliwka|oliwkę|oliwką|oliwki czarne|oliwek czarnych|oliwki zielone|oliwek zielonych|czarne oliwki|czarnych oliwek|zielone oliwki|zielonych oliwek;116;0.84;6.04;10.9;;
+ketchup;ketchupu|ketchupem|keczup|keczupu|keczupem;101;1.04;27.4;0.1;;1.15
+musztarda;musztardy|musztardą|musztarda sarepska|musztardy sarepskiej|musztarda dijon|musztardy dijon|musztarda stołowa|musztardy stołowej;60;3.74;5.83;3.34;;1.052
+majonez;majonezu|majonezem|majonez kielecki|majonezu kieleckiego;680;0.96;0.57;74.85;;0.93
+jabłko;jabłka|jabłek|jabłkiem|jabłkami|jabłko świeże|jabłka świeże|jabłek świeżych|jabłko czerwone|jabłka czerwone|jabłko zielone|jabłka zielone|jabłko kwaśne|jabłka kwaśne|jabłka do szarlotki|jabłek do szarlotki|papierówka|papierówki|papierówek|szara reneta|szarej renety|antonówka|antonówki|antonówek;52;0.26;13.81;0.17;182;
+gruszka;gruszki|gruszek|gruszką|gruszkę|gruszkami|gruszka świeża|gruszki świeże|gruszek świeżych|gruszka dojrzała|gruszki dojrzałe;63;0.39;15.01;0.16;177;
+banan;banana|banany|bananów|bananem|bananami|banan dojrzały|banana dojrzałego|banany dojrzałe|bananów dojrzałych;89;1.09;22.84;0.33;118;
+pomarańcza;pomarańczy|pomarańczę|pomarańczą|pomarańcze|pomarańcz|pomarańczami|skórka z pomarańczy|skórki z pomarańczy|skórkę z pomarańczy|skórka pomarańczowa|skórki pomarańczowej;47;0.94;11.75;0.12;131;
+cytryna;cytryny|cytrynę|cytrynie|cytrynami|cytryn|cytryną|skórka z cytryny|skórki z cytryny|skórkę z cytryny|skórka cytrynowa|skórki cytrynowej|plasterek cytryny|plasterka cytryny|plasterki cytryny|plasterków cytryny|ćwiartka cytryny|ćwiartki cytryny|połówka cytryny|połówki cytryny;29;1.1;9.32;0.3;84;
+sok z cytryny;soku z cytryny|sokiem z cytryny|sok cytrynowy|soku cytrynowego|sokiem cytrynowym|świeży sok z cytryny|świeżego soku z cytryny;22;0.35;6.9;0.24;;1.031
+mandarynka;mandarynki|mandarynek|mandarynkę|mandarynką|mandarynkami|klementynka|klementynki|klementynek|klementynkę|klementynkami;53;0.81;13.34;0.31;88;
+truskawki;truskawek|truskawkami|truskawka|truskawkę|truskawką|truskawki świeże|truskawek świeżych|truskawki mrożone|truskawek mrożonych;32;0.67;7.68;0.3;;
+maliny;malin|malinami|malina|malinę|maliny świeże|malin świeżych|maliny mrożone|malin mrożonych;52;1.2;11.94;0.65;;
+borówki;borówek|borówkami|borówka|borówkę|jagody|jagód|jagodami|jagoda|borówki amerykańskie|borówek amerykańskich|czarne jagody|czarnych jagód;57;0.74;14.49;0.33;;
+winogrona;winogron|winogronami|winogrono|winogrona czerwone|winogron czerwonych|winogrona zielone|winogron zielonych|winogrona bezpestkowe|winogron bezpestkowych;69;0.72;18.1;0.16;;
+brzoskwinia;brzoskwini|brzoskwinię|brzoskwinią|brzoskwinie|brzoskwiń|brzoskwiniami|nektarynka|nektarynki|nektarynek|nektarynkę|nektarynkami;39;0.91;9.54;0.25;150;
+śliwki;śliwek|śliwkami|śliwka|śliwkę|śliwką|śliwki świeże|śliwek świeżych|śliwki węgierki|śliwek węgierek|węgierki|węgierek;46;0.7;11.42;0.28;66;
+wiśnie;wiśni|wiśniami|wiśnia|wiśnię|wiśnią|wiśnie świeże|wiśni świeżych|wiśnie mrożone|wiśni mrożonych|wiśnie bez pestek|wiśni bez pestek;50;1;12.18;0.3;;
+czereśnie;czereśni|czereśniami|czereśnia|czereśnię|czereśnią|czereśnie świeże|czereśni świeżych;63;1.06;16.01;0.2;8.2;
+arbuz;arbuza|arbuzem|arbuzy|arbuzów|miąższ arbuza|miąższu arbuza;30;0.61;7.55;0.15;;
+melon;melona|melonem|melony|melonów|melon cantaloupe|melona cantaloupe;34;0.84;8.16;0.19;;
+awokado;awokada|awokadem|awokado dojrzałe|awokada dojrzałego;160;2;8.53;14.66;201;
+rodzynki;rodzynek|rodzynkami|rodzynka|rodzynkę|rodzynki suszone|rodzynek suszonych|rodzynki sułtańskie|rodzynek sułtańskich;299;3.3;79.32;0.25;;
+morele suszone;moreli suszonych|morelami suszonymi|suszone morele|suszonych moreli|morela suszona|moreli suszonej|morele suszone niesiarkowane|moreli suszonych niesiarkowanych;241;3.39;62.64;0.51;;
+morela;moreli|morelę|morelą|morele|morelami;48;1.4;11.12;0.39;35;
+daktyle;daktyli|daktylami|daktyl|daktyla|daktyle suszone|daktyli suszonych|daktyle medjool|daktyli medjool|daktyle bez pestek|daktyli bez pestek;277;1.81;74.97;0.15;24;
+kiwi;kiwi świeże|kiwi zielone|owoc kiwi|owocu kiwi;61;1.14;14.66;0.52;69;
+ananas;ananasa|ananasem|ananasy|ananasów|ananas świeży|ananasa świeżego|miąższ ananasa|miąższu ananasa;50;0.54;13.12;0.12;;
+żurawina;żurawiny|żurawiną|żurawinę|żurawina świeża|żurawiny świeżej|żurawina mrożona|żurawiny mrożonej;46;0.46;11.97;0.13;;
+porzeczki czarne;porzeczek czarnych|porzeczkami czarnymi|porzeczki|porzeczek|porzeczkami|porzeczka|porzeczkę|czarna porzeczka|czarnej porzeczki|czarne porzeczki|czarnych porzeczek;63;1.4;15.38;0.41;;
+grejpfrut;grejpfruta|grejpfrutem|grejpfruty|grejpfrutów|grejpfrut różowy|grejpfruta różowego|grejpfrut czerwony|grejpfruta czerwonego;32;0.63;8.08;0.1;;
+cukier;cukru|cukrem|cukier biały|cukru białego|cukier kryształ|cukru kryształu|cukier kryształowy|cukru kryształowego;387;0;99.98;0;;0.845
+cukier puder;cukru pudru|cukrem pudrem|cukier puder;389;0;99.77;0;;0.507
+cukier brązowy;cukru brązowego|cukrem brązowym|cukier trzcinowy|cukru trzcinowego|cukier muscovado|cukru muscovado;380;0.12;98.09;0;;0.93
+miód;miodu|miodem|miód pszczeli|miodu pszczelego|miód naturalny|miodu naturalnego|miód płynny|miodu płynnego;304;0.3;82.4;0;;1.42
+syrop klonowy;syropu klonowego|syropem klonowym|syrop z klonu|syropu z klonu;260;0.04;67.04;0.06;;
+dżem;dżemu|dżemem|dżemy|dżemów|konfitura|konfitury|konfiturą|dżem owocowy|dżemu owocowego|powidła|powideł|powidłami;278;0.37;68.86;0.07;;
+melasa;melasy|melasą|melasa trzcinowa|melasy trzcinowej;290;0;74.73;0.1;;
+sól;soli|solą|sól kuchenna|soli kuchennej|sól morska|soli morskiej|sól himalajska|soli himalajskiej;0;0;0;0;;1.217
+kurkuma;kurkumy|kurkumą|kurkuma mielona|kurkumy mielonej;312;9.68;67.14;3.25;;
+gałka muszkatołowa;gałki muszkatołowej|gałką muszkatołową|gałka muszkatołowa mielona|gałki muszkatołowej mielonej|muszkatołowa|muszkatołowej;525;5.84;49.29;36.31;;
+soda oczyszczona;sody oczyszczonej|sodą oczyszczoną|soda|sody|sodą|soda do pieczenia|sody do pieczenia;0;0;0;0;;0.933
+drożdże;drożdży|drożdżami|drożdże świeże|drożdży świeżych|drożdże prasowane|drożdży prasowanych|kostka drożdży|kostki drożdży;105;8.4;18.1;1.9;;
+żelatyna;żelatyny|żelatyną|żelatyna spożywcza|żelatyny spożywczej;335;85.6;0;0.1;;
+ocet;octu|octem|ocet spirytusowy|octu spirytusowego|ocet 10%|octu 10%;18;0;0.04;0;;1.008
+sos sojowy;sosu sojowego|sosem sojowym|sos soja|sosu soja;53;8.14;4.93;0.57;;1.082
+olej rzepakowy;oleju rzepakowego|olejem rzepakowym|olej|oleju|olejem|olej do smażenia|oleju do smażenia|olej roślinny|oleju roślinnego|olej rafinowany|oleju rafinowanego;884;0;0;100;;0.947
+olej słonecznikowy;oleju słonecznikowego|olejem słonecznikowym;884;0;0;100;;0.92
+oliwa;oliwy|oliwą|oliwa z oliwek|oliwy z oliwek|oliwą z oliwek|oliwa extra virgin|oliwy extra virgin|oliwa z oliwek extra virgin|oliwy z oliwek extra virgin|oliwa extra vergine|oliwy extra vergine;884;0;0;100;;0.913
+olej kokosowy;oleju kokosowego|olejem kokosowym;892;0;0;99.06;;0.92
+olej sezamowy;oleju sezamowego|olejem sezamowym;884;0;0;100;;0.92
+smalec;smalcu|smalcem|smalec wieprzowy|smalcu wieprzowego;902;0;0;100;;0.866
+tofu;tofu naturalne|tofu twarde|tofu wędzone;144;17.27;2.78;8.72;;
+wiórki kokosowe;wiórków kokosowych|wiórkami kokosowymi|kokos|kokosu|kokosem|płatki kokosowe|płatków kokosowych|wiórki kokosu|wiórków kokosu;660;6.88;23.65;64.53;;
+woda;wody|wodą|woda przegotowana|woda z kranu;0;0;0;0;;

@@ -19,6 +19,7 @@ export function draftToRecipe(d: RecipeDraft, id = ''): Recipe {
       confidence: i.confidence,
     })),
     steps: [...d.steps],
+    nutrition: { ...(d.nutrition ?? { kcal: null, protein: null, carbs: null, fat: null }) },
   }
 }
 
@@ -54,6 +55,15 @@ export function mergeIntoExisting(d: RecipeDraft, existing: Recipe): Recipe {
   if (!merged.tags.length) merged.tags = [...existing.tags]
   if (!merged.ingredients.length) merged.ingredients = existing.ingredients.map((i) => ({ ...i }))
   if (!merged.steps.length) merged.steps = [...existing.steps]
+  // Per value: the draft wins when it has one (0 included), otherwise the existing value survives.
+  const have = merged.nutrition ?? { kcal: null, protein: null, carbs: null, fat: null }
+  const old = existing.nutrition
+  merged.nutrition = {
+    kcal: have.kcal ?? old?.kcal ?? null,
+    protein: have.protein ?? old?.protein ?? null,
+    carbs: have.carbs ?? old?.carbs ?? null,
+    fat: have.fat ?? old?.fat ?? null,
+  }
   return merged
 }
 

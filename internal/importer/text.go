@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"mealplan/internal/domain"
 )
 
 const (
@@ -184,6 +186,12 @@ func ParseText(text string) Draft {
 		}
 		if n, ok := servingsOf(l); ok && d.Servings == 0 {
 			d.Servings = n
+			continue
+		}
+		if isNutritionLine(l) {
+			if m, ok := parseNutritionLine(l); ok && d.Nutrition == (domain.Macros{}) {
+				d.Nutrition = m
+			}
 			continue
 		}
 		body = append(body, l)

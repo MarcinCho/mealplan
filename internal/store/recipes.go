@@ -9,8 +9,8 @@ import (
 
 func (s *Store) CreateRecipe(ctx context.Context, r domain.Recipe) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
-		if err := s.exec(ctx, tx, `INSERT INTO recipe (id, household_id, title, base_servings, source_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			r.ID, r.HouseholdID, r.Title, r.BaseServings, r.SourceURL, ts(r.CreatedAt), ts(r.UpdatedAt)); err != nil {
+		if err := s.exec(ctx, tx, `INSERT INTO recipe (id, household_id, title, base_servings, source_url, kcal, protein, carbs, fat, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			r.ID, r.HouseholdID, r.Title, r.BaseServings, r.SourceURL, nf(r.Nutrition.Kcal), nf(r.Nutrition.Protein), nf(r.Nutrition.Carbs), nf(r.Nutrition.Fat), ts(r.CreatedAt), ts(r.UpdatedAt)); err != nil {
 			return err
 		}
 		return s.insertRecipeChildren(ctx, tx, r)
@@ -19,8 +19,8 @@ func (s *Store) CreateRecipe(ctx context.Context, r domain.Recipe) error {
 
 func (s *Store) UpdateRecipe(ctx context.Context, r domain.Recipe) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
-		res, err := tx.ExecContext(ctx, s.db.Rebind(`UPDATE recipe SET title = ?, base_servings = ?, source_url = ?, updated_at = ? WHERE id = ? AND household_id = ?`),
-			r.Title, r.BaseServings, r.SourceURL, ts(r.UpdatedAt), r.ID, r.HouseholdID)
+		res, err := tx.ExecContext(ctx, s.db.Rebind(`UPDATE recipe SET title = ?, base_servings = ?, source_url = ?, kcal = ?, protein = ?, carbs = ?, fat = ?, updated_at = ? WHERE id = ? AND household_id = ?`),
+			r.Title, r.BaseServings, r.SourceURL, nf(r.Nutrition.Kcal), nf(r.Nutrition.Protein), nf(r.Nutrition.Carbs), nf(r.Nutrition.Fat), ts(r.UpdatedAt), r.ID, r.HouseholdID)
 		if err != nil {
 			return mapErr(err)
 		}
@@ -42,8 +42,12 @@ func (s *Store) insertRecipeChildren(ctx context.Context, tx *sql.Tx, r domain.R
 		if ing.Quantity != nil {
 			q = *ing.Quantity
 		}
-		if err := s.exec(ctx, tx, `INSERT INTO ingredient (recipe_id, position, name, normalized_name, quantity, unit, note) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			r.ID, i, ing.Name, ing.NormalizedName, q, ing.Unit, ing.Note); err != nil {
+		var pid any
+		if ing.ProductID != "" {
+			pid = ing.ProductID
+		}
+		if err := s.exec(ctx, tx, `INSERT INTO ingredient (recipe_id, position, name, normalized_name, quantity, unit, note, product_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			r.ID, i, ing.Name, ing.NormalizedName, q, ing.Unit, ing.Note, pid); err != nil {
 			return err
 		}
 	}
@@ -63,25 +67,29 @@ func (s *Store) insertRecipeChildren(ctx context.Context, tx *sql.Tx, r domain.R
 func (s *Store) RecipeByID(ctx context.Context, householdID, id string) (domain.Recipe, error) {
 	var r domain.Recipe
 	var created, updated int64
+	var nk, np, nc, nfat sql.NullFloat64
 	err := s.db.QueryRowContext(ctx, s.db.Rebind(
-		`SELECT id, household_id, title, base_servings, source_url, created_at, updated_at FROM recipe WHERE id = ? AND household_id = ?`),
-		id, householdID).Scan(&r.ID, &r.HouseholdID, &r.Title, &r.BaseServings, &r.SourceURL, &created, &updated)
+		`SELECT id, household_id, title, base_servings, source_url, kcal, protein, carbs, fat, created_at, updated_at FROM recipe WHERE id = ? AND household_id = ?`),
+		id, householdID).Scan(&r.ID, &r.HouseholdID, &r.Title, &r.BaseServings, &r.SourceURL, &nk, &np, &nc, &nfat, &created, &updated)
 	if err != nil {
 		return domain.Recipe{}, mapErr(err)
 	}
 	r.CreatedAt, r.UpdatedAt = fromTS(created), fromTS(updated)
+	r.Nutrition = domain.Macros{Kcal: pf(nk), Protein: pf(np), Carbs: pf(nc), Fat: pf(nfat)}
 
-	rows, err := s.db.QueryContext(ctx, s.db.Rebind(`SELECT name, normalized_name, quantity, unit, note FROM ingredient WHERE recipe_id = ? ORDER BY position`), id)
+	rows, err := s.db.QueryContext(ctx, s.db.Rebind(`SELECT name, normalized_name, quantity, unit, note, product_id FROM ingredient WHERE recipe_id = ? ORDER BY position`), id)
 	if err != nil {
 		return domain.Recipe{}, err
 	}
 	for rows.Next() {
 		var ing domain.Ingredient
 		var q sql.NullFloat64
-		if err := rows.Scan(&ing.Name, &ing.NormalizedName, &q, &ing.Unit, &ing.Note); err != nil {
+		var pid sql.NullString
+		if err := rows.Scan(&ing.Name, &ing.NormalizedName, &q, &ing.Unit, &ing.Note, &pid); err != nil {
 			_ = rows.Close()
 			return domain.Recipe{}, err
 		}
+		ing.ProductID = pid.String
 		if q.Valid {
 			v := q.Float64
 			ing.Quantity = &v
@@ -121,7 +129,7 @@ func (s *Store) stringCol(ctx context.Context, q string, args ...any) ([]string,
 // ListRecipes returns summaries (title, servings, source, tags) ordered by title.
 func (s *Store) ListRecipes(ctx context.Context, householdID string) ([]domain.Recipe, error) {
 	rows, err := s.db.QueryContext(ctx, s.db.Rebind(
-		`SELECT id, household_id, title, base_servings, source_url, created_at, updated_at FROM recipe WHERE household_id = ? ORDER BY title, id`), householdID)
+		`SELECT id, household_id, title, base_servings, source_url, kcal, protein, carbs, fat, created_at, updated_at FROM recipe WHERE household_id = ? ORDER BY title, id`), householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -130,10 +138,12 @@ func (s *Store) ListRecipes(ctx context.Context, householdID string) ([]domain.R
 	for rows.Next() {
 		var r domain.Recipe
 		var created, updated int64
-		if err := rows.Scan(&r.ID, &r.HouseholdID, &r.Title, &r.BaseServings, &r.SourceURL, &created, &updated); err != nil {
+		var nk, np, nc, nfat sql.NullFloat64
+		if err := rows.Scan(&r.ID, &r.HouseholdID, &r.Title, &r.BaseServings, &r.SourceURL, &nk, &np, &nc, &nfat, &created, &updated); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}
+		r.Nutrition = domain.Macros{Kcal: pf(nk), Protein: pf(np), Carbs: pf(nc), Fat: pf(nfat)}
 		r.CreatedAt, r.UpdatedAt = fromTS(created), fromTS(updated)
 		idx[r.ID] = len(out)
 		out = append(out, r)

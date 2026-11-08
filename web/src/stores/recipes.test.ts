@@ -53,6 +53,34 @@ describe('useRecipes', () => {
     expect(spy.mock.calls[0][1]!.method).toBe('PUT')
   })
 
+  it('always sends nutrition and productId, nulls for empty values, 0 kept, and no import hints', async () => {
+    const s = useRecipes()
+    const spy = mockFetch(200, { id: 'n1', title: 'X' })
+    await s.save({
+      ...emptyRecipe(),
+      id: 'n1',
+      title: 'X',
+      nutrition: { kcal: '' as unknown as number, protein: 0, carbs: null, fat: 12.5 },
+      ingredients: [
+        { name: 'jajka', quantity: 2, unit: 'szt', productId: 'p1', raw: '2 jajka', confidence: 'ok' },
+        { name: 'sól', quantity: null, unit: '', productId: '' as unknown as string },
+        { name: 'pieprz', quantity: null, unit: '' },
+      ],
+    })
+    const body = JSON.parse(spy.mock.calls[0][1]!.body as string)
+    expect(body.nutrition).toEqual({ kcal: null, protein: 0, carbs: null, fat: 12.5 })
+    expect(body.ingredients.map((i: { productId: unknown }) => i.productId)).toEqual(['p1', null, null])
+    expect(body.ingredients[0]).not.toHaveProperty('raw')
+    expect(body.ingredients[0]).not.toHaveProperty('confidence')
+  })
+
+  it('sends all-null nutrition when the recipe has none', async () => {
+    const s = useRecipes()
+    const spy = mockFetch(201, { id: 'n1', title: 'X' })
+    await s.save({ ...emptyRecipe(), title: 'X' })
+    expect(JSON.parse(spy.mock.calls[0][1]!.body as string).nutrition).toEqual({ kcal: null, protein: null, carbs: null, fat: null })
+  })
+
   it('removes from the local list after DELETE', async () => {
     mockFetch(200, [{ id: 'a', title: 'Zupa' }])
     const s = useRecipes()
@@ -91,7 +119,7 @@ describe('useRecipes', () => {
       ingredients: [{ name: 'woda', quantity: 1, unit: 'l', raw: '1 l wody', note: 'zimna', confidence: 'guess' }],
     })
     const body = JSON.parse(String(spy.mock.calls[0][1]?.body))
-    expect(body.ingredients[0]).toEqual({ name: 'woda', quantity: 1, unit: 'l', note: 'zimna' })
+    expect(body.ingredients[0]).toEqual({ name: 'woda', quantity: 1, unit: 'l', note: 'zimna', productId: null })
   })
 
   it('sends the ingredient note: kept, defaulted to empty, trimmed, never raw/confidence', async () => {

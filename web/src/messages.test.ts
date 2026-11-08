@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from './api/client'
-import { errorText } from './messages'
+import { errorText, productErrorText } from './messages'
 
 describe('errorText', () => {
   it.each([
@@ -39,5 +39,15 @@ describe('errorText new codes', () => {
   })
   it('explains in_use', () => {
     expect(errorText(new ApiError(409, 'in_use', 'x'))).toBe('Ten przepis jest użyty w planie. Najpierw usuń go z planu.')
+  })
+})
+
+describe('productErrorText', () => {
+  it('uses product wording for in_use and conflict', () => {
+    expect(productErrorText(new ApiError(409, 'in_use', 'x'))).toBe('Ten produkt jest używany w dzienniku posiłków domowników, więc nie można go usunąć.')
+    expect(productErrorText(new ApiError(409, 'conflict', 'x'))).toContain('Produkt o takiej nazwie')
+  })
+  it('falls back to the generic texts', () => {
+    expect(productErrorText(new ApiError(422, 'invalid_input', 'x'))).toBe(errorText(new ApiError(422, 'invalid_input', 'x')))
   })
 })

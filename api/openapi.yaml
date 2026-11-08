@@ -260,6 +260,74 @@ paths:
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/products:
+    get:
+      summary: List the household's products (the bundled starter set is installed on first use)
+      security: [{ session: [] }]
+      parameters:
+        - { name: q, in: query, required: false, description: Case-insensitive substring of the name or an alias, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Product" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Create a product
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/products/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    put:
+      summary: Replace a product
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Delete a product (refused with in_use while the food log references it)
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /api/v1/recipes/import/url:
     post:
       summary: Fetch a web page and return a recipe draft (nothing is saved)
@@ -507,6 +575,106 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/me/nutrition:
+    get:
+      summary: The account's nutrition tracking settings
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NutritionSettings" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      summary: Save the account's nutrition tracking settings (kcal 0-20000, other goals 0-2000 g, null = no goal)
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NutritionSettings" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NutritionSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/me/nutrition/days:
+    get:
+      summary: Daily intake against the goal for a range of at most 31 days (days is empty while tracking is disabled)
+      description: Every planned recipe counts as one portion regardless of servings or done; plus the account's food log.
+      security: [{ session: [] }]
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled, days]
+                properties:
+                  enabled: { type: boolean }
+                  days:
+                    type: array
+                    items: { $ref: "#/components/schemas/DaySummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/me/food-log:
+    post:
+      summary: Log a product amount for a day (404 for an unknown or foreign product)
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, productId, quantity, unit]
+              properties:
+                date: { type: string, format: date }
+                productId: { type: string }
+                quantity: { type: number, exclusiveMinimum: 0, maximum: 10000 }
+                unit: { type: string, enum: [g, szt] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, date, productId, quantity, unit]
+                properties:
+                  id: { type: string }
+                  date: { type: string, format: date }
+                  productId: { type: string }
+                  quantity: { type: number }
+                  unit: { type: string, enum: [g, szt] }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/me/food-log/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    delete:
+      summary: Delete one of the account's own food log entries
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
 components:
   securitySchemes:
     session: { type: apiKey, in: cookie, name: mealplan_session }
@@ -587,6 +755,75 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
   schemas:
+    NutritionSettings:
+      type: object
+      required: [enabled, goal]
+      properties:
+        enabled: { type: boolean }
+        goal: { $ref: "#/components/schemas/Macros" }
+    Macros:
+      type: object
+      description: Values are null when unknown (in a day, total and remaining are null for a value nothing supplied).
+      required: [kcal, protein, carbs, fat]
+      properties:
+        kcal: { type: number, nullable: true }
+        protein: { type: number, nullable: true }
+        carbs: { type: number, nullable: true }
+        fat: { type: number, nullable: true }
+    ValueSources:
+      type: object
+      required: [kcal, protein, carbs, fat]
+      properties:
+        kcal: { type: string, enum: [recipe, computed, missing] }
+        protein: { type: string, enum: [recipe, computed, missing] }
+        carbs: { type: string, enum: [recipe, computed, missing] }
+        fat: { type: string, enum: [recipe, computed, missing] }
+    DaySummary:
+      type: object
+      required: [date, total, goal, remaining, meals, log, missingMeals, missingLog, incomplete, approximate]
+      properties:
+        date: { type: string, format: date }
+        total: { $ref: "#/components/schemas/Macros" }
+        goal: { $ref: "#/components/schemas/Macros" }
+        remaining: { $ref: "#/components/schemas/Macros" }
+        meals:
+          type: array
+          items:
+            type: object
+            required: [entryId, title, slot, values, sources, approximate, missing]
+            properties:
+              entryId: { type: string }
+              title: { type: string }
+              slot: { type: string, enum: [breakfast, lunch, dinner, snack] }
+              values: { $ref: "#/components/schemas/Macros" }
+              sources: { $ref: "#/components/schemas/ValueSources" }
+              approximate: { type: boolean }
+              missing: { type: boolean, description: "Free text or no nutrition data; adds nothing to the total" }
+        log:
+          type: array
+          items:
+            type: object
+            required: [id, productId, name, quantity, unit, values, missing]
+            properties:
+              id: { type: string }
+              productId: { type: string }
+              name: { type: string }
+              quantity: { type: number }
+              unit: { type: string, enum: [g, szt] }
+              values: { $ref: "#/components/schemas/Macros" }
+              missing: { type: boolean }
+        missingMeals: { type: integer }
+        missingLog: { type: integer, description: "Log items that supply no value at all" }
+        incomplete:
+          type: object
+          description: Per value, true when some meal or log item did not supply it, so total understates the day
+          required: [kcal, protein, carbs, fat]
+          properties:
+            kcal: { type: boolean }
+            protein: { type: boolean }
+            carbs: { type: boolean }
+            fat: { type: boolean }
+        approximate: { type: boolean, description: "Approximate recipe or any incomplete value" }
     Error:
       type: object
       required: [code, message]
@@ -675,6 +912,8 @@ components:
         quantity: { type: number, nullable: true, description: Null when the amount is "to taste" }
         unit: { type: string }
         note: { type: string, maxLength: 200, description: "Remark about the ingredient, e.g. a substitution" }
+        productId: { type: string, nullable: true, description: "Remembered product of the household used for nutrition; 404 when unknown or foreign" }
+        matchedProductId: { type: string, nullable: true, readOnly: true, description: "Output only, only in GET /recipes/{id}: the product the nutrition matcher used (the remembered productId, else the name/alias match); null when none. Ignored in requests." }
     RecipeInput:
       type: object
       required: [title, baseServings]
@@ -685,19 +924,85 @@ components:
         tags: { type: array, maxItems: 20, items: { type: string, maxLength: 40 } }
         ingredients: { type: array, maxItems: 200, items: { $ref: "#/components/schemas/Ingredient" } }
         steps: { type: array, maxItems: 100, items: { type: string, maxLength: 2000 } }
+        nutrition: { $ref: "#/components/schemas/RecipeNutritionGiven" }
+    RecipeNutritionGiven:
+      type: object
+      description: Given (manual) values per portion, null when unknown. Kcal 0-5000, others 0-500 g.
+      required: [kcal, protein, carbs, fat]
+      properties:
+        kcal: { type: number, nullable: true, minimum: 0, maximum: 5000 }
+        protein: { type: number, nullable: true, minimum: 0, maximum: 500 }
+        carbs: { type: number, nullable: true, minimum: 0, maximum: 500 }
+        fat: { type: number, nullable: true, minimum: 0, maximum: 500 }
+    NutritionPerPortion:
+      type: object
+      description: Computed per-portion values; given values win per value. Only in GET /recipes/{id}.
+      required: [values, sources, approximate, unmatched]
+      properties:
+        values:
+          type: object
+          required: [kcal, protein, carbs, fat]
+          properties:
+            kcal: { type: number, nullable: true }
+            protein: { type: number, nullable: true }
+            carbs: { type: number, nullable: true }
+            fat: { type: number, nullable: true }
+        sources:
+          type: object
+          required: [kcal, protein, carbs, fat]
+          properties:
+            kcal: { $ref: "#/components/schemas/NutritionSource" }
+            protein: { $ref: "#/components/schemas/NutritionSource" }
+            carbs: { $ref: "#/components/schemas/NutritionSource" }
+            fat: { $ref: "#/components/schemas/NutritionSource" }
+        approximate: { type: boolean }
+        unmatched: { type: array, items: { type: string }, description: Ingredients not counted or only partly counted }
+    NutritionSource:
+      type: string
+      enum: [recipe, computed, missing]
     Recipe:
       type: object
-      required: [id, title, baseServings, sourceUrl, tags, ingredients, steps, createdAt, updatedAt]
+      required: [id, title, baseServings, sourceUrl, tags, ingredients, steps, nutrition, createdAt, updatedAt]
       properties:
         id: { type: string }
         title: { type: string }
         baseServings: { type: integer }
+        nutrition: { $ref: "#/components/schemas/RecipeNutritionGiven" }
+        nutritionPerPortion: { $ref: "#/components/schemas/NutritionPerPortion" }
         sourceUrl: { type: string }
         tags: { type: array, items: { type: string } }
         ingredients: { type: array, items: { $ref: "#/components/schemas/Ingredient" }, description: Empty in list responses }
         steps: { type: array, items: { type: string }, description: Empty in list responses }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    Macros:
+      type: object
+      description: Values per 100 g, null when unknown
+      required: [kcal, protein, carbs, fat]
+      properties:
+        kcal: { type: number, nullable: true, minimum: 0, maximum: 900 }
+        protein: { type: number, nullable: true, minimum: 0, maximum: 100 }
+        carbs: { type: number, nullable: true, minimum: 0, maximum: 100 }
+        fat: { type: number, nullable: true, minimum: 0, maximum: 100, description: Protein, carbs and fat together are at most 100 }
+    ProductInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        per100g: { $ref: "#/components/schemas/Macros" }
+        pieceGrams: { type: number, nullable: true, minimum: 0, exclusiveMinimum: true, maximum: 5000 }
+        densityGPerMl: { type: number, nullable: true, minimum: 0.2, exclusiveMinimum: true, maximum: 2 }
+        aliases: { type: array, maxItems: 20, items: { type: string, maxLength: 200 }, description: Normalized by the server; must not equal another product's name }
+    Product:
+      type: object
+      required: [id, name, per100g, pieceGrams, densityGPerMl, aliases]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        per100g: { $ref: "#/components/schemas/Macros" }
+        pieceGrams: { type: number, nullable: true }
+        densityGPerMl: { type: number, nullable: true }
+        aliases: { type: array, items: { type: string } }
     ImportUrlInput:
       type: object
       required: [url]
@@ -720,10 +1025,11 @@ components:
         confidence: { type: string, enum: [ok, guess, unparsed] }
     RecipeDraft:
       type: object
-      required: [title, servings, sourceUrl, tags, ingredients, steps, warnings]
+      required: [title, servings, sourceUrl, tags, ingredients, steps, nutrition, warnings]
       properties:
         title: { type: string }
         servings: { type: integer, description: 0 when unknown }
+        nutrition: { $ref: "#/components/schemas/RecipeNutritionGiven" }
         sourceUrl: { type: string }
         tags: { type: array, items: { type: string } }
         ingredients: { type: array, items: { $ref: "#/components/schemas/DraftIngredient" } }

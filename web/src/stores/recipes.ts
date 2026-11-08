@@ -12,6 +12,9 @@ export function formatQuantity(q: number | null, unit: string): string {
   return unit ? `${n} ${unit}` : n
 }
 
+// v-model.number yields '' when a field is cleared; the API expects null. 0 is a real value.
+const num = (v: unknown): number | null => (v === '' || v === undefined || v === null ? null : Number(v))
+
 export const useRecipes = defineStore('recipes', {
   state: () => ({ items: [] as Recipe[], loaded: false }),
   actions: {
@@ -35,8 +38,16 @@ export const useRecipes = defineStore('recipes', {
           quantity: (i.quantity as unknown) === '' ? null : i.quantity,
           unit: i.unit,
           note: (i.note ?? '').trim(),
+          // PUT replaces the whole recipe: an omitted productId would clear the stored choice.
+          productId: i.productId ? i.productId : null,
         })),
         steps: r.steps,
+        nutrition: {
+          kcal: num(r.nutrition?.kcal),
+          protein: num(r.nutrition?.protein),
+          carbs: num(r.nutrition?.carbs),
+          fat: num(r.nutrition?.fat),
+        },
       }
       const saved = r.id
         ? await api<Recipe>('PUT', `/recipes/${encodeURIComponent(r.id)}`, body)

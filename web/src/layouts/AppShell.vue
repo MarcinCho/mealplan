@@ -74,6 +74,8 @@ async function logout() {
         </v-list-item>
         <v-divider class="my-2" />
         <v-list-item prepend-icon="mdi-theme-light-dark" :title="t.theme" rounded="lg" @click="toggleTheme" />
+        <v-list-item prepend-icon="mdi-account-cog-outline" :title="t.accountTitle" :to="{ name: 'account' }" rounded="lg" />
+        <v-list-item prepend-icon="mdi-food-apple-outline" :title="t.navProducts" :to="{ name: 'products' }" rounded="lg" />
         <v-list-item prepend-icon="mdi-account-group-outline" :title="t.navMembers" :to="{ name: 'members' }" rounded="lg" />
         <v-list-item prepend-icon="mdi-logout" :title="t.signOut" rounded="lg" @click="logout" />
       </v-list>

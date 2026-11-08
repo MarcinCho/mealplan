@@ -340,6 +340,7 @@ func draftFromLD(m map[string]any) Draft {
 	d.Ingredients = ingredientLines(raw)
 	d.Steps = ldInstructions(m["recipeInstructions"])
 	d.Tags = append(ldTags(m["keywords"]), ldTags(m["recipeCategory"])...)
+	d.Nutrition = nutritionFromLD(m["nutrition"])
 	capDraft(&d)
 	return d
 }

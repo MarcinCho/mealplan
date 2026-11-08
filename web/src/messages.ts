@@ -131,6 +131,62 @@ export const t = {
   ingredientNotePlaceholder: 'np. można zastąpić jogurtem greckim',
   skillTitle: 'Używasz Claude?',
   skillText: 'Pobierz umiejętność „mealplan-recipe-format". Claude zamieni dowolny przepis (tekst, link do strony, przepis z innego języka) na format, który wkleisz w zakładce Tekst.',
+  navProducts: 'Produkty',
+  products: 'Produkty',
+  accountTitle: 'Konto',
+  trackNutrition: 'Śledź wartości odżywcze',
+  trackNutritionHint: 'Pokazuje kalorie i makroskładniki w planie i na stronie Dziś.',
+  dailyGoal: 'Dzienny cel',
+  dailyGoalHint: 'Puste pole oznacza brak celu.',
+  goalKcal: 'Kalorie (kcal)',
+  goalProtein: 'Białko (g)',
+  goalCarbs: 'Węglowodany (g)',
+  goalFat: 'Tłuszcz (g)',
+  saved: 'Zapisano',
+  searchProducts: 'Szukaj produktu',
+  newProduct: 'Nowy produkt',
+  editProduct: 'Edytuj produkt',
+  productName: 'Nazwa',
+  per100g: 'Wartości na 100 g',
+  kcalShort: 'kcal',
+  proteinShort: 'Białko (g)',
+  carbsShort: 'Węglowodany (g)',
+  fatShort: 'Tłuszcz (g)',
+  pieceGrams: 'Gramatura sztuki (g)',
+  density: 'Gęstość (g/ml)',
+  aliases: 'Aliasy',
+  aliasesHint: 'Inne nazwy produktu. Zatwierdź Enterem.',
+  noProducts: 'Brak produktów',
+  noProductsHint: 'Dodaj pierwszy produkt, aby liczyć wartości odżywcze.',
+  addProduct: 'Dodaj produkt',
+  product: 'Produkt',
+  confirmDeleteProduct: 'Usunąć ten produkt?',
+  nutritionPerPortion: 'Wartości na porcję',
+  nutritionPerPortionHint: 'Wpisz własne wartości albo zostaw puste, by użyć wyliczonych z produktów.',
+  nutritionComputed: 'wyliczone',
+  nutritionMissing: 'brak',
+  nutritionApproxPrefix: 'Wartości przybliżone — niepełne dane dla:',
+  productDeleted: 'produkt usunięty — wybierz inny',
+  matchedProduct: 'dopasowano',
+  ingredientProduct: 'Produkt dla składnika',
+  daySummary: 'Podsumowanie dnia',
+  logAdd: 'Dopisz',
+  logTitle: 'Dopisz do dziennika',
+  logListTitle: 'Dopisane',
+  logQuantity: 'Ilość',
+  logUnit: 'Jednostka',
+  logQuantityInvalid: 'Podaj ilość większą od 0 i do 10000.',
+  logRemove: 'Usuń pozycję',
+  logEmpty: 'Nic nie dopisano.',
+  mealNutritionTitle: 'Wartości odżywcze porcji',
+  nutritionFromRecipe: 'z przepisu',
+  nutritionNoData: 'Brak wartości odżywczych',
+  close: 'Zamknij',
+  approximate: 'Wartości przybliżone — część danych jest niepełna.',
+  macroKcal: 'Kalorie',
+  macroProtein: 'Białko',
+  macroCarbs: 'Węglowodany',
+  macroFat: 'Tłuszcz',
   skillDownload: 'Pobierz SKILL.md',
   skillInstall: 'Zapisz plik w folderze mealplan-recipe-format w katalogu umiejętności Claude, np. ~/.claude/skills/mealplan-recipe-format/SKILL.md.',
 }
@@ -159,6 +215,17 @@ const errors: Record<string, string> = {
   import_timeout: 'Strona odpowiada zbyt wolno. Spróbuj ponownie lub wklej tekst przepisu.',
   cookie_not_stored:
     'Przeglądarka nie zapisała sesji. Jeśli otwierasz aplikację przez zwykłe HTTP, ustaw MEALPLAN_COOKIE_SECURE=false lub użyj HTTPS (np. tailscale serve).',
+}
+
+const productErrors: Record<string, string> = {
+  in_use: 'Ten produkt jest używany w dzienniku posiłków domowników, więc nie można go usunąć.',
+  conflict: 'Produkt o takiej nazwie lub aliasie już istnieje.',
+}
+
+// Like errorText, but with wording that fits the product database.
+export function productErrorText(e: unknown): string {
+  if (e instanceof ApiError && productErrors[e.code]) return productErrors[e.code]
+  return errorText(e)
 }
 
 export function errorText(e: unknown): string {
