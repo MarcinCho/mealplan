@@ -132,3 +132,13 @@ func TestDayCompleteWhenEverythingSupplied(t *testing.T) {
 		t.Fatalf("%+v", d)
 	}
 }
+
+func TestEmptyDayIsKnownZero(t *testing.T) {
+	d := BuildDay("2026-11-03", domain.Macros{Kcal: f(2000)}, nil, nil, nil, nil, NewMatcher(nil))
+	if d.Total.Kcal == nil || *d.Total.Kcal != 0 || d.Remaining.Kcal == nil || *d.Remaining.Kcal != 2000 || d.Remaining.Protein != nil {
+		t.Fatalf("%+v %+v", d.Total, d.Remaining)
+	}
+	if d.Incomplete != (IncompleteFlags{}) || d.Approximate {
+		t.Fatalf("%+v", d)
+	}
+}

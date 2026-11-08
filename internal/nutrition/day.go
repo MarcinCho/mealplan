@@ -103,6 +103,9 @@ func BuildDay(date string, goal domain.Macros, entries []domain.PlanEntry, recip
 		add(item.Values)
 		d.Log = append(d.Log, item)
 	}
+	if len(d.Meals) == 0 && len(d.Log) == 0 {
+		supplied = [4]bool{true, true, true, true} // nothing planned or logged is a known zero
+	}
 	d.Incomplete = IncompleteFlags{incomplete[0], incomplete[1], incomplete[2], incomplete[3]}
 	if incomplete[0] || incomplete[1] || incomplete[2] || incomplete[3] {
 		d.Approximate = true
