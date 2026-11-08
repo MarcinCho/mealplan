@@ -4,6 +4,7 @@ package httpapi
 import (
 	"log/slog"
 	"net/http"
+	"time"
 
 	"mealplan/internal/auth"
 	"mealplan/internal/config"
@@ -17,6 +18,7 @@ type Deps struct {
 	Recipes  *recipe.Service
 	Plan     *plan.Service
 	Shopping *shopping.Service
+	Importer Importer
 }
 
 type Server struct {
@@ -25,10 +27,12 @@ type Server struct {
 	cfg    config.Config
 	static http.Handler
 	log    *slog.Logger
+
+	importLimit *limiter
 }
 
 func New(a *auth.Service, d Deps, cfg config.Config, static http.Handler, log *slog.Logger) *Server {
-	return &Server{auth: a, deps: d, cfg: cfg, static: static, log: log}
+	return &Server{auth: a, deps: d, cfg: cfg, static: static, log: log, importLimit: newLimiter(10, time.Minute)}
 }
 
 type route struct {
@@ -54,6 +58,8 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/recipes/{id}", s.private(s.handleGetRecipe)},
 		{"PUT /api/v1/recipes/{id}", s.private(s.handleUpdateRecipe)},
 		{"DELETE /api/v1/recipes/{id}", s.private(s.handleDeleteRecipe)},
+		{"POST /api/v1/recipes/import/url", s.private(s.handleImportURL)},
+		{"POST /api/v1/recipes/import/text", s.private(s.handleImportText)},
 		{"PATCH /api/v1/household/members/{id}", s.private(s.handleChangeRole)},
 		{"DELETE /api/v1/household/members/{id}", s.private(s.handleRemoveMember)},
 		{"GET /api/v1/plan/{week}", s.private(s.handleGetWeek)},

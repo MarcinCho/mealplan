@@ -9,6 +9,7 @@ export interface EntryInput {
   freeText?: string
   servings?: number
   cookUserId?: string | null
+  done?: boolean
 }
 
 // Monotonic request counter: only the latest load may touch the state.
@@ -44,6 +45,18 @@ export const usePlan = defineStore('plan', {
       const week = this.week
       const e = await api<PlanEntry>('PUT', `/plan/${week}/entries/${encodeURIComponent(id)}`, input)
       if (week === this.week) this.entries = this.entries.map((x) => (x.id === id ? e : x))
+    },
+    // PUT replaces the entry, so the toggle sends the whole entry back with only `done` changed.
+    async setDone(entry: PlanEntry, done: boolean) {
+      await this.edit(entry.id, {
+        date: entry.date,
+        slot: entry.slot,
+        recipeId: entry.recipeId,
+        freeText: entry.freeText,
+        servings: entry.servings,
+        cookUserId: entry.cookUserId,
+        done,
+      })
     },
     async remove(id: string) {
       const week = this.week

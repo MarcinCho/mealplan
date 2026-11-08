@@ -18,6 +18,23 @@
 | Nagłówki | CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, HSTS przy `Secure`, `Cache-Control: no-store` dla `/api/` |
 | Audyt | tabela `audit_event` (zdarzenia `setup`, `login`, `login_failed`, `invite_created`, `invite_revoked`, `invite_accepted`, `role_changed`, `member_removed`) |
 
+## Import z adresu URL (SSRF)
+
+Import przepisu z linku sprawia, że serwer łączy się z adresem podanym przez użytkownika. Szczegóły działania: [import.md](import.md).
+
+| Obszar | Rozwiązanie |
+|---|---|
+| Blokowane zakresy | loopback (`127.0.0.0/8`, `::1`), prywatne (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`), link-local (`169.254/16`, `fe80::/10`), multicast, adres nieokreślony, `0.0.0.0/8`, `100.64.0.0/10` (CGNAT i adresy tailnetu Tailscale), `198.18.0.0/15` (testy wydajności), `240.0.0.0/4` (zarezerwowane, w tym `255.255.255.255`), `192.0.0.0/24` (protokoły IETF) oraz zakresy IPv6 osadzające IPv4 lub przestarzałe: `64:ff9b::/96` i `64:ff9b:1::/48` (NAT64), `2002::/16` (6to4), `::/96` (zgodne z IPv4), `fec0::/10` (site-local) i `2001::/32` (Teredo); adresy IPv4 zapisane jako IPv6 (`::ffff:a.b.c.d`) są sprawdzane jako IPv4 |
+| Moment kontroli | w dialerze (`net.Dialer.Control`), po rozwiązaniu DNS i tuż przed połączeniem z konkretnym IP; dzięki temu zabezpieczone są też każde przekierowanie i rebinding DNS (nazwa rozwiązująca się najpierw na adres publiczny, potem na prywatny) |
+| Przekierowania | najwyżej 5; przekierowanie na nie-`http(s)`, adres z danymi logowania lub inny port niż 80/443 kończy się błędem |
+| Schematy i porty | tylko `http` i `https`, porty 80 i 443, bez `user:pass@` |
+| Proxy | brak: proxy z zmiennych środowiskowych (`HTTP_PROXY` itd.) jest wyłączone, żeby nie obejść kontroli adresów |
+| Limity pobierania | 2 MB treści, 10 s na całe żądanie, tylko typy HTML; połączenia bez keep-alive |
+| Limit częstotliwości | 10 importów z linku na minutę na użytkownika (`429 rate_limited`), żeby serwer nie służył do skanowania sieci; licznik jest w pamięci procesu, jak limiter logowania |
+| Treść błędów | odpowiedź zawiera tylko kod (`import_blocked`, `import_failed`, `import_timeout`); przyczyna błędu sieci jest odrzucana, bo komunikat z dialera zdradzałby, które wewnętrzne hosty istnieją |
+| Wynik | szkic to dane: tekst jest zawsze escapowany przy wyświetlaniu (interpolacja Vue, bez `v-html`), a surowy HTML pobranej strony nigdy nie jest renderowany; `sourceUrl` przechodzi tę samą walidację `http`/`https` co zwykły przepis |
+| Brak zapisu | endpointy importu niczego nie zapisują; przepis powstaje dopiero z zatwierdzonego podglądu |
+
 ## Znane ograniczenia
 
 - **CSP dla stylów** dopuszcza `unsafe-inline`, bo Vuetify wstrzykuje arkusz motywu w czasie działania. Skrypty mają ścisłe `script-src 'self'`. Docelowo: nonce.

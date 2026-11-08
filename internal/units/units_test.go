@@ -92,3 +92,24 @@ func TestRound(t *testing.T) {
 		t.Fatalf("Round(0.1+0.2)=%v", got)
 	}
 }
+
+func TestCanonUnitPolishForms(t *testing.T) {
+	cases := map[string]string{
+		"łyżki": "łyżka", "łyżek": "łyżka", "Łyżkę": "łyżka", "łyż": "łyżka",
+		"łyżeczki": "łyżeczka", "łyżeczek": "łyżeczka",
+		"szklanki": "szklanka", "szklanek": "szklanka", "szkl": "szklanka",
+		"ząbki": "ząbek", "ząbków": "ząbek",
+		"plasterki": "plaster", "plasterków": "plaster",
+		"szczypty": "szczypta", "szczypta": "szczypta",
+		"opakowania": "opakowanie", "op": "opakowanie",
+		"puszki": "puszka", "puszek": "puszka",
+		"pęczki": "pęczek", "garści": "garść", "kostki": "kostka",
+		"główki": "główka", "kromki": "kromka",
+		"litra": "l", "litrów": "l", "kilo": "kg", "gr": "g", "ml": "ml", "mililitrów": "ml",
+	}
+	for in, want := range cases {
+		if got := units.CanonUnit(in); got != want {
+			t.Errorf("CanonUnit(%q)=%q want %q", in, got, want)
+		}
+	}
+}

@@ -143,3 +143,27 @@ func TestDeleteRecipeRemovesChildren(t *testing.T) {
 		t.Fatalf("orphans left: %d", n)
 	}
 }
+
+func TestRecipeIngredientNotes(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedTwoHouseholds(t, s)
+	r := sampleRecipe("r1", "hA")
+	r.Ingredients[0].Note = "można zastąpić jogurtem greckim"
+	if err := s.CreateRecipe(ctx, r); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.RecipeByID(ctx, "hA", "r1")
+	if err != nil || got.Ingredients[0].Note != "można zastąpić jogurtem greckim" || got.Ingredients[1].Note != "" {
+		t.Fatalf("notes after create: %v %+v", err, got.Ingredients)
+	}
+	r.Ingredients[0].Note = ""
+	r.Ingredients[1].Note = "do smaku"
+	if err := s.UpdateRecipe(ctx, r); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = s.RecipeByID(ctx, "hA", "r1")
+	if got.Ingredients[0].Note != "" || got.Ingredients[1].Note != "do smaku" {
+		t.Fatalf("notes after update: %+v", got.Ingredients)
+	}
+}

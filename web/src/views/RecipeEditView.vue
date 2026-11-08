@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { draftToRecipe, mergeIntoExisting } from '../importDraft'
+import { useImport } from '../stores/import'
 import { emptyRecipe, useRecipes } from '../stores/recipes'
 import type { Recipe } from '../api/types'
 import { errorText, t } from '../messages'
@@ -8,6 +10,7 @@ import { errorText, t } from '../messages'
 const route = useRoute()
 const router = useRouter()
 const recipes = useRecipes()
+const imports = useImport()
 const recipe = ref<Recipe>(emptyRecipe())
 const error = ref('')
 const busy = ref(false)
@@ -16,20 +19,32 @@ const loaded = ref(false)
 const isNew = computed(() => !route.params.id)
 
 onMounted(async () => {
+  const d = imports.draft
   if (isNew.value) {
+    if (d && !imports.targetId) recipe.value = draftToRecipe(d)
     loaded.value = true
     return
   }
   try {
-    recipe.value = await recipes.get(String(route.params.id))
+    const existing = await recipes.get(String(route.params.id))
+    if (d && imports.targetId === existing.id) {
+      recipe.value = mergeIntoExisting(d, existing)
+    } else {
+      recipe.value = { ...existing, ingredients: existing.ingredients.map((i) => ({ ...i, note: i.note ?? '' })) }
+    }
     loaded.value = true
   } catch (e) {
     error.value = errorText(e)
   }
 })
 
+// A draft must never leak into the next "new recipe" form.
+onBeforeUnmount(() => imports.clear())
+
+const fromImport = computed(() => Boolean(imports.draft) && (isNew.value ? !imports.targetId : imports.targetId === recipe.value.id))
+
 function addIngredient() {
-  recipe.value.ingredients.push({ name: '', quantity: null, unit: '' })
+  recipe.value.ingredients.push({ name: '', quantity: null, unit: '', note: '' })
 }
 function addStep() {
   recipe.value.steps.push('')
@@ -38,6 +53,10 @@ function addStep() {
 async function submit() {
   if (!loaded.value || (!isNew.value && !recipe.value.id)) return
   error.value = ''
+  if (!recipe.value.title.trim()) {
+    error.value = t.titleRequired
+    return
+  }
   busy.value = true
   try {
     await recipes.save(recipe.value)
@@ -65,6 +84,13 @@ async function remove() {
 <template>
   <h1 class="text-h5 mb-4">{{ isNew ? t.newRecipe : t.editRecipe }}</h1>
   <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
+  <v-alert v-if="loaded && fromImport" type="info" variant="tonal" class="mb-4">
+    {{ t.importedBanner }}
+    <div v-if="!isNew" class="mt-2">{{ t.importedUpdateNote }}</div>
+    <ul v-if="imports.draft?.warnings.length" class="mt-2 ps-4">
+      <li v-for="(w, wi) in imports.draft.warnings" :key="wi">{{ w }}</li>
+    </ul>
+  </v-alert>
   <v-progress-linear v-if="!loaded && !error" indeterminate class="mb-4" :aria-label="t.loading" />
   <v-btn v-if="!loaded && error" variant="text" :to="{ name: 'recipes' }">{{ t.backToList }}</v-btn>
   <v-form v-if="loaded" @submit.prevent="submit">
@@ -76,11 +102,15 @@ async function remove() {
     <v-combobox v-model="recipe.tags" :label="t.tags" multiple chips closable-chips />
 
     <h2 class="text-h6 mb-2">{{ t.ingredients }}</h2>
-    <div v-for="(ing, i) in recipe.ingredients" :key="i" class="d-flex ga-2 align-start">
-      <v-text-field v-model="ing.name" :label="t.ingredientName" class="flex-grow-1" density="compact" />
-      <v-text-field v-model.number="ing.quantity" :label="t.quantity" type="number" min="0.001" step="any" density="compact" style="max-width: 110px" />
-      <v-text-field v-model="ing.unit" :label="t.unit" density="compact" style="max-width: 110px" />
-      <v-btn icon="mdi-close" variant="text" :title="t.remove" @click="recipe.ingredients.splice(i, 1)" />
+    <div v-for="(ing, i) in recipe.ingredients" :key="i" :class="['ing-row', ing.confidence && `ing-${ing.confidence}`]">
+      <div class="d-flex ga-2 align-start ing-fields">
+        <v-text-field v-model="ing.name" :label="t.ingredientName" class="flex-grow-1 ing-name" density="compact" />
+        <v-text-field v-model.number="ing.quantity" :label="t.quantity" type="number" min="0.001" step="any" density="compact" class="ing-qty" />
+        <v-text-field v-model="ing.unit" :label="t.unit" density="compact" class="ing-unit" />
+        <v-btn icon="mdi-close" variant="text" :title="t.remove" @click="recipe.ingredients.splice(i, 1)" />
+      </div>
+      <v-text-field v-model="ing.note" :label="t.ingredientNote" :placeholder="t.ingredientNotePlaceholder" maxlength="200" density="compact" />
+      <div v-if="ing.confidence && ing.confidence !== 'ok'" class="text-caption text-medium-emphasis pb-1">{{ t.fromText }}: „{{ ing.raw }}"</div>
     </div>
     <v-btn variant="text" prepend-icon="mdi-plus" class="mb-4" @click="addIngredient">{{ t.addIngredient }}</v-btn>
 
@@ -102,3 +132,42 @@ async function remove() {
     </div>
   </v-form>
 </template>
+
+<style scoped>
+.ing-row {
+  border-radius: 12px;
+  padding: 0 8px;
+}
+.ing-guess,
+.ing-unparsed {
+  margin-bottom: 8px;
+}
+.ing-guess {
+  background: rgba(var(--v-theme-warning), 0.16);
+  border-left: 3px solid rgb(var(--v-theme-warning));
+}
+.ing-unparsed {
+  background: rgba(var(--v-theme-error), 0.16);
+  border-left: 3px solid rgb(var(--v-theme-error));
+}
+:global(.v-theme--dark) .ing-unparsed {
+  background: rgba(var(--v-theme-error), 0.24);
+}
+.ing-qty,
+.ing-unit {
+  max-width: 110px;
+}
+@media (max-width: 599.98px) {
+  .ing-fields {
+    flex-wrap: wrap;
+  }
+  .ing-name {
+    flex: 1 1 100%;
+  }
+  .ing-qty,
+  .ing-unit {
+    flex: 1 1 0;
+    max-width: none;
+  }
+}
+</style>

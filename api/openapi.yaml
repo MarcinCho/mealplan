@@ -260,6 +260,49 @@ paths:
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/recipes/import/url:
+    post:
+      summary: Fetch a web page and return a recipe draft (nothing is saved)
+      description: Limited to 10 requests per minute per user. Only http(s) on default ports; private, loopback, link-local and Tailscale addresses are refused.
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImportUrlInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecipeDraft" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "429": { description: Too many imports; see Retry-After (code rate_limited) }
+        "504": { description: The page took too long to respond (code import_timeout) }
+  /api/v1/recipes/import/text:
+    post:
+      summary: Parse pasted recipe text and return a recipe draft (nothing is saved)
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImportTextInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecipeDraft" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /api/v1/plan/{week}:
     parameters:
       - { name: week, in: path, required: true, schema: { type: string, format: date }, description: Monday of the week (YYYY-MM-DD) }
@@ -530,7 +573,7 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
     Unprocessable:
-      description: Validation failed (code invalid_input or password_length)
+      description: Validation failed (code invalid_input or password_length) or the import could not produce a draft (code import_blocked, import_unparsable or import_failed)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
@@ -631,6 +674,7 @@ components:
         name: { type: string }
         quantity: { type: number, nullable: true, description: Null when the amount is "to taste" }
         unit: { type: string }
+        note: { type: string, maxLength: 200, description: "Remark about the ingredient, e.g. a substitution" }
     RecipeInput:
       type: object
       required: [title, baseServings]
@@ -654,6 +698,37 @@ components:
         steps: { type: array, items: { type: string }, description: Empty in list responses }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    ImportUrlInput:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, maxLength: 2000 }
+    ImportTextInput:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string, description: Up to 100 KB }
+    DraftIngredient:
+      type: object
+      required: [raw, name, quantity, unit, note, confidence]
+      properties:
+        raw: { type: string, description: The line as found in the source }
+        name: { type: string, description: Empty when confidence is unparsed }
+        quantity: { type: number, nullable: true }
+        unit: { type: string }
+        note: { type: string, description: Remark such as "posiekana" or a substitution; saved with the ingredient (max 200 characters, longer ones are cut with a warning) }
+        confidence: { type: string, enum: [ok, guess, unparsed] }
+    RecipeDraft:
+      type: object
+      required: [title, servings, sourceUrl, tags, ingredients, steps, warnings]
+      properties:
+        title: { type: string }
+        servings: { type: integer, description: 0 when unknown }
+        sourceUrl: { type: string }
+        tags: { type: array, items: { type: string } }
+        ingredients: { type: array, items: { $ref: "#/components/schemas/DraftIngredient" } }
+        steps: { type: array, items: { type: string } }
+        warnings: { type: array, items: { type: string } }
     PlanEntryInput:
       type: object
       required: [date, slot]
@@ -664,9 +739,10 @@ components:
         freeText: { type: string }
         servings: { type: integer, description: Zero or omitted means the recipe base servings, or 1 for free-text entries }
         cookUserId: { type: string, nullable: true }
+        done: { type: boolean, description: Whether the meal was cooked; defaults to false }
     PlanEntry:
       type: object
-      required: [id, date, slot, recipeId, freeText, servings, cookUserId]
+      required: [id, date, slot, recipeId, freeText, servings, cookUserId, done]
       properties:
         id: { type: string }
         date: { type: string, format: date }
@@ -675,6 +751,7 @@ components:
         freeText: { type: string }
         servings: { type: integer }
         cookUserId: { type: string, nullable: true }
+        done: { type: boolean }
     Week:
       type: object
       required: [week, entries]

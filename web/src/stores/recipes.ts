@@ -29,9 +29,12 @@ export const useRecipes = defineStore('recipes', {
         sourceUrl: r.sourceUrl,
         tags: r.tags,
         // v-model.number yields '' when the field is cleared; the API expects null.
+        // Only schema fields are sent: imported rows carry extra hints the server rejects.
         ingredients: r.ingredients.map((i) => ({
-          ...i,
+          name: i.name,
           quantity: (i.quantity as unknown) === '' ? null : i.quantity,
+          unit: i.unit,
+          note: (i.note ?? '').trim(),
         })),
         steps: r.steps,
       }

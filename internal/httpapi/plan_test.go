@@ -10,6 +10,7 @@ type entryJSON struct {
 	FreeText   string  `json:"freeText"`
 	Servings   int     `json:"servings"`
 	CookUserID *string `json:"cookUserId"`
+	Done       bool    `json:"done"`
 }
 
 type weekJSON struct {
@@ -52,14 +53,14 @@ func TestPlanWeekLifecycle(t *testing.T) {
 		t.Fatalf("added: %+v", added)
 	}
 
-	rec = c.do("PUT", "/api/v1/plan/2026-11-02/entries/"+added.ID, map[string]any{"date": "2026-11-04", "slot": "lunch", "freeText": "Resztki", "servings": 2})
+	rec = c.do("PUT", "/api/v1/plan/2026-11-02/entries/"+added.ID, map[string]any{"date": "2026-11-04", "slot": "lunch", "freeText": "Resztki", "servings": 2, "done": true})
 	if rec.Code != 200 {
 		t.Fatalf("edit: %d %s", rec.Code, rec.Body)
 	}
 
 	var wk weekJSON
 	decode(t, c.do("GET", "/api/v1/plan/2026-11-02", nil), &wk)
-	if wk.Week != "2026-11-02" || len(wk.Entries) != 1 || wk.Entries[0].FreeText != "Resztki" || wk.Entries[0].RecipeID != nil || wk.Entries[0].CookUserID != nil {
+	if wk.Week != "2026-11-02" || len(wk.Entries) != 1 || wk.Entries[0].FreeText != "Resztki" || wk.Entries[0].RecipeID != nil || wk.Entries[0].CookUserID != nil || !wk.Entries[0].Done {
 		t.Fatalf("week: %+v", wk)
 	}
 

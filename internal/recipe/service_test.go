@@ -128,6 +128,7 @@ func TestRejectsControlCharacters(t *testing.T) {
 		"step":            func(in *recipe.Input) { in.Steps[0] = "Got\x00uj" },
 		"tag":             func(in *recipe.Input) { in.Tags[0] = "ob\x00iad" },
 		"sourceUrl":       func(in *recipe.Input) { in.SourceURL = "https://example.com/\x00" },
+		"ingredient note": func(in *recipe.Input) { in.Ingredients[0].Note = "no\x00te" },
 		"bell in title":   func(in *recipe.Input) { in.Title = "Zu\x07pa" },
 	}
 	for name, mut := range cases {
@@ -141,5 +142,23 @@ func TestRejectsControlCharacters(t *testing.T) {
 	in.Steps = []string{"Linia 1\n\tLinia 2\r\nLinia 3"}
 	if _, err := svc.Create(context.Background(), hid, in); err != nil {
 		t.Fatalf("newlines and tabs in steps must stay allowed: %v", err)
+	}
+}
+
+func TestIngredientNote(t *testing.T) {
+	svc, hid := newSvc(t)
+	in := valid()
+	in.Ingredients[0].Note = "  można zastąpić jogurtem  "
+	r, err := svc.Create(context.Background(), hid, in)
+	if err != nil || r.Ingredients[0].Note != "można zastąpić jogurtem" || r.Ingredients[1].Note != "" {
+		t.Fatalf("trimmed note: %v %+v", err, r.Ingredients)
+	}
+	in.Ingredients[0].Note = strings.Repeat("ż", 200)
+	if _, err := svc.Create(context.Background(), hid, in); err != nil {
+		t.Fatalf("200 runes must be ok: %v", err)
+	}
+	in.Ingredients[0].Note = strings.Repeat("ż", 201)
+	if _, err := svc.Create(context.Background(), hid, in); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("201 runes: %v", err)
 	}
 }

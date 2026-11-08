@@ -33,6 +33,7 @@ type env struct {
 	st    *store.Store
 	svc   *auth.Service
 	clock *fakeClock
+	imp   *fakeImporter
 }
 
 type fakeClock struct {
@@ -62,9 +63,10 @@ func newEnv(t *testing.T) *env {
 	}
 	cfg := config.Config{Mode: config.ModeSelfhost, CookieSecure: false}
 	recipes := recipe.New(st, clock.Now)
-	deps := httpapi.Deps{Recipes: recipes, Plan: plan.New(st, st), Shopping: shopping.New(st, st)}
+	imp := &fakeImporter{}
+	deps := httpapi.Deps{Recipes: recipes, Plan: plan.New(st, st), Shopping: shopping.New(st, st), Importer: imp}
 	srv := httpapi.New(svc, deps, cfg, http.NotFoundHandler(), slog.New(slog.NewTextHandler(io.Discard, nil)))
-	return &env{srv: srv, st: st, svc: svc, clock: clock}
+	return &env{srv: srv, st: st, svc: svc, clock: clock, imp: imp}
 }
 
 // secondHouseholdClient creates an independent household with its own admin and logs in.

@@ -124,12 +124,17 @@ func TestCopyShiftsDatesAndRefusesNonEmptyTarget(t *testing.T) {
 	_, _ = f.svc.Add(ctx, f.hid, wk, plan.EntryInput{Date: "2026-11-03", Slot: domain.SlotLunch, RecipeID: f.recipe.ID, Servings: 2, CookUserID: "u1"})
 	_, _ = f.svc.Add(ctx, f.hid, wk, plan.EntryInput{Date: "2026-11-08", Slot: domain.SlotDinner, FreeText: "Pizza"})
 
+	week, _ := f.svc.Week(ctx, f.hid, wk)
+	if _, err := f.svc.Edit(ctx, f.hid, wk, week[0].ID, plan.EntryInput{Date: week[0].Date, Slot: week[0].Slot, RecipeID: week[0].RecipeID, Servings: 2, CookUserID: "u1", Done: true}); err != nil {
+		t.Fatal(err)
+	}
+
 	n, err := f.svc.Copy(ctx, f.hid, wk, "2026-11-09")
 	if err != nil || n != 2 {
 		t.Fatalf("copy: %d %v", n, err)
 	}
 	got, _ := f.svc.Week(ctx, f.hid, "2026-11-09")
-	if len(got) != 2 || got[0].Date != "2026-11-10" || got[1].Date != "2026-11-15" || got[0].CookUserID != "u1" || got[0].Servings != 2 {
+	if len(got) != 2 || got[0].Date != "2026-11-10" || got[1].Date != "2026-11-15" || got[0].CookUserID != "u1" || got[0].Servings != 2 || got[0].Done {
 		t.Fatalf("copied week: %+v", got)
 	}
 	if _, err := f.svc.Copy(ctx, f.hid, wk, "2026-11-09"); !errors.Is(err, store.ErrConflict) {

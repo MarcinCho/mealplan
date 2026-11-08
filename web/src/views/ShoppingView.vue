@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import EmptyState from '../components/EmptyState.vue'
 import { errorText, t } from '../messages'
 import { useShopping } from '../stores/shopping'
 import { formatQuantity } from '../stores/recipes'
@@ -78,7 +79,7 @@ function add() {
 <template>
   <div class="d-flex align-center flex-wrap ga-2 mb-4">
     <v-btn icon="mdi-chevron-left" variant="text" :title="t.prevWeek" @click="go(-1)" />
-    <h1 class="text-h6">{{ t.shopping }}: {{ formatDay(dates[0]) }} – {{ formatDay(dates[6]) }}</h1>
+    <h1 class="text-subtitle-1 text-md-h6">{{ t.shopping }}: {{ formatDay(dates[0]) }} – {{ formatDay(dates[6]) }}</h1>
     <v-btn icon="mdi-chevron-right" variant="text" :title="t.nextWeek" @click="go(1)" />
     <v-spacer />
     <v-btn color="primary" :loading="busy" :disabled="!ready" prepend-icon="mdi-cart-arrow-down" @click="generate">
@@ -94,14 +95,14 @@ function add() {
   <p v-else-if="!ready" class="text-medium-emphasis">{{ t.loading }}</p>
 
   <template v-if="ready">
-    <v-form class="d-flex ga-2 align-start mb-4" @submit.prevent="add">
-      <v-text-field v-model="name" :label="t.itemName" density="compact" hide-details class="flex-grow-1" maxlength="200" />
-      <v-text-field v-model.number="quantity" :label="t.quantity" type="number" min="0" step="any" density="compact" hide-details style="max-width: 100px" />
-      <v-text-field v-model="unit" :label="t.unit" density="compact" hide-details style="max-width: 100px" />
+    <v-form class="d-flex flex-wrap ga-2 align-start mb-4" @submit.prevent="add">
+      <v-text-field v-model="name" :label="t.itemName" density="compact" hide-details style="flex: 1 1 260px" maxlength="200" />
+      <v-text-field v-model.number="quantity" :label="t.quantity" type="number" min="0" step="any" density="compact" hide-details style="flex: 1 1 90px; max-width: 140px" />
+      <v-text-field v-model="unit" :label="t.unit" density="compact" hide-details style="flex: 1 1 90px; max-width: 140px" />
       <v-btn type="submit" variant="tonal" :disabled="!name.trim() || busy">{{ t.addManualItem }}</v-btn>
     </v-form>
 
-    <p v-if="!shop.items.length" class="text-medium-emphasis">{{ t.noItems }}</p>
+    <EmptyState v-if="!shop.items.length" :title="t.noItemsTitle" :hint="t.noItems" />
     <v-list v-else border rounded>
       <v-list-item v-for="i in shop.open" :key="i.id">
         <template #prepend>

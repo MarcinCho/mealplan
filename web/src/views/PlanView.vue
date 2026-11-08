@@ -150,6 +150,8 @@ async function copyPrev() {
         <td v-for="d in dates" :key="d" class="align-top pa-1">
           <v-chip
             v-for="e in plan.entriesFor(d, s.value)"
+            color="primary"
+            variant="tonal"
             :key="e.id"
             class="mb-1 d-flex"
             style="height: auto; white-space: normal"
@@ -157,16 +159,16 @@ async function copyPrev() {
           >
             <span>{{ label(e) }}<template v-if="e.cookUserId"> · {{ memberName[e.cookUserId] }}</template></span>
           </v-chip>
-          <v-btn icon="mdi-plus" size="x-small" variant="text" :title="t.addEntry" @click="openNew(d, s.value)" />
+          <v-btn icon="mdi-plus" size="x-small" variant="text" color="primary" :title="t.addEntry" @click="openNew(d, s.value)" />
         </td>
       </tr>
     </tbody>
   </v-table>
 
   <div v-else>
-    <v-card v-for="d in dates" :key="d" class="mb-3" variant="outlined">
+    <v-card v-for="d in dates" :key="d" class="mb-3">
       <v-card-title class="text-subtitle-1">{{ formatDay(d) }}</v-card-title>
-      <v-list density="compact">
+      <v-list density="compact" bg-color="transparent">
         <template v-for="s in SLOTS" :key="s.value">
           <v-list-item
             v-for="e in plan.entriesFor(d, s.value)"

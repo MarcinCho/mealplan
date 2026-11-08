@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Notatki do składników
+
+- Składnik przepisu ma opcjonalną notatkę (`note`, do 200 znaków), np. „można zastąpić jogurtem greckim". Jest zapisywana razem z przepisem (migracja `0004`), a import zapisuje ją zamiast odrzucać; żądania bez `note` nadal działają. Długie linie zaczynające się od ilości (11-30 słów) są teraz składnikami, a notatki dłuższe niż 200 znaków są ucinane z ostrzeżeniem.
+- Edytor przepisu ma przy każdym składniku pole „Notatka” (do 200 znaków); wartość z importu lub z zapisanego przepisu jest w nim widoczna i zapisuje się razem z przepisem.
+- Ekran importu ma kartę „Używasz Claude?” z przyciskiem pobierania umiejętności `mealplan-recipe-format` (`/claude-skill/SKILL.md`, plik kanoniczny `web/public/claude-skill/SKILL.md`).
+
+### Import przepisów
+
+- Import przepisu z linku (`POST /recipes/import/url`) lub wklejonego tekstu (`POST /recipes/import/text`, do 100 KB). Źródła strony: JSON-LD, microdata, a w ostateczności tekst strony (min. 2 składniki i 1 krok, z ostrzeżeniem). Parser linii składnika (ilość, jednostka, nazwa, notatka; `ok`/`guess`/`unparsed`). Import niczego nie zapisuje.
+- Podgląd w edytorze przepisu: niepewne wiersze (`guess`, `unparsed`) są podświetlone, linia `unparsed` zachowuje oryginalny tekst jako nazwę, notatka składnika jest zapisywana razem ze składnikiem. Wykrywanie duplikatów (ten sam adres źródła lub tytuł) z wyborem „Zaktualizuj istniejący" albo „Dodaj jako nowy".
+- Ochrona SSRF: blokada zakresów prywatnych, loopback, link-local i `100.64.0.0/10`, kontrola w dialerze po rozwiązaniu DNS (także przekierowania i rebinding), porty 80/443, bez proxy z otoczenia, limity 2 MB, 10 s i 5 przekierowań. Limit 10 importów z linku na minutę na użytkownika (`429 rate_limited`). Nowe kody błędów `import_blocked`, `import_unparsable`, `import_failed`, `import_timeout`.
+- Nowa zależność: `golang.org/x/net` (parser HTML i dekodowanie kodowań stron). Opis: `docs/import.md`.
+- Rozszerzona blokada adresów (NAT64, 6to4, Teredo, `::/96`, `fec0::/10`, `198.18.0.0/15`, `240.0.0.0/4`, `192.0.0.0/24`), limity pracy parsera (linie, składniki, kroki), usuwanie znaków sterujących ze szkicu, ilość po nazwie składnika („czosnek 2 ząbki") i przymiotniki przed jednostką.
+- Uwaga: jednostki zapisane w istniejących przepisach przed tą zmianą (np. „łyżki") nie są przepisywane i na liście zakupów nie scalą się z nowymi formami kanonicznymi („łyżka"), dopóki przepis nie zostanie zapisany ponownie.
+
+### Nowy wygląd
+
+- Ekran „Dziś" jako strona startowa: najbliższy niegotowy posiłek dnia, pasek dni tygodnia, lista posiłków z kucharzem i przycisk „Zrobione" (`plan_entry.done`, migracja 0003, pole `done` w API; kopiowanie tygodnia zeruje stan). Siatka tygodnia przeniesiona na `/plan`.
+- Szybkie dodawanie posiłku z podpowiedziami przepisów, dniem, posiłkiem i kucharzem.
+- Nawigacja: ciemny pasek boczny na komputerze, dolny pasek na telefonie; ustawienia (kolory, motyw, domownicy, wylogowanie) w menu awatara.
+- Material 3: duże zaokrąglenia, płaskie powierzchnie z cienką ramką, dolny arkusz zamiast okna dialogowego na telefonie, puste stany z ilustracją, płynne przejścia.
+- Palety kolorów (Klasyczny, Śliwka, Ziemia, Granat), domyślnie Ziemia.
+
 ### Etap 2: rdzeń
 
 - Przepisy (składniki, kroki, tagi, `sourceUrl` tylko http/https), tygodniowy plan (wpis: przepis albo tekst wolny, slot, porcje, kucharz), kopiowanie tygodnia, lista zakupów generowana z planu z ręcznymi pozycjami, jednostki i normalizacja nazw.

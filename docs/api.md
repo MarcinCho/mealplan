@@ -28,8 +28,10 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `GET /household/members` | członkowie gospodarstwa (np. do wyboru kucharza) |
 | `PATCH /household/members/{id}` | zmiana roli (admin); `409 last_admin` przy degradacji ostatniego administratora |
 | `DELETE /household/members/{id}` | usunięcie członka (admin); kasuje jego sesje w gospodarstwie i czyści go jako kucharza we wpisach planu; `409 last_admin` dla ostatniego administratora |
-| `GET /recipes`, `POST /recipes` | lista (bez składników i kroków) i tworzenie przepisu |
+| `GET /recipes`, `POST /recipes` | lista (bez składników i kroków) i tworzenie przepisu; składnik ma `name`, `quantity`, `unit` i opcjonalną `note` (uwaga do składnika, do 200 znaków) |
 | `GET/PUT/DELETE /recipes/{id}` | odczyt, pełna zamiana i usunięcie; `409 in_use`, gdy przepis jest w planie |
+| `POST /recipes/import/url` | szkic przepisu ze strony (`{"url"}`); niczego nie zapisuje; `422 import_blocked`, `import_unparsable`, `import_failed`, `504 import_timeout`; limit 10 na minutę na użytkownika (`429 rate_limited` + `Retry-After`) |
+| `POST /recipes/import/text` | szkic przepisu z wklejonego tekstu (`{"text"}`, do 100 KB); niczego nie zapisuje; `422 import_unparsable` |
 | `GET /plan/{week}` | wpisy planu tygodnia |
 | `POST /plan/{week}/entries` | dodanie wpisu: przepis albo tekst wolny, slot, porcje, opcjonalnie kucharz |
 | `PUT/DELETE /plan/{week}/entries/{id}` | zamiana i usunięcie wpisu |
@@ -50,6 +52,8 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 - Odejmowanie zapasów jest podpięte, ale nieaktywne do Etapu 3.
 - `sourceUrl` przepisu musi być adresem `http` lub `https` (albo pusty).
 
+Szczegóły formatu i ograniczeń importu: [import.md](import.md).
+
 ### Kody błędów
 
 | Kod | HTTP | Kiedy |
@@ -64,6 +68,10 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `csrf` | 403 | brak lub błędny nagłówek `X-CSRF-Token` w żądaniu modyfikującym |
 | `too_large` | 413 | treść żądania większa niż 1 MiB |
 | `unsupported_media_type` | 415 | brak nagłówka `Content-Type: application/json` (dotyczy tylko tras publicznych: logowanie, pierwsze uruchomienie, zaproszenia) |
+| `import_blocked` | 422 | adres importu wskazuje na zablokowany zakres (SSRF), także po przekierowaniu |
+| `import_unparsable` | 422 | w źródle importu nie znaleziono przepisu |
+| `import_failed` | 422 | nie udało się pobrać strony (status inny niż 2xx, zły typ treści, za duży plik, zbyt wiele przekierowań, błąd sieci) |
+| `import_timeout` | 504 | strona nie odpowiedziała w 10 s |
 | `internal` | 500 | nieoczekiwany błąd serwera (szczegóły tylko w dzienniku) |
 
-Pozostałe kody (`unauthenticated`, `invalid_credentials`, `rate_limited`, `login_taken`, `invite_invalid`, `setup_done`, `password_length`) dotyczą kont i sesji z Etapu 1.
+Pozostałe kody (`unauthenticated`, `invalid_credentials`, `rate_limited` (też przy imporcie z linku, z nagłówkiem `Retry-After`), `login_taken`, `invite_invalid`, `setup_done`, `password_length`) dotyczą kont i sesji z Etapu 1.

@@ -1,0 +1,1 @@
+../../../web/public/claude-skill/SKILL.md

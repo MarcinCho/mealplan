@@ -82,4 +82,36 @@ describe('useRecipes', () => {
     const body = JSON.parse(spy.mock.calls[0][1]!.body as string)
     expect(body.ingredients[0].quantity).toBeNull()
   })
+
+  it('sends only schema fields when saving an imported recipe', async () => {
+    const spy = mockFetch(201, { id: 'n' })
+    const s = useRecipes()
+    await s.save({
+      id: '', title: 'Zupa', baseServings: 4, sourceUrl: '', tags: [], steps: [],
+      ingredients: [{ name: 'woda', quantity: 1, unit: 'l', raw: '1 l wody', note: 'zimna', confidence: 'guess' }],
+    })
+    const body = JSON.parse(String(spy.mock.calls[0][1]?.body))
+    expect(body.ingredients[0]).toEqual({ name: 'woda', quantity: 1, unit: 'l', note: 'zimna' })
+  })
+
+  it('sends the ingredient note: kept, defaulted to empty, trimmed, never raw/confidence', async () => {
+    const spy = mockFetch(201, { id: 'n' })
+    const s = useRecipes()
+    await s.save({
+      id: '', title: 'Zupa', baseServings: 4, sourceUrl: '', tags: [], steps: [],
+      ingredients: [
+        { name: 'a', quantity: 1, unit: '', note: 'drobno starta' },
+        { name: 'b', quantity: 1, unit: '' },
+        { name: 'c', quantity: 1, unit: '', note: '  spacje \n', raw: 'x', confidence: 'ok' },
+      ],
+    })
+    const ing = JSON.parse(String(spy.mock.calls[0][1]?.body)).ingredients
+    expect(ing[0].note).toBe('drobno starta')
+    expect(ing[1].note).toBe('')
+    expect(ing[2].note).toBe('spacje')
+    for (const i of ing) {
+      expect(i).not.toHaveProperty('raw')
+      expect(i).not.toHaveProperty('confidence')
+    }
+  })
 })
