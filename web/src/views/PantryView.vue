@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import type { PantryItem } from '../api/types'
 import EmptyState from '../components/EmptyState.vue'
 import PantryAddDialog from '../components/PantryAddDialog.vue'
 import PantryReview from '../components/PantryReview.vue'
 import { pantryErrorText, t } from '../messages'
-import { formatStock, isExpired, stepFor } from '../pantry'
+import { createSerialSaver, formatStock, isExpired, stepFor, validExpiry, type SerialSaver } from '../pantry'
 import { usePantry } from '../stores/pantry'
 
 const pantry = usePantry()
@@ -38,12 +38,73 @@ async function run(fn: () => Promise<unknown>) {
 const load = () => run(() => pantry.load())
 onMounted(load)
 
+interface Patch { quantity?: number; expiresOn?: string }
+const shownQty = reactive<Record<string, number>>({}) // optimistic quantities while saves are pending
+const shownExpiry = reactive<Record<string, string>>({})
+const savers = new Map<string, SerialSaver<Patch>>()
+
+function clearShown(id: string) {
+  delete shownQty[id]
+  delete shownExpiry[id]
+}
+
+function saverFor(id: string): SerialSaver<Patch> {
+  let s = savers.get(id)
+  if (!s) {
+    s = createSerialSaver<Patch>({
+      delay: 400,
+      merge: (a, b) => ({ ...a, ...b }),
+      send: async (patch) => {
+        const cur = pantry.items.find((x) => x.id === id)
+        if (!cur) return
+        await pantry.update(id, {
+          quantity: patch.quantity ?? cur.quantity,
+          unit: cur.unit,
+          expiresOn: patch.expiresOn ?? cur.expiresOn,
+          staple: cur.staple,
+        })
+      },
+      onIdle: () => {
+        clearShown(id)
+        const q = pantry.items.find((x) => x.id === id)?.quantity
+        zeroFor.value = q === 0 ? id : zeroFor.value === id ? null : zeroFor.value
+      },
+      onError: (e) => {
+        clearShown(id) // roll back to what the server has
+        error.value = pantryErrorText(e)
+      },
+    })
+    savers.set(id, s)
+  }
+  return s
+}
+
+const qtyOf = (i: PantryItem) => (i.id in shownQty ? shownQty[i.id] : i.quantity)
+const stockText = (i: PantryItem) => formatStock({ ...i, quantity: qtyOf(i) })
+
 function change(i: PantryItem, dir: 1 | -1) {
-  const next = Math.max(0, Math.round(((i.quantity ?? 0) + dir * stepFor(i.unit)) * 1000) / 1000)
-  return run(async () => {
-    await pantry.update(i.id, { quantity: next, unit: i.unit, expiresOn: i.expiresOn, staple: i.staple })
-    zeroFor.value = next === 0 ? i.id : null
-  })
+  error.value = ''
+  const next = Math.max(0, Math.round(((qtyOf(i) ?? 0) + dir * stepFor(i.unit)) * 1000) / 1000)
+  shownQty[i.id] = next
+  saverFor(i.id).set({ quantity: next })
+}
+
+const expiryOf = (i: PantryItem) => (i.id in shownExpiry ? shownExpiry[i.id] : i.expiresOn)
+
+// Typing only updates the draft; the save happens on change/blur and only for a sane date.
+function commitExpiry(i: PantryItem) {
+  const v = shownExpiry[i.id]
+  if (v === undefined) return
+  if (!validExpiry(v)) {
+    delete shownExpiry[i.id]
+    return
+  }
+  if (v === i.expiresOn) {
+    delete shownExpiry[i.id]
+    return
+  }
+  error.value = ''
+  saverFor(i.id).set({ expiresOn: v })
 }
 const toggleStaple = (i: PantryItem, staple: boolean | null) =>
   run(() =>
@@ -54,10 +115,10 @@ const toggleStaple = (i: PantryItem, staple: boolean | null) =>
       staple: Boolean(staple),
     }),
   )
-const setExpiry = (i: PantryItem, v: string | null) =>
-  run(() => pantry.update(i.id, { quantity: i.quantity, unit: i.unit, expiresOn: v ?? '', staple: i.staple }))
 const remove = (id: string) =>
   run(async () => {
+    savers.delete(id)
+    clearShown(id)
     await pantry.remove(id)
     zeroFor.value = null
   })
@@ -86,29 +147,32 @@ const remove = (id: string) =>
     <div class="d-flex align-center ga-2">
       <div class="flex-grow-1 name-col">
         <div class="font-weight-bold item-name">{{ i.name }}</div>
-        <div class="text-body-2" :class="isExpired(i.expiresOn, now) ? 'text-error font-weight-bold' : 'text-medium-emphasis'">
-          <v-icon v-if="isExpired(i.expiresOn, now)" icon="mdi-alert-circle-outline" size="small" />
-          <template v-if="i.expiresOn">{{ isExpired(i.expiresOn, now) ? t.pantryExpired : t.pantryExpiresShort }} {{ i.expiresOn }}</template>
+        <div class="text-body-2" :class="isExpired(expiryOf(i), now) ? 'text-error font-weight-bold' : 'text-medium-emphasis'">
+          <v-icon v-if="isExpired(expiryOf(i), now)" icon="mdi-alert-circle-outline" size="small" />
+          <template v-if="expiryOf(i)">{{ isExpired(expiryOf(i), now) ? t.pantryExpired : t.pantryExpiresShort }} {{ expiryOf(i) }}</template>
         </div>
       </div>
       <template v-if="!i.staple">
-        <v-btn icon="mdi-minus" size="small" variant="tonal" :title="t.pantryDecrease" :disabled="(i.quantity ?? 0) <= 0" @click="change(i, -1)" />
-        <span class="qty">{{ formatStock(i) }}</span>
+        <v-btn icon="mdi-minus" size="small" variant="tonal" :title="t.pantryDecrease" :disabled="(qtyOf(i) ?? 0) <= 0" @click="change(i, -1)" />
+        <span class="qty">{{ stockText(i) }}</span>
         <v-btn icon="mdi-plus" size="small" variant="tonal" :title="t.pantryIncrease" @click="change(i, 1)" />
       </template>
-      <span v-else class="qty">{{ formatStock(i) }}</span>
+      <span v-else class="qty">{{ stockText(i) }}</span>
     </div>
     <div class="d-flex align-center flex-wrap ga-2 mt-2">
       <v-switch :model-value="i.staple" :label="t.pantryStapleSwitch" density="compact" color="primary" hide-details @update:model-value="toggleStaple(i, $event)" />
       <v-text-field
-        :model-value="i.expiresOn"
+        :model-value="expiryOf(i)"
         type="date"
         :label="t.pantryExpires"
         density="compact"
         hide-details
         clearable
         class="expiry"
-        @update:model-value="setExpiry(i, $event)"
+        @update:model-value="shownExpiry[i.id] = $event ?? ''"
+        @blur="commitExpiry(i)"
+        @change="commitExpiry(i)"
+        @click:clear="shownExpiry[i.id] = ''; commitExpiry(i)"
       />
       <v-spacer />
       <v-btn icon="mdi-delete-outline" variant="text" color="error" size="small" :title="t.delete" @click="remove(i.id)" />

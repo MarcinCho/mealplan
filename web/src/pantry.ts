@@ -39,3 +39,64 @@ export const PANTRY_UNITS = [
   'g', 'kg', 'ml', 'l', 'szt', 'łyżka', 'łyżeczka', 'szklanka', 'opakowanie', 'puszka', 'kostka',
   'ząbek', 'plaster', 'szczypta', 'pęczek', 'garść', 'główka', 'kromka',
 ]
+
+// Empty clears the date; otherwise YYYY-MM-DD with a sane year (typing a year emits junk dates like 0002-...).
+export function validExpiry(v: string | null | undefined): boolean {
+  if (!v) return true
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v)
+  if (!m || Number(m[1]) < 1900) return false
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3])
+}
+
+export interface SerialSaver<T> {
+  set(v: T): void
+  readonly pending: boolean
+}
+
+// Collects rapid changes into one send after `delay` ms. At most one send is in flight; changes made
+// meanwhile are merged and sent afterwards with the latest value. A failure drops queued changes and
+// reports once, so the caller can roll back to what the server has.
+export function createSerialSaver<T>(opts: {
+  send: (v: T) => Promise<unknown>
+  delay: number
+  onError: (e: unknown) => void
+  onIdle?: () => void
+  merge?: (prev: T, next: T) => T
+}): SerialSaver<T> {
+  let queued: { v: T } | null = null
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let inflight = false
+
+  async function flush() {
+    timer = undefined
+    if (inflight || !queued) return
+    const { v } = queued
+    queued = null
+    inflight = true
+    try {
+      await opts.send(v)
+    } catch (e) {
+      queued = null
+      clearTimeout(timer)
+      timer = undefined
+      inflight = false
+      opts.onError(e)
+      return
+    }
+    inflight = false
+    if (queued && timer === undefined) void flush()
+    else if (!queued && timer === undefined) opts.onIdle?.()
+  }
+
+  return {
+    set(v: T) {
+      queued = { v: queued && opts.merge ? opts.merge(queued.v, v) : v }
+      clearTimeout(timer)
+      timer = setTimeout(flush, opts.delay)
+    },
+    get pending() {
+      return queued !== null || inflight || timer !== undefined
+    },
+  }
+}

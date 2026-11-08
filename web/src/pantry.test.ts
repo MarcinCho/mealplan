@@ -43,3 +43,76 @@ describe('isExpired', () => {
     expect(isExpired('', now)).toBe(false)
   })
 })
+
+import { afterEach, beforeEach, vi } from 'vitest'
+import { createSerialSaver, validExpiry } from './pantry'
+
+describe('validExpiry', () => {
+  it('accepts empty and real dates from 1900', () => {
+    expect(validExpiry('')).toBe(true)
+    expect(validExpiry('2026-11-08')).toBe(true)
+    expect(validExpiry('0002-01-01')).toBe(false)
+    expect(validExpiry('1899-12-31')).toBe(false)
+    expect(validExpiry('2026-02-30')).toBe(false)
+    expect(validExpiry('2026-1-1')).toBe(false)
+  })
+})
+
+describe('createSerialSaver', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('sends one value for three quick taps', async () => {
+    const send = vi.fn(async (_v: number) => {})
+    const s = createSerialSaver<number>({ send, delay: 400, onError: vi.fn() })
+    s.set(550); s.set(600); s.set(650)
+    expect(send).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(400)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(send).toHaveBeenCalledWith(650)
+    expect(s.pending).toBe(false)
+  })
+
+  it('waits for a slow in-flight send, then sends the latest value', async () => {
+    let release!: () => void
+    const calls: number[] = []
+    const send = vi.fn((v: number) => {
+      calls.push(v)
+      return calls.length === 1 ? new Promise<void>((r) => (release = r)) : Promise.resolve()
+    })
+    const idle = vi.fn()
+    const s = createSerialSaver<number>({ send, delay: 400, onError: vi.fn(), onIdle: idle })
+    s.set(550)
+    await vi.advanceTimersByTimeAsync(400)
+    s.set(600)
+    await vi.advanceTimersByTimeAsync(400)
+    expect(calls).toEqual([550]) // still waiting for the first
+    expect(s.pending).toBe(true)
+    release()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls).toEqual([550, 600])
+    expect(idle).toHaveBeenCalledTimes(1)
+    expect(s.pending).toBe(false)
+  })
+
+  it('reports a failure once and drops queued changes', async () => {
+    const err = new Error('x')
+    const send = vi.fn(async (_v: number) => { throw err })
+    const onError = vi.fn()
+    const s = createSerialSaver<number>({ send, delay: 400, onError })
+    s.set(1)
+    await vi.advanceTimersByTimeAsync(400)
+    expect(onError).toHaveBeenCalledWith(err)
+    expect(s.pending).toBe(false)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('merges patches', async () => {
+    const send = vi.fn(async (_v: object) => {})
+    const s = createSerialSaver<object>({ send, delay: 10, onError: vi.fn(), merge: (a, b) => ({ ...a, ...b }) })
+    s.set({ quantity: 5 }); s.set({ expiresOn: '2027-01-01' })
+    await vi.advanceTimersByTimeAsync(10)
+    expect(send).toHaveBeenCalledWith({ quantity: 5, expiresOn: '2027-01-01' })
+  })
+})
