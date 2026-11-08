@@ -82,3 +82,21 @@ func TestProductWithoutMacrosIsUnmatched(t *testing.T) {
 		t.Fatalf("%+v", n)
 	}
 }
+
+func TestPartialMacroProductMakesApproximate(t *testing.T) {
+	m := NewMatcher([]domain.Product{
+		{ID: "x", Name: "x", Per100g: domain.Macros{Kcal: f(100)}},
+		{ID: "y", Name: "y", Per100g: macros(200, 10, 20, 5)},
+	})
+	r := domain.Recipe{BaseServings: 1, Ingredients: []domain.Ingredient{ing("x", 100, "g"), ing("y", 100, "g")}}
+	n := ForRecipe(r, m)
+	if n.Sources.Protein != SourceComputed || !near(*n.PerPortion.Protein, 10) {
+		t.Fatalf("%+v", n)
+	}
+	if !near(*n.PerPortion.Kcal, 300) {
+		t.Fatalf("kcal %v", *n.PerPortion.Kcal)
+	}
+	if !n.Approximate || len(n.Unmatched) != 1 || n.Unmatched[0] != "x" {
+		t.Fatalf("%+v", n)
+	}
+}

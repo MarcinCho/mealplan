@@ -1,6 +1,10 @@
 package nutrition
 
-import "mealplan/internal/domain"
+import (
+	"slices"
+
+	"mealplan/internal/domain"
+)
 
 type Source string
 
@@ -26,6 +30,11 @@ type RecipeNutrition struct {
 func ForRecipe(r domain.Recipe, m *Matcher) RecipeNutrition {
 	var sum [4]float64
 	var seen [4]bool
+	type lack struct {
+		name string
+		miss [4]bool
+	}
+	var lacks []lack
 	var out RecipeNutrition
 	for _, ing := range r.Ingredients {
 		if ing.Quantity == nil {
@@ -41,10 +50,23 @@ func ForRecipe(r domain.Recipe, m *Matcher) RecipeNutrition {
 			out.Unmatched = append(out.Unmatched, ing.Name)
 			continue
 		}
+		l := lack{name: ing.Name}
 		for i, v := range []*float64{p.Per100g.Kcal, p.Per100g.Protein, p.Per100g.Carbs, p.Per100g.Fat} {
 			if v != nil {
 				sum[i] += g * *v / 100
 				seen[i] = true
+			} else {
+				l.miss[i] = true
+			}
+		}
+		lacks = append(lacks, l)
+	}
+	// An ingredient lacking a macro that is reported as computed understates it.
+	given := [4]bool{r.Nutrition.Kcal != nil, r.Nutrition.Protein != nil, r.Nutrition.Carbs != nil, r.Nutrition.Fat != nil}
+	for _, l := range lacks {
+		for i := range l.miss {
+			if l.miss[i] && seen[i] && !given[i] && !slices.Contains(out.Unmatched, l.name) {
+				out.Unmatched = append(out.Unmatched, l.name)
 			}
 		}
 	}
