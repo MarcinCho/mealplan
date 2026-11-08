@@ -73,6 +73,21 @@ type Ingredient struct {
 	Quantity       *float64
 	Unit           string
 	Note           string
+	ProductID      string // remembered product choice, "" = none
+}
+
+// Macros holds nutrition values; nil means unknown.
+type Macros struct {
+	Kcal, Protein, Carbs, Fat *float64
+}
+
+type Product struct {
+	ID, HouseholdID, Name, NormalizedName string
+	Per100g                               Macros
+	PieceGrams                            *float64
+	DensityGPerML                         *float64
+	Aliases                               []string
+	CreatedAt, UpdatedAt                  time.Time
 }
 
 type Recipe struct {
@@ -84,6 +99,7 @@ type Recipe struct {
 	Tags         []string
 	Ingredients  []Ingredient
 	Steps        []string
+	Nutrition    Macros // given/manual values per portion
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
