@@ -51,8 +51,14 @@ func parseNutritionLine(line string) (domain.Macros, bool) {
 	}
 	for _, seg := range splitOutsideDecimals(strings.NewReplacer(";", ",", "/", ",").Replace(rest)) {
 		low := strings.ToLower(seg)
-		// Sub-items ("w tym kwasy tłuszczowe nasycone 3 g") never set a main macro.
-		if strings.HasPrefix(strings.TrimSpace(low), "w tym") || containsAny(low, "nasycon", "saturated") {
+		// Sub-items ("(w tym nasycone 3 g)", "z czego ...", "of which ...") are cut off, so they never set a main macro
+		// and never hide the main value in front of them.
+		for _, cut := range []string{"(w tym", "w tym", "z czego", "of which"} {
+			if i := strings.Index(low, cut); i >= 0 {
+				low = low[:i]
+			}
+		}
+		if strings.TrimSpace(low) == "" || containsAny(low, "nasycon", "saturated") {
 			continue
 		}
 		var dst **float64

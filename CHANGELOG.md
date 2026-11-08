@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Spiżarnia
+
+- Spiżarnia gospodarstwa (`/pantry`, `/pantry/review`): pozycje wskazują produkty (nazwa może rozwiązać się przez alias, nieznana tworzy produkt), ilości w jednostkach bazowych (kg jako g, l jako ml), ilość 0, stały zapas bez ilości, data ważności, przyciski +/- z opóźnionym, szeregowanym zapisem i miesięczny przegląd z przypomnieniem na ekranie „Dziś" po ponad 30 dniach.
+- „Zrobione" na posiłku z przepisu zdejmuje składniki przeskalowane do porcji, tylko w tej samej jednostce bazowej i nie poniżej 0; zapisuje, ile zdjęto, a cofnięcie zwraca dokładnie to. Ponowny zapis nie odejmuje drugi raz, a usunięcie zrobionego wpisu nie zwraca zapasu. Błąd `pantry_failed` oznacza zapisany posiłek bez aktualizacji spiżarni (ponowny zapis naprawia).
+- Lista zakupów pomija zrobione posiłki i odejmuje zapas per produkt i jednostka bazowa: pozycje `haveQuantity` („masz w domu", „kup X (masz Y)"), stałe zapasy są pomijane. „Przenieś kupione do spiżarni" (`POST /shopping/move-to-pantry`, pole `moved`) dodaje odhaczone pozycje raz. Opis: `docs/pantry.md`.
+- Ograniczenia: brak przeliczania łyżek i szklanek na g/ml, brak rezerwacji zapasu między tygodniami, dwie nazwy jednego produktu to dwa wiersze listy, dowolne jednostki nigdy nie są dopasowywane.
+- Import: linia `Wartości na porcję` z „(w tym nasycone …)", „z czego" lub „of which" przy tłuszczu nie gubi już wartości tłuszczu (segment jest ucinany zamiast pomijany).
+
 ### Wartości odżywcze
 
 - Przepis ma wartości na porcję (kcal, białko, węglowodany, tłuszcz) z osobnym źródłem każdej wartości: wpisane w przepisie, wyliczone ze składników przez bazę produktów gospodarstwa albo brak. Wyliczenie oznacza „przybliżone", gdy składnik nie ma produktu lub jego ilości nie da się przeliczyć na gramy.
