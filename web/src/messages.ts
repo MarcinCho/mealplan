@@ -127,7 +127,12 @@ export const t = {
   titleRequired: 'Podaj tytuł przepisu.',
   importedBanner: 'Przepis wczytany z importu. Sprawdź wiersze oznaczone kolorem, zanim go zapiszesz.',
   fromText: 'Z tekstu',
-  ingredientNote: 'Notatka (nie jest zapisywana)',
+  ingredientNote: 'Notatka',
+  ingredientNotePlaceholder: 'np. można zastąpić jogurtem greckim',
+  skillTitle: 'Używasz Claude?',
+  skillText: 'Pobierz umiejętność „mealplan-recipe-format". Claude zamieni dowolny przepis (tekst, link do strony, przepis z innego języka) na format, który wkleisz w zakładce Tekst.',
+  skillDownload: 'Pobierz SKILL.md',
+  skillInstall: 'Zapisz plik w folderze mealplan-recipe-format w katalogu umiejętności Claude, np. ~/.claude/skills/mealplan-recipe-format/SKILL.md.',
 }
 
 const errors: Record<string, string> = {

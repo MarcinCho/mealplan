@@ -34,6 +34,7 @@ export const useRecipes = defineStore('recipes', {
           name: i.name,
           quantity: (i.quantity as unknown) === '' ? null : i.quantity,
           unit: i.unit,
+          note: (i.note ?? '').trim(),
         })),
         steps: r.steps,
       }

@@ -105,6 +105,14 @@ Parser ma twarde granice, żeby ogromna strona lub wklejka nie zużyła czasu an
 
 Parser linii składnika rozpoznaje też ilość po nazwie („czosnek 2 ząbki", „sól 1 płaska łyżeczka"; jednostka jest wtedy wymagana) oraz przymiotnik między liczbą a jednostką („1 płaska łyżeczka", „2 czubate łyżki").
 
+## Umiejętność Claude
+
+Umiejętność `mealplan-recipe-format` uczy Claude zamieniać dowolny przepis (tekst, link do strony, przepis w innym języku) na format, który wklejasz w zakładce Tekst importu.
+
+Plik pobierzesz w aplikacji: Importuj, karta „Używasz Claude?" na dole ekranu (przycisk „Pobierz SKILL.md"), albo bezpośrednio spod `/claude-skill/SKILL.md`. Zapisz go w katalogu umiejętności Claude, np. `~/.claude/skills/mealplan-recipe-format/SKILL.md`.
+
+Plik kanoniczny to `web/public/claude-skill/SKILL.md` (serwer wydaje go z osadzonego `dist`); `.claude/skills/mealplan-recipe-format/SKILL.md` w repozytorium jest dowiązaniem symbolicznym do niego.
+
 ## Duplikaty i aktualizacja
 
 Po analizie edytor porównuje szkic z listą przepisów. Za duplikat uważany jest przepis o tym samym znormalizowanym adresie źródła (bez schematu, `www.`, fragmentu `#…` i końcowych `/`, wielkość liter bez znaczenia) albo o takim samym tytule (wielkość liter bez znaczenia). Użytkownik wybiera:

@@ -6,9 +6,10 @@ export interface Ingredient {
   name: string
   quantity: number | null
   unit: string
-  // Set only on rows that came from an import; used for highlighting, never sent to the API.
-  raw?: string
+  // Saved with the recipe (max 200 characters); an absent value is sent as empty.
   note?: string
+  // Import-only hints, used for highlighting and never sent to the API.
+  raw?: string
   confidence?: Confidence
 }
 

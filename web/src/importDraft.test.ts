@@ -31,6 +31,11 @@ describe('draftToRecipe', () => {
     expect(r.baseServings).toBe(4)
     expect(r.ingredients[0]).toMatchObject({ name: 'wody', quantity: 1, unit: 'l', confidence: 'ok' })
   })
+  it('carries the ingredient note from draft to recipe', () => {
+    const d = draft({ ingredients: [{ raw: 'ser', name: 'ser', quantity: null, unit: '', note: 'drobno starta', confidence: 'ok' }] })
+    expect(draftToRecipe(d).ingredients[0].note).toBe('drobno starta')
+    expect(mergeIntoExisting(d, recipe({})).ingredients[0].note).toBe('drobno starta')
+  })
   it('defaults unknown servings to 4 and keeps the id when updating', () => {
     const r = draftToRecipe(draft({ servings: 0 }), 'abc')
     expect(r.baseServings).toBe(4)

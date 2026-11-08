@@ -30,7 +30,7 @@ onMounted(async () => {
     if (d && imports.targetId === existing.id) {
       recipe.value = mergeIntoExisting(d, existing)
     } else {
-      recipe.value = existing
+      recipe.value = { ...existing, ingredients: existing.ingredients.map((i) => ({ ...i, note: i.note ?? '' })) }
     }
     loaded.value = true
   } catch (e) {
@@ -44,7 +44,7 @@ onBeforeUnmount(() => imports.clear())
 const fromImport = computed(() => Boolean(imports.draft) && (isNew.value ? !imports.targetId : imports.targetId === recipe.value.id))
 
 function addIngredient() {
-  recipe.value.ingredients.push({ name: '', quantity: null, unit: '' })
+  recipe.value.ingredients.push({ name: '', quantity: null, unit: '', note: '' })
 }
 function addStep() {
   recipe.value.steps.push('')
@@ -109,8 +109,8 @@ async function remove() {
         <v-text-field v-model="ing.unit" :label="t.unit" density="compact" class="ing-unit" />
         <v-btn icon="mdi-close" variant="text" :title="t.remove" @click="recipe.ingredients.splice(i, 1)" />
       </div>
+      <v-text-field v-model="ing.note" :label="t.ingredientNote" :placeholder="t.ingredientNotePlaceholder" maxlength="200" density="compact" />
       <div v-if="ing.confidence && ing.confidence !== 'ok'" class="text-caption text-medium-emphasis pb-1">{{ t.fromText }}: „{{ ing.raw }}"</div>
-      <div v-if="ing.note" class="text-caption text-medium-emphasis pb-1">{{ t.ingredientNote }}: {{ ing.note }}</div>
     </div>
     <v-btn variant="text" prepend-icon="mdi-plus" class="mb-4" @click="addIngredient">{{ t.addIngredient }}</v-btn>
 

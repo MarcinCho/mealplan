@@ -113,4 +113,11 @@ async function choose(update: boolean) {
       <v-btn variant="text" :to="{ name: 'recipes' }">{{ t.cancel }}</v-btn>
     </div>
   </v-form>
+
+  <v-card v-if="!duplicate" border flat class="pa-4 mt-6">
+    <div class="text-subtitle-1 mb-1">{{ t.skillTitle }}</div>
+    <div class="text-body-2 mb-3">{{ t.skillText }}</div>
+    <v-btn variant="tonal" prepend-icon="mdi-download" href="/claude-skill/SKILL.md" download="SKILL.md">{{ t.skillDownload }}</v-btn>
+    <div class="text-caption text-medium-emphasis mt-3">{{ t.skillInstall }}</div>
+  </v-card>
 </template>
