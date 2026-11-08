@@ -172,3 +172,44 @@ func TestEditAndRemoveRespectTheWeek(t *testing.T) {
 		t.Fatalf("remove through own week: %v", err)
 	}
 }
+
+type fakeHook struct{ done, undone int }
+
+func (h *fakeHook) EntryDone(context.Context, string, domain.PlanEntry) error { h.done++; return nil }
+func (h *fakeHook) EntryUndone(context.Context, string, string) error         { h.undone++; return nil }
+
+func TestEditCallsDoneHookOnTransitionsOnly(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	in := plan.EntryInput{Date: "2026-11-04", Slot: domain.SlotDinner, RecipeID: f.recipe.ID}
+	e, err := f.svc.Add(ctx, f.hid, wk, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// no hook: Edit still works
+	in.Done = true
+	if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, in); err != nil {
+		t.Fatal(err)
+	}
+	in.Done = false
+	if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, in); err != nil {
+		t.Fatal(err)
+	}
+	h := &fakeHook{}
+	f.svc.SetDoneHook(h)
+	edit := func(done bool, wantDone, wantUndone int) {
+		t.Helper()
+		in.Done = done
+		if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, in); err != nil {
+			t.Fatal(err)
+		}
+		if h.done != wantDone || h.undone != wantUndone {
+			t.Fatalf("after done=%v: done=%d undone=%d, want %d/%d", done, h.done, h.undone, wantDone, wantUndone)
+		}
+	}
+	edit(false, 0, 0)
+	edit(true, 1, 0)
+	edit(true, 1, 0)
+	edit(false, 1, 1)
+	edit(false, 1, 1)
+}

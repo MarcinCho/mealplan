@@ -40,10 +40,20 @@ type EntryInput struct {
 	Done       bool
 }
 
+// DoneHook is told when a plan entry is marked done or un-done (implemented by the pantry).
+type DoneHook interface {
+	EntryDone(ctx context.Context, householdID string, e domain.PlanEntry) error
+	EntryUndone(ctx context.Context, householdID, entryID string) error
+}
+
 type Service struct {
 	repo    Repo
 	recipes RecipeLookup
+	hook    DoneHook
 }
+
+// SetDoneHook registers the hook called after Edit changes an entry's Done flag.
+func (s *Service) SetDoneHook(h DoneHook) { s.hook = h }
 
 func New(repo Repo, recipes RecipeLookup) *Service { return &Service{repo: repo, recipes: recipes} }
 
@@ -118,20 +128,20 @@ func (s *Service) Add(ctx context.Context, householdID, week string, in EntryInp
 	return e, nil
 }
 
-// inWeek returns store.ErrNotFound unless the household's entry exists and is dated inside the week.
-func (s *Service) inWeek(ctx context.Context, householdID, week, id string) error {
+// inWeek returns the current entry, or store.ErrNotFound unless the household's entry exists and is dated inside the week.
+func (s *Service) inWeek(ctx context.Context, householdID, week, id string) (domain.PlanEntry, error) {
 	dates, err := WeekDates(week)
 	if err != nil {
-		return err
+		return domain.PlanEntry{}, err
 	}
 	cur, err := s.repo.PlanEntryByID(ctx, householdID, id)
 	if err != nil {
-		return err
+		return domain.PlanEntry{}, err
 	}
 	if cur.Date < dates[0] || cur.Date > dates[6] {
-		return store.ErrNotFound
+		return domain.PlanEntry{}, store.ErrNotFound
 	}
-	return nil
+	return cur, nil
 }
 
 func (s *Service) Edit(ctx context.Context, householdID, week, id string, in EntryInput) (domain.PlanEntry, error) {
@@ -139,18 +149,30 @@ func (s *Service) Edit(ctx context.Context, householdID, week, id string, in Ent
 	if err != nil {
 		return domain.PlanEntry{}, err
 	}
-	if err := s.inWeek(ctx, householdID, week, id); err != nil {
+	cur, err := s.inWeek(ctx, householdID, week, id)
+	if err != nil {
 		return domain.PlanEntry{}, err
 	}
 	e.ID = id
 	if err := s.repo.UpdatePlanEntry(ctx, e); err != nil {
 		return domain.PlanEntry{}, err
 	}
+	if s.hook != nil && cur.Done != e.Done {
+		var herr error
+		if e.Done {
+			herr = s.hook.EntryDone(ctx, householdID, e)
+		} else {
+			herr = s.hook.EntryUndone(ctx, householdID, id)
+		}
+		if herr != nil {
+			return e, fmt.Errorf("plan entry saved, but updating the pantry failed: %w", herr)
+		}
+	}
 	return e, nil
 }
 
 func (s *Service) Remove(ctx context.Context, householdID, week, id string) error {
-	if err := s.inWeek(ctx, householdID, week, id); err != nil {
+	if _, err := s.inWeek(ctx, householdID, week, id); err != nil {
 		return err
 	}
 	return s.repo.DeletePlanEntry(ctx, householdID, id)
