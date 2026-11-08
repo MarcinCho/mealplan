@@ -2,11 +2,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { resolveRoute } from './guard'
 import { useSession } from './stores/session'
 import AppShell from './layouts/AppShell.vue'
+import AccountView from './views/AccountView.vue'
 import ImportView from './views/ImportView.vue'
 import InviteAcceptView from './views/InviteAcceptView.vue'
 import LoginView from './views/LoginView.vue'
 import MembersView from './views/MembersView.vue'
 import PlanView from './views/PlanView.vue'
+import ProductsView from './views/ProductsView.vue'
 import RecipeEditView from './views/RecipeEditView.vue'
 import RecipesView from './views/RecipesView.vue'
 import SetupView from './views/SetupView.vue'
@@ -30,6 +32,8 @@ export const router = createRouter({
         { path: 'recipes/new', name: 'recipe-new', component: RecipeEditView },
         { path: 'recipes/:id', name: 'recipe-edit', component: RecipeEditView },
         { path: 'shopping', name: 'shopping', component: ShoppingView },
+        { path: 'account', name: 'account', component: AccountView },
+        { path: 'products', name: 'products', component: ProductsView },
         { path: 'members', name: 'members', component: MembersView },
       ],
     },

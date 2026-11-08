@@ -59,3 +59,66 @@ export interface ShoppingItem {
   checked: boolean
   manual: boolean
 }
+
+export interface Macros {
+  kcal: number | null
+  protein: number | null
+  carbs: number | null
+  fat: number | null
+}
+
+export interface Product {
+  id: string
+  name: string
+  per100g: Macros
+  pieceGrams: number | null
+  densityGPerMl: number | null
+  aliases: string[]
+}
+
+export interface NutritionSettings {
+  enabled: boolean
+  goal: Macros
+}
+
+export type Source = 'recipe' | 'computed' | 'missing'
+
+export interface MealNutrition {
+  entryId: string
+  title: string
+  slot: Slot
+  values: Macros
+  sources: Record<keyof Macros, Source>
+  approximate: boolean
+  missing: boolean
+}
+
+export interface LogNutrition {
+  id: string
+  productId: string
+  name: string
+  quantity: number
+  unit: 'g' | 'szt'
+  values: Macros
+  missing: boolean
+}
+
+export interface DaySummary {
+  date: string
+  total: Macros
+  goal: Macros
+  remaining: Macros
+  meals: MealNutrition[]
+  log: LogNutrition[]
+  missingMeals: number
+  missingLog: number
+  incomplete: Record<keyof Macros, boolean>
+  approximate: boolean
+}
+
+export interface RecipeNutrition {
+  values: Macros
+  sources: Record<keyof Macros, Source>
+  approximate: boolean
+  unmatched: string[]
+}
