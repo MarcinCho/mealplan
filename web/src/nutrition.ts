@@ -45,3 +45,37 @@ export function formatRemaining(d: DaySummary): string {
   out.push(...other)
   return out.length ? out.join(' · ') : 'cel osiągnięty'
 }
+
+// Share of the goal reached, for a progress bar: 0..100, null when there is no goal.
+export function goalPercent(total: number | null, goal: number | null): number | null {
+  if (goal === null || goal === undefined || goal <= 0) return null
+  if (total === null || total === undefined) return 0
+  return Math.min(100, Math.max(0, (total / goal) * 100))
+}
+
+function plural(n: number, one: string, few: string, many: string): string {
+  if (n === 1) return one
+  const last = n % 10
+  const tens = n % 100
+  return last >= 2 && last <= 4 && !(tens >= 12 && tens <= 14) ? few : many
+}
+
+// Warnings that tell the user the day's total is not the whole truth.
+export function dayWarnings(d: DaySummary): string[] {
+  const out: string[] = []
+  if (d.missingMeals > 0) out.push(`${d.missingMeals} ${plural(d.missingMeals, 'posiłek', 'posiłki', 'posiłków')} bez wartości`)
+  if (d.missingLog > 0) out.push(`${d.missingLog} ${plural(d.missingLog, 'pozycja', 'pozycje', 'pozycji')} bez wartości`)
+  if (d.approximate) out.push('wartości przybliżone')
+  return out
+}
+
+// Mirrors the API: quantity > 0 and <= 10000.
+export function validQuantity(q: number | null | undefined): boolean {
+  return typeof q === 'number' && Number.isFinite(q) && q > 0 && q <= 10000
+}
+
+// One-line day digest for the week plan: "1850 / 2000 kcal · białko 92 g".
+export function dayLine(d: DaySummary): string {
+  const goal = d.goal.kcal !== null && d.goal.kcal !== undefined ? ` / ${formatNumber(d.goal.kcal, 'kcal')}` : ''
+  return `${formatNumber(d.total.kcal, 'kcal')}${goal} kcal · białko ${formatNumber(d.total.protein, 'g')} g`
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DaySummary, Macros } from './api/types'
-import { formatMacros, formatNumber, formatRemaining } from './nutrition'
+import { dayWarnings, formatMacros, formatNumber, formatRemaining, dayLine, goalPercent, validQuantity } from './nutrition'
 
 const m = (kcal: number | null, protein: number | null, carbs: number | null, fat: number | null): Macros => ({ kcal, protein, carbs, fat })
 const none = { kcal: false, protein: false, carbs: false, fat: false }
@@ -59,5 +59,55 @@ describe('formatRemaining', () => {
   it('combines precise, lower-bound and missing parts', () => {
     const d = day(m(1360, 50, null, null), m(2000, 100, 300, null), { ...none, protein: true })
     expect(formatRemaining(d)).toBe('brakuje 640 kcal · brakuje co najmniej 50 g białka · brak danych o węglowodanach')
+  })
+})
+
+describe('goalPercent', () => {
+  it('is the share of the goal, clamped to 0..100', () => {
+    expect(goalPercent(500, 2000)).toBe(25)
+    expect(goalPercent(3000, 2000)).toBe(100)
+    expect(goalPercent(-5, 2000)).toBe(0)
+  })
+  it('is 0 without a total and null without a goal', () => {
+    expect(goalPercent(null, 2000)).toBe(0)
+    expect(goalPercent(100, null)).toBeNull()
+    expect(goalPercent(100, 0)).toBeNull()
+  })
+})
+
+describe('dayWarnings', () => {
+  const base = day(m(1, 1, 1, 1), m(1, 1, 1, 1))
+  it('is empty for a complete day', () => {
+    expect(dayWarnings(base)).toEqual([])
+  })
+  it('pluralises the missing counts in Polish', () => {
+    expect(dayWarnings({ ...base, missingMeals: 1 })).toEqual(['1 posiłek bez wartości'])
+    expect(dayWarnings({ ...base, missingMeals: 3, missingLog: 5 })).toEqual(['3 posiłki bez wartości', '5 pozycji bez wartości'])
+    expect(dayWarnings({ ...base, missingLog: 2 })).toEqual(['2 pozycje bez wartości'])
+    expect(dayWarnings({ ...base, missingMeals: 12 })).toEqual(['12 posiłków bez wartości'])
+  })
+  it('adds the approximate warning last', () => {
+    expect(dayWarnings({ ...base, missingMeals: 2, approximate: true })).toEqual(['2 posiłki bez wartości', 'wartości przybliżone'])
+  })
+})
+
+describe('validQuantity', () => {
+  it('mirrors the API: > 0 and <= 10000', () => {
+    expect(validQuantity(0)).toBe(false)
+    expect(validQuantity(-1)).toBe(false)
+    expect(validQuantity(0.5)).toBe(true)
+    expect(validQuantity(10000)).toBe(true)
+    expect(validQuantity(10001)).toBe(false)
+    expect(validQuantity(null)).toBe(false)
+    expect(validQuantity(NaN)).toBe(false)
+  })
+})
+
+describe('dayLine', () => {
+  it('shows kcal against the goal and protein', () => {
+    expect(dayLine(day(m(1850, 92.4, 1, 1), m(2000, 100, null, null)))).toBe('1850 / 2000 kcal · białko 92,4 g')
+  })
+  it('uses a dash for missing values and omits a missing goal', () => {
+    expect(dayLine(day(m(null, null, null, null), m(null, null, null, null)))).toBe('— kcal · białko — g')
   })
 })

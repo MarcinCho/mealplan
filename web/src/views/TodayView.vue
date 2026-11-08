@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
-import type { PlanEntry, Slot } from '../api/types'
+import type { MealNutrition, PlanEntry, Slot } from '../api/types'
 import EmptyState from '../components/EmptyState.vue'
+import DaySummaryCard from '../components/DaySummary.vue'
 import EntryDialog from '../components/EntryDialog.vue'
+import FoodLogDialog from '../components/FoodLogDialog.vue'
+import MealNutritionDialog from '../components/MealNutritionDialog.vue'
 import QuickAdd from '../components/QuickAdd.vue'
 import { errorText, t } from '../messages'
 import { useMembers } from '../stores/members'
+import { useNutrition, type LogInput } from '../stores/nutrition'
 import { usePlan, type EntryInput } from '../stores/plan'
 import { useRecipes } from '../stores/recipes'
 import { useSession } from '../stores/session'
 import { avatarColor, entriesOfDay, freeSlots, greeting, heroOf, initial, SLOT_ACCUSATIVE, SLOT_ICON } from '../today'
+import { formatNumber } from '../nutrition'
 import { isoDate, mondayOf, SLOTS, weekDates } from '../weeks'
 
 const { mdAndUp } = useDisplay()
@@ -18,6 +23,7 @@ const plan = usePlan()
 const recipes = useRecipes()
 const members = useMembers()
 const session = useSession()
+const nutrition = useNutrition()
 
 const now = new Date()
 const todayDate = isoDate(now)
@@ -28,11 +34,28 @@ const error = ref('')
 const ready = ref(false)
 const dialog = ref(false)
 const editing = ref<PlanEntry | null>(null)
+const logDialog = ref(false)
+const mealDialog = ref(false)
+const shownMeal = ref<MealNutrition | null>(null)
 const initial_ = ref<{ date: string; slot: Slot }>({ date: todayDate, slot: 'lunch' })
 
 const recipeTitle = computed(() => Object.fromEntries(recipes.items.map((r) => [r.id, r.title])))
 const ready_ = computed(() => ready.value && plan.loaded && plan.week === week)
 const dayEntries = computed(() => entriesOfDay(plan.entries, selected.value))
+const tracking = computed(() => nutrition.settings?.enabled === true)
+const daySummary = computed(() => nutrition.days[selected.value] ?? null)
+const mealOf = (e: PlanEntry) => daySummary.value?.meals.find((m) => m.entryId === e.id) ?? null
+const chipText = (e: PlanEntry) => {
+  const k = mealOf(e)?.values.kcal
+  return k === null || k === undefined ? '—' : `${formatNumber(k, 'kcal')} kcal`
+}
+function openMeal(e: PlanEntry) {
+  shownMeal.value = mealOf(e)
+  if (shownMeal.value) mealDialog.value = true
+}
+async function refreshDays() {
+  if (tracking.value) await nutrition.loadDays(dates[0], dates[6])
+}
 const hero = computed(() => heroOf(plan.entries, selected.value))
 const free = computed(() => freeSlots(plan.entries, selected.value))
 const isToday = computed(() => selected.value === todayDate)
@@ -63,6 +86,8 @@ async function init() {
     await Promise.all([recipes.load(), members.load()])
     ready.value = true
     await plan.load(week)
+    await nutrition.loadSettings()
+    await refreshDays()
   } catch (e) {
     error.value = errorText(e)
   }
@@ -73,6 +98,7 @@ async function run(fn: () => Promise<unknown>) {
   error.value = ''
   try {
     await fn()
+    await refreshDays()
   } catch (e) {
     error.value = errorText(e)
   }
@@ -97,6 +123,14 @@ async function save(input: EntryInput) {
     dialog.value = false
   })
 }
+async function saveLog(input: LogInput) {
+  await run(async () => {
+    await nutrition.addLog(input)
+    logDialog.value = false
+  })
+}
+const removeLog = (id: string) => run(() => nutrition.removeLog(id))
+
 async function removeEntry() {
   const e = editing.value
   if (!e) return
@@ -174,6 +208,7 @@ async function removeEntry() {
               <div class="font-weight-bold meal-title">{{ label(e) }}</div>
               <div class="text-body-2 text-medium-emphasis">{{ slotTitle(e.slot) }} · {{ e.servings }} {{ t.servingsShort }}</div>
             </div>
+            <v-chip v-if="tracking && mealOf(e)" size="small" variant="tonal" :title="t.mealNutritionTitle" @click.stop="openMeal(e)">{{ chipText(e) }}</v-chip>
             <span v-if="e.cookUserId" class="avatar" :style="{ background: color(e.cookUserId) }" :title="members.name(e.cookUserId)">
               {{ initial(members.name(e.cookUserId)) }}
             </span>
@@ -193,6 +228,8 @@ async function removeEntry() {
             <span class="d-block text-body-2">{{ t.whoCooks }}</span>
           </span>
         </button>
+
+        <DaySummaryCard v-if="tracking && daySummary" class="mt-4" :day="daySummary" @add="logDialog = true" @remove="removeLog" />
 
         <EmptyState v-if="recipes.items.length === 0 && dayEntries.length === 0" :title="t.noRecipes" :hint="t.noRecipesHint">
           <v-btn color="primary" :to="{ name: 'recipe-new' }">{{ t.newRecipe }}</v-btn>
@@ -236,6 +273,8 @@ async function removeEntry() {
     @save="save"
     @remove="removeEntry"
   />
+  <FoodLogDialog v-model="logDialog" :date="selected" @save="saveLog" />
+  <MealNutritionDialog v-model="mealDialog" :meal="shownMeal" />
 </template>
 
 <style scoped>
