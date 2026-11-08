@@ -4,7 +4,7 @@
 
 ### Notatki do składników
 
-- Składnik przepisu ma opcjonalną notatkę (`note`, do 200 znaków), np. „można zastąpić jogurtem greckim". Jest zapisywana razem z przepisem (migracja `0004`), a import zapisuje ją zamiast odrzucać; żądania bez `note` nadal działają. Długie linie z ilością (11-30 słów) są teraz składnikami, a notatki dłuższe niż 200 znaków są ucinane z ostrzeżeniem.
+- Składnik przepisu ma opcjonalną notatkę (`note`, do 200 znaków), np. „można zastąpić jogurtem greckim". Jest zapisywana razem z przepisem (migracja `0004`), a import zapisuje ją zamiast odrzucać; żądania bez `note` nadal działają. Długie linie zaczynające się od ilości (11-30 słów) są teraz składnikami, a notatki dłuższe niż 200 znaków są ucinane z ostrzeżeniem.
 - Edytor przepisu ma przy każdym składniku pole „Notatka” (do 200 znaków); wartość z importu lub z zapisanego przepisu jest w nim widoczna i zapisuje się razem z przepisem.
 - Ekran importu ma kartę „Używasz Claude?” z przyciskiem pobierania umiejętności `mealplan-recipe-format` (`/claude-skill/SKILL.md`, plik kanoniczny `web/public/claude-skill/SKILL.md`).
 

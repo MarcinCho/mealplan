@@ -88,7 +88,7 @@ Zasady:
 - Ilość bez jednostki (`2 jajka`) dostaje jednostkę `szt` i `guess`.
 - Brak ilości daje pustą ilość (`sól do smaku`); jednostki metryczne (`g`, `kg`, `ml`, `l`, `szt`) bez liczby nie są uznawane za jednostkę.
 - Zwroty typu `do smaku`, `do posypania`, `opcjonalnie` oraz tekst w nawiasach i po przecinku trafiają do **notatki**. Notatka jest **zapisywana** razem ze składnikiem (pole `note`, do 200 znaków; dłuższa jest ucinana z ostrzeżeniem).
-- Linie dłuższe niż 10 słów są składnikiem tylko wtedy, gdy znaleziono ilość (np. `250 g jogurtu (można zastąpić kefirem…)`); bez ilości są `unparsed`, żeby wklejone zdanie nie wyglądało jak składnik. Linie powyżej 30 słów są zawsze `unparsed`.
+- Linie dłuższe niż 10 słów są składnikiem tylko wtedy, gdy zaczynają się od ilości (np. `250 g jogurtu (można zastąpić kefirem…)`); bez ilości na początku (także z ilością tylko na końcu) są `unparsed`, żeby wklejone zdanie nie wyglądało jak składnik. Linie powyżej 30 słów są zawsze `unparsed`.
 - W edytorze linia `unparsed` ma jako nazwę swój oryginalny tekst (do 200 znaków), więc nic nie ginie; podświetlenie prosi o poprawę.
 
 ## Limity pracy parsera

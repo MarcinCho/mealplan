@@ -289,12 +289,13 @@ func ParseIngredient(raw string) IngredientLine {
 		unit     string
 		guess    bool
 		consumed bool
+		leading  bool // the amount stood at the start of the line
 		rest     = tk
 	)
 	if v, n, rng, ok := parseQuantity(tk); ok {
 		u, mult, un := takeUnitAfterFiller(tk[n:])
 		v *= mult
-		qty, unit, rest, guess, consumed = &v, u, tk[n+un:], rng, true
+		qty, unit, rest, guess, consumed, leading = &v, u, tk[n+un:], rng, true, true
 		if unit == "" {
 			unit, guess = "szt", true
 		}
@@ -323,8 +324,8 @@ func ParseIngredient(raw string) IngredientLine {
 		}
 	}
 
-	// A long line is an ingredient only when it starts with an amount; otherwise it is probably a pasted sentence.
-	if words > shortLineWords && qty == nil {
+	// A long line is an ingredient only when the amount stands at its start; otherwise it is probably a pasted sentence.
+	if words > shortLineWords && !leading {
 		return line
 	}
 

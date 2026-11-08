@@ -54,7 +54,7 @@ Shape: `ilość jednostka nazwa`, optionally followed by `, notatka` or `(notatk
 - **Countable things** have no unit: `2 jajka`, `1 cebula`, `3 pomidory`. The parser stores them as `szt` and marks the row as a guess; that tint in the preview is normal and needs no fix.
 - **Name**: use the **base (nominative) form**, lowercase except proper names: `250 g mąka pszenna`, not `mąki pszennej`. The app has no word-form matching, so `mąka` and `mąki` would appear as two products on the shopping list. Keep the name short: the product only, no amount and no preparation.
 - **No amount** (salt, pepper, oil for frying): write only the name, with the note after it: `sól`, `pieprz do smaku`, `olej do smażenia`. Recognised endings (`do smaku`, `do posypania`, `do podania`, `do smażenia`, `do dekoracji`, `do wyboru`, `opcjonalnie`) become the note automatically.
-- **Notes** go after a comma or in parentheses: `1 cebula, drobno posiekana`, `250 g jogurt grecki (można zastąpić kefirem lub śmietaną)`. A note is **saved with the ingredient** and shown next to it in the recipe, so use it for preparation (`rozpuszczone`, `w temperaturze pokojowej`), substitutions and any remark the source makes about that ingredient (`najlepiej mączyste`, `bez skórki`, `opcjonalnie`). Keep a note to one short phrase (at most 200 characters); do not put the product itself in the note.
+- **Notes** go after a comma or in parentheses: `1 cebula, drobno posiekana`, `250 g jogurt grecki (można zastąpić kefirem lub śmietaną)`. A note is **saved with the ingredient** and shown in the recipe editor, so use it for preparation (`rozpuszczone`, `w temperaturze pokojowej`), substitutions and any remark the source makes about that ingredient (`najlepiej mączyste`, `bez skórki`, `opcjonalnie`). Keep a note to one short phrase (at most 200 characters); do not put the product itself in the note.
 - **One product per line.** Split `sól i pieprz` into `sól` and `pieprz`. Keep alternatives as one name (`masło lub margarynę` → `masło lub margaryna`); put "or replace with" advice in the note.
 - **Line length**: up to 10 words normally; a line that starts with an amount may be up to 30 words, so that a long note fits. A longer line, or a long line with no amount, is not treated as an ingredient.
 - **Groups** (`Na ciasto:`, `Na sos:`): a short label line ending with a colon is skipped by the parser, so the grouping is lost. Keep the label if the groups matter, but put the group's role in the step text too. Do not repeat the same ingredient with different notes unless the amounts differ.
@@ -89,7 +89,7 @@ Tags, the source link, preparation times and photos. Say so briefly in the notes
 ## Before you answer, check
 
 - The block starts with the title line, then `Porcje: N`, a blank line, `Składniki:`, the ingredient lines, a blank line, `Przygotowanie:`, the numbered steps.
-- Every ingredient line is `ilość jednostka nazwa` (or a bare name for "to taste" items), no line over 10 words, no ranges, no bullets needed.
+- Every ingredient line is `ilość jednostka nazwa` (or a bare name for "to taste" items), at most 10 words per line (up to 30 when the line starts with an amount), no ranges, no bullets needed.
 - Names are in the nominative; metric units used where the source had them.
 - Every step is one numbered line; nothing from the page chrome remains.
 - Nothing was invented; every assumption is listed after the block.

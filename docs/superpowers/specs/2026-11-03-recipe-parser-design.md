@@ -85,7 +85,7 @@ Wejście: `"2 łyżki oliwy z oliwek, podgrzanej"`. Wyjście: `Quantity 2, Unit 
 **Nazwa i notatka**
 - nazwa to reszta po ilości i jednostce, bez przyimka `z`/`ze` na początku, w formie jak w tekście (bez lematyzacji);
 - tekst po przecinku i w nawiasach trafia do `Note`;
-- linia dłuższa niż 10 słów jest składnikiem tylko z rozpoznaną ilością (maks. 30 słów);
+- linia dłuższa niż 10 słów jest składnikiem tylko gdy zaczyna się od ilości (maks. 30 słów);
 - gdy nie da się wskazać nazwy, linia dostaje `unparsed` i zachowuje `Raw`.
 
 **Confidence**
