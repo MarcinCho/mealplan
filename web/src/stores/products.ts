@@ -16,17 +16,23 @@ export function emptyProduct(): Product {
 // v-model.number yields '' when a field is cleared; the API expects null.
 const num = (v: unknown): number | null => (v === '' || v === undefined || v === null ? null : Number(v))
 
+// A cleared v-text-field sets its model to null; treat that as an empty search.
+export function normalizeQuery(q: string | null | undefined): string {
+  return (q ?? '').trim()
+}
+
 export const useProducts = defineStore('products', {
   state: () => ({ items: [] as Product[], loaded: false }),
   actions: {
-    async load(q?: string) {
-      const query = q ? `?q=${encodeURIComponent(q)}` : ''
+    async load(q?: string | null) {
+      const n = normalizeQuery(q)
+      const query = n ? `?q=${encodeURIComponent(n)}` : ''
       this.items = await api<Product[]>('GET', '/products' + query)
       this.loaded = true
     },
     async save(p: Product): Promise<Product> {
       const body = {
-        name: p.name.trim(),
+        name: (p.name ?? '').trim(),
         per100g: {
           kcal: num(p.per100g.kcal),
           protein: num(p.per100g.protein),

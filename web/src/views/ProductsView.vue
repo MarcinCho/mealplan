@@ -8,7 +8,7 @@ import { productErrorText, t } from '../messages'
 import { useProducts } from '../stores/products'
 
 const products = useProducts()
-const q = ref('')
+const q = ref<string | null>('')
 const error = ref('')
 const dialog = ref(false)
 const editing = ref<Product | null>(null)
@@ -17,7 +17,7 @@ let timer: ReturnType<typeof setTimeout> | undefined
 
 async function load() {
   try {
-    await products.load(q.value.trim() || undefined)
+    await products.load(q.value)
     error.value = ''
   } catch (e) {
     error.value = productErrorText(e)

@@ -81,7 +81,7 @@ async function save() {
       <v-card-actions>
         <v-spacer />
         <v-btn variant="text" @click="emit('update:modelValue', false)">{{ t.cancel }}</v-btn>
-        <v-btn color="primary" :disabled="!draft.name.trim() || busy" :loading="busy" @click="save">{{ t.save }}</v-btn>
+        <v-btn color="primary" :disabled="!(draft.name ?? '').trim() || busy" :loading="busy" @click="save">{{ t.save }}</v-btn>
       </v-card-actions>
     </v-card>
   </component>

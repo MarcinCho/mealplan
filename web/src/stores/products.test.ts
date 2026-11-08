@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { emptyProduct, useProducts } from './products'
+import { emptyProduct, normalizeQuery, useProducts } from './products'
 
 describe('useProducts', () => {
   beforeEach(() => {
@@ -64,5 +64,26 @@ describe('useProducts', () => {
     await s.remove('a')
     expect(spy.mock.calls[0][1]!.method).toBe('DELETE')
     expect(s.items).toEqual([])
+  })
+})
+
+describe('normalizeQuery', () => {
+  it('treats null, undefined and blank as empty and trims', () => {
+    expect(normalizeQuery(null)).toBe('')
+    expect(normalizeQuery(undefined)).toBe('')
+    expect(normalizeQuery('')).toBe('')
+    expect(normalizeQuery('  mleko ')).toBe('mleko')
+  })
+})
+
+describe('useProducts.load with a cleared search', () => {
+  it('reloads the full list when the query is null', async () => {
+    setActivePinia(createPinia())
+    const spy = vi.fn(async (_u: string) => new Response('[]', { status: 200 }))
+    vi.stubGlobal('fetch', spy)
+    await useProducts().load(null)
+    await useProducts().load('  mleko ')
+    expect(spy.mock.calls[0][0]).toBe('/api/v1/products')
+    expect(spy.mock.calls[1][0]).toBe('/api/v1/products?q=mleko')
   })
 })
