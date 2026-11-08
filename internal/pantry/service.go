@@ -29,9 +29,8 @@ type Repo interface {
 	AddToPantry(ctx context.Context, householdID, productID, unit string, amount float64) (domain.PantryItem, error)
 	SavePantryItem(ctx context.Context, it domain.PantryItem) error
 	DeletePantryItem(ctx context.Context, householdID, id string) error
-	ApplyMovements(ctx context.Context, householdID string, ms []domain.PantryMovement) error
-	MovementsForEntry(ctx context.Context, householdID, entryID string) ([]domain.PantryMovement, error)
-	DeleteMovementsForEntry(ctx context.Context, householdID, entryID string) error
+	ConsumeForEntry(ctx context.Context, householdID, entryID string, ms []domain.PantryMovement) (bool, error)
+	RestoreForEntry(ctx context.Context, householdID, entryID string) error
 	PantryReviewedAt(ctx context.Context, householdID string) (*time.Time, error)
 	MarkPantryReviewed(ctx context.Context, householdID string, at time.Time) error
 }
@@ -95,6 +94,7 @@ func normalize(in Input) (*float64, string, error) {
 		}
 	}
 	if in.Staple {
+		_, unit = units.ToBase(1, unit)
 		return nil, unit, nil
 	}
 	if in.Quantity == nil {

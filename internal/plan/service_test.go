@@ -173,43 +173,60 @@ func TestEditAndRemoveRespectTheWeek(t *testing.T) {
 	}
 }
 
-type fakeHook struct{ done, undone int }
+type fakeHook struct {
+	done, undone int
+	failNext     bool
+}
 
-func (h *fakeHook) EntryDone(context.Context, string, domain.PlanEntry) error { h.done++; return nil }
-func (h *fakeHook) EntryUndone(context.Context, string, string) error         { h.undone++; return nil }
+func (h *fakeHook) EntryDone(context.Context, string, domain.PlanEntry) error {
+	h.done++
+	if h.failNext {
+		h.failNext = false
+		return errors.New("boom")
+	}
+	return nil
+}
+func (h *fakeHook) EntryUndone(context.Context, string, string) error { h.undone++; return nil }
 
-func TestEditCallsDoneHookOnTransitionsOnly(t *testing.T) {
+func TestHookIsStateBasedOnAddAndEdit(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
 	in := plan.EntryInput{Date: "2026-11-04", Slot: domain.SlotDinner, RecipeID: f.recipe.ID}
+	// no hook: everything still works
 	e, err := f.svc.Add(ctx, f.hid, wk, in)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// no hook: Edit still works
 	in.Done = true
-	if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, in); err != nil {
-		t.Fatal(err)
-	}
-	in.Done = false
 	if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, in); err != nil {
 		t.Fatal(err)
 	}
 	h := &fakeHook{}
 	f.svc.SetDoneHook(h)
-	edit := func(done bool, wantDone, wantUndone int) {
-		t.Helper()
-		in.Done = done
-		if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, in); err != nil {
-			t.Fatal(err)
-		}
-		if h.done != wantDone || h.undone != wantUndone {
-			t.Fatalf("after done=%v: done=%d undone=%d, want %d/%d", done, h.done, h.undone, wantDone, wantUndone)
-		}
+	if _, err := f.svc.Add(ctx, f.hid, wk, in); err != nil || h.done != 1 {
+		t.Fatalf("add done=true: %v done=%d", err, h.done)
 	}
-	edit(false, 0, 0)
-	edit(true, 1, 0)
-	edit(true, 1, 0)
-	edit(false, 1, 1)
-	edit(false, 1, 1)
+	if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, in); err != nil || h.done != 2 {
+		t.Fatalf("edit done=true: %v done=%d", err, h.done)
+	}
+	in.Done = false
+	if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, in); err != nil || h.undone != 1 {
+		t.Fatalf("edit done=false: %v undone=%d", err, h.undone)
+	}
+}
+
+func TestHookFailureIsReportedAndRetryCallsAgain(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	in := plan.EntryInput{Date: "2026-11-04", Slot: domain.SlotDinner, RecipeID: f.recipe.ID}
+	e, _ := f.svc.Add(ctx, f.hid, wk, in)
+	h := &fakeHook{failNext: true}
+	f.svc.SetDoneHook(h)
+	in.Done = true
+	if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, in); !errors.Is(err, plan.ErrPantry) {
+		t.Fatalf("want ErrPantry, got %v", err)
+	}
+	if _, err := f.svc.Edit(ctx, f.hid, wk, e.ID, in); err != nil || h.done != 2 {
+		t.Fatalf("retry: %v done=%d", err, h.done)
+	}
 }

@@ -2,6 +2,7 @@ package plan
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -50,6 +51,27 @@ type Service struct {
 	repo    Repo
 	recipes RecipeLookup
 	hook    DoneHook
+}
+
+// ErrPantry means the entry was saved but the pantry could not be updated; retrying the save repairs it.
+var ErrPantry = errors.New("plan entry saved, but updating the pantry failed")
+
+// syncPantry makes stock match the saved entry's Done flag. The hook is state-based and idempotent,
+// so repeating a save (e.g. after a failure) converges.
+func (s *Service) syncPantry(ctx context.Context, e domain.PlanEntry) error {
+	if s.hook == nil {
+		return nil
+	}
+	var err error
+	if e.Done {
+		err = s.hook.EntryDone(ctx, e.HouseholdID, e)
+	} else {
+		err = s.hook.EntryUndone(ctx, e.HouseholdID, e.ID)
+	}
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrPantry, err)
+	}
+	return nil
 }
 
 // SetDoneHook registers the hook called after Edit changes an entry's Done flag.
@@ -125,6 +147,9 @@ func (s *Service) Add(ctx context.Context, householdID, week string, in EntryInp
 	if err := s.repo.InsertPlanEntry(ctx, e); err != nil {
 		return domain.PlanEntry{}, err
 	}
+	if err := s.syncPantry(ctx, e); err != nil {
+		return e, err
+	}
 	return e, nil
 }
 
@@ -149,24 +174,15 @@ func (s *Service) Edit(ctx context.Context, householdID, week, id string, in Ent
 	if err != nil {
 		return domain.PlanEntry{}, err
 	}
-	cur, err := s.inWeek(ctx, householdID, week, id)
-	if err != nil {
+	if _, err := s.inWeek(ctx, householdID, week, id); err != nil {
 		return domain.PlanEntry{}, err
 	}
 	e.ID = id
 	if err := s.repo.UpdatePlanEntry(ctx, e); err != nil {
 		return domain.PlanEntry{}, err
 	}
-	if s.hook != nil && cur.Done != e.Done {
-		var herr error
-		if e.Done {
-			herr = s.hook.EntryDone(ctx, householdID, e)
-		} else {
-			herr = s.hook.EntryUndone(ctx, householdID, id)
-		}
-		if herr != nil {
-			return e, fmt.Errorf("plan entry saved, but updating the pantry failed: %w", herr)
-		}
+	if err := s.syncPantry(ctx, e); err != nil {
+		return e, err
 	}
 	return e, nil
 }

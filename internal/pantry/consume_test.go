@@ -2,6 +2,9 @@ package pantry_test
 
 import (
 	"context"
+	"errors"
+	"os"
+	"sync"
 	"testing"
 
 	"mealplan/internal/domain"
@@ -135,5 +138,137 @@ func TestDeleteDoneEntryKeepsStock(t *testing.T) {
 	}
 	if ms, _ := f.st.MovementsForEntry(ctx, f.hid, e.ID); len(ms) != 0 {
 		t.Fatalf("movements left: %+v", ms)
+	}
+}
+
+// doneFixture returns a one-ingredient recipe entry (500 g for 2 servings) and the product.
+func (f *fixture) doneFixture(t *testing.T, name string, servings int) (domain.PlanEntry, domain.Product) {
+	t.Helper()
+	ctx := context.Background()
+	prod := f.product(name)
+	r, err := recipe.New(f.st, nil).Create(ctx, f.hid, recipe.Input{Title: name, BaseServings: 2,
+		Ingredients: []recipe.IngredientInput{{Name: name, Quantity: fp(500), Unit: "g", ProductID: prod.ID}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e, err := plan.New(f.st, f.st).Add(ctx, f.hid, "2026-11-02", plan.EntryInput{Date: "2026-11-03", Slot: domain.SlotDinner, RecipeID: r.ID, Servings: servings})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return e, prod
+}
+
+func (f *fixture) stock(prodID string) float64 {
+	items, _ := f.st.PantryItems(context.Background(), f.hid)
+	for _, it := range items {
+		if it.ProductID == prodID && it.Quantity != nil {
+			return *it.Quantity
+		}
+	}
+	return -1
+}
+
+func TestConcurrentDoneAndUndoApplyOnce(t *testing.T) {
+	if os.Getenv("MEALPLAN_TEST_DRIVER") != "postgres" {
+		t.Skip("Postgres-only concurrency test")
+	}
+	f := newFixture(t)
+	ctx := context.Background()
+	e, prod := f.doneFixture(t, "Wspólny", 2)
+	if _, err := f.st.AddToPantry(ctx, f.hid, prod.ID, "g", 2000); err != nil {
+		t.Fatal(err)
+	}
+	run := func(fn func() error) {
+		var wg sync.WaitGroup
+		for i := 0; i < 8; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := fn(); err != nil {
+					t.Error(err)
+				}
+			}()
+		}
+		wg.Wait()
+	}
+	run(func() error { return f.svc.EntryDone(ctx, f.hid, e) })
+	if got := f.stock(prod.ID); got != 1500 {
+		t.Fatalf("after parallel done: %v", got)
+	}
+	if ms, _ := f.st.MovementsForEntry(ctx, f.hid, e.ID); len(ms) != 1 {
+		t.Fatalf("movements: %+v", ms)
+	}
+	run(func() error { return f.svc.EntryUndone(ctx, f.hid, e.ID) })
+	if got := f.stock(prod.ID); got != 2000 {
+		t.Fatalf("after parallel undo: %v", got)
+	}
+}
+
+type failingRepo struct {
+	pantry.Repo
+	fail bool
+}
+
+func (r *failingRepo) ConsumeForEntry(ctx context.Context, hh, id string, ms []domain.PantryMovement) (bool, error) {
+	if r.fail {
+		r.fail = false
+		return false, errors.New("db down")
+	}
+	return r.Repo.ConsumeForEntry(ctx, hh, id, ms)
+}
+
+func TestRetryAfterFailingStoreDeductsOnce(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	e, prod := f.doneFixture(t, "Retry", 2)
+	f.st.AddToPantry(ctx, f.hid, prod.ID, "g", 2000)
+	svc := pantry.New(&failingRepo{Repo: f.st, fail: true}, f.st, f.prods, nil)
+	psvc := plan.New(f.st, f.st)
+	psvc.SetDoneHook(svc)
+	in := plan.EntryInput{Date: e.Date, Slot: e.Slot, RecipeID: e.RecipeID, Servings: 2, Done: true}
+	if _, err := psvc.Edit(ctx, f.hid, "2026-11-02", e.ID, in); !errors.Is(err, plan.ErrPantry) {
+		t.Fatalf("first: %v", err)
+	}
+	if got := f.stock(prod.ID); got != 2000 {
+		t.Fatalf("stock after failure: %v", got)
+	}
+	for i := 0; i < 2; i++ { // retry, then a second done=true save
+		if _, err := psvc.Edit(ctx, f.hid, "2026-11-02", e.ID, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := f.stock(prod.ID); got != 1500 {
+		t.Fatalf("stock after retries: %v", got)
+	}
+}
+
+func TestAddWithDoneDeducts(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	e, prod := f.doneFixture(t, "Dodane", 2)
+	f.st.AddToPantry(ctx, f.hid, prod.ID, "g", 2000)
+	psvc := plan.New(f.st, f.st)
+	psvc.SetDoneHook(f.svc)
+	if _, err := psvc.Add(ctx, f.hid, "2026-11-02", plan.EntryInput{Date: e.Date, Slot: domain.SlotLunch, RecipeID: e.RecipeID, Servings: 2, Done: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.stock(prod.ID); got != 1500 {
+		t.Fatalf("stock: %v", got)
+	}
+}
+
+func TestStapleAndStockInKgShareOneRow(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	p := f.product("Mąka kg")
+	if _, err := f.svc.Add(ctx, f.hid, pantry.Input{ProductID: p.ID, Unit: "kg", Staple: true}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.Add(ctx, f.hid, pantry.Input{ProductID: p.ID, Quantity: fp(1), Unit: "kg"}); err != nil {
+		t.Fatal(err)
+	}
+	items, _ := f.st.PantryItems(ctx, f.hid)
+	if len(items) != 1 || items[0].Unit != "g" || !items[0].Staple {
+		t.Fatalf("items: %+v", items)
 	}
 }

@@ -152,7 +152,86 @@ func (s *Store) DeletePantryItem(ctx context.Context, householdID, id string) er
 //   - Staple rows (quantity NULL) are never changed and nothing is recorded for them.
 //   - Movements that end up applying 0 are not recorded.
 func (s *Store) ApplyMovements(ctx context.Context, householdID string, ms []domain.PantryMovement) error {
+	return s.inTx(ctx, func(tx *sql.Tx) error { return s.applyMovements(ctx, tx, householdID, ms) })
+}
+
+// lockEntry locks the household's plan entry row for the transaction (ErrNotFound if absent).
+// SQLite needs no lock: the pool has a single connection, so transactions are serialized.
+func (s *Store) lockEntry(ctx context.Context, tx *sql.Tx, householdID, entryID string) error {
+	q := `SELECT id FROM plan_entry WHERE id = ? AND household_id = ?`
+	if s.db.Driver == "postgres" {
+		q += ` FOR UPDATE`
+	}
+	var id string
+	if err := tx.QueryRowContext(ctx, s.db.Rebind(q), entryID, householdID).Scan(&id); err != nil {
+		return mapErr(err)
+	}
+	return nil
+}
+
+func (s *Store) movementsTx(ctx context.Context, tx *sql.Tx, householdID, entryID string) (int, []domain.PantryMovement, error) {
+	rows, err := tx.QueryContext(ctx, s.db.Rebind(`SELECT entry_id, product_id, unit, amount FROM pantry_movement WHERE household_id = ? AND entry_id = ? ORDER BY product_id, unit, amount`), householdID, entryID)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer rows.Close()
+	var out []domain.PantryMovement
+	for rows.Next() {
+		var m domain.PantryMovement
+		if err := rows.Scan(&m.EntryID, &m.ProductID, &m.Unit, &m.Amount); err != nil {
+			return 0, nil, err
+		}
+		out = append(out, m)
+	}
+	return len(out), out, rows.Err()
+}
+
+// ConsumeForEntry applies ms in one transaction unless the entry already has recorded movements.
+// The entry row is locked first, so concurrent calls for one entry deduct exactly once.
+func (s *Store) ConsumeForEntry(ctx context.Context, householdID, entryID string, ms []domain.PantryMovement) (bool, error) {
+	applied := false
+	err := s.inTx(ctx, func(tx *sql.Tx) error {
+		if err := s.lockEntry(ctx, tx, householdID, entryID); err != nil {
+			return err
+		}
+		n, _, err := s.movementsTx(ctx, tx, householdID, entryID)
+		if err != nil || n > 0 {
+			return err
+		}
+		for _, m := range ms {
+			if m.EntryID != entryID {
+				return ErrNotFound
+			}
+		}
+		applied = true
+		return s.applyMovements(ctx, tx, householdID, ms)
+	})
+	return applied && err == nil, err
+}
+
+// RestoreForEntry gives back the recorded (actually applied) movements of the entry with the opposite
+// sign and forgets them, all in one transaction under the entry lock. No movements means no-op.
+func (s *Store) RestoreForEntry(ctx context.Context, householdID, entryID string) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
+		if err := s.lockEntry(ctx, tx, householdID, entryID); err != nil {
+			return err
+		}
+		n, ms, err := s.movementsTx(ctx, tx, householdID, entryID)
+		if err != nil || n == 0 {
+			return err
+		}
+		for i := range ms {
+			ms[i].Amount = -ms[i].Amount
+		}
+		if err := s.applyMovements(ctx, tx, householdID, ms); err != nil {
+			return err
+		}
+		return s.exec(ctx, tx, `DELETE FROM pantry_movement WHERE household_id = ? AND entry_id = ?`, householdID, entryID)
+	})
+}
+
+func (s *Store) applyMovements(ctx context.Context, tx *sql.Tx, householdID string, ms []domain.PantryMovement) error {
+	{
 		for _, m := range ms {
 			var n int
 			if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COUNT(*) FROM plan_entry WHERE id = ? AND household_id = ?`), m.EntryID, householdID).Scan(&n); err != nil {
@@ -195,7 +274,7 @@ func (s *Store) ApplyMovements(ctx context.Context, householdID string, ms []dom
 			}
 		}
 		return nil
-	})
+	}
 }
 
 func (s *Store) MovementsForEntry(ctx context.Context, householdID, entryID string) ([]domain.PantryMovement, error) {

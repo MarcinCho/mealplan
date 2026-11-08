@@ -50,15 +50,11 @@ func Deductions(r domain.Recipe, servings int, m *nutrition.Matcher, stock []dom
 	return out
 }
 
-// EntryDone takes the recipe's ingredients out of stock. It does nothing for free-text entries or an
-// entry that already has recorded movements.
+// EntryDone takes the recipe's ingredients out of stock. It does nothing for free-text entries; the
+// store applies the deductions atomically and only if the entry has no recorded movements yet.
 func (s *Service) EntryDone(ctx context.Context, householdID string, e domain.PlanEntry) error {
 	if e.RecipeID == "" {
 		return nil
-	}
-	existing, err := s.repo.MovementsForEntry(ctx, householdID, e.ID)
-	if err != nil || len(existing) > 0 {
-		return err
 	}
 	r, err := s.recipes.RecipeByID(ctx, householdID, e.RecipeID)
 	if err != nil {
@@ -76,23 +72,12 @@ func (s *Service) EntryDone(ctx context.Context, householdID string, e domain.Pl
 	if len(ms) == 0 {
 		return nil
 	}
-	return s.repo.ApplyMovements(ctx, householdID, ms)
+	_, err = s.repo.ConsumeForEntry(ctx, householdID, e.ID, ms)
+	return err
 }
 
-// EntryUndone puts back what EntryDone took (the amounts actually applied) and forgets the movements.
-// The reversal is applied first, then the records are deleted, so a repeated call finds nothing to do.
+// EntryUndone puts back what EntryDone took (the amounts actually applied) and forgets the movements,
+// atomically; a repeated call finds nothing to do.
 func (s *Service) EntryUndone(ctx context.Context, householdID, entryID string) error {
-	ms, err := s.repo.MovementsForEntry(ctx, householdID, entryID)
-	if err != nil || len(ms) == 0 {
-		return err
-	}
-	rev := make([]domain.PantryMovement, len(ms))
-	for i, m := range ms {
-		m.Amount = -m.Amount
-		rev[i] = m
-	}
-	if err := s.repo.ApplyMovements(ctx, householdID, rev); err != nil {
-		return err
-	}
-	return s.repo.DeleteMovementsForEntry(ctx, householdID, entryID)
+	return s.repo.RestoreForEntry(ctx, householdID, entryID)
 }
