@@ -167,3 +167,97 @@ func TestRecipeIngredientNoteOverHTTP(t *testing.T) {
 		t.Fatalf("long note: %d %s", rec.Code, rec.Body)
 	}
 }
+
+type nutritionResp struct {
+	Nutrition struct {
+		Kcal, Protein, Carbs, Fat *float64
+	} `json:"nutrition"`
+	Ingredients []struct {
+		ProductID *string `json:"productId"`
+	} `json:"ingredients"`
+	NutritionPerPortion *struct {
+		Values struct {
+			Kcal, Protein, Carbs, Fat *float64
+		} `json:"values"`
+		Sources struct {
+			Kcal, Protein, Carbs, Fat string
+		} `json:"sources"`
+		Approximate bool     `json:"approximate"`
+		Unmatched   []string `json:"unmatched"`
+	} `json:"nutritionPerPortion"`
+}
+
+func TestRecipeNutritionOverHTTP(t *testing.T) {
+	e := newEnv(t)
+	c := e.client(t)
+	setup(t, c)
+
+	var prod productJSON
+	pb := map[string]any{"name": "Mąka testowa", "per100g": map[string]any{"kcal": 360, "protein": 10, "carbs": 70, "fat": nil}, "aliases": []string{}}
+	decode(t, c.do("POST", "/api/v1/products", pb), &prod)
+
+	body := recipeBody("Placek")
+	body["nutrition"] = map[string]any{"kcal": nil, "protein": 7, "carbs": nil, "fat": nil}
+	body["ingredients"] = []map[string]any{
+		{"name": "coś dziwnego", "quantity": 200, "unit": "g", "productId": prod.ID},
+		{"name": "Sól", "quantity": nil, "unit": ""},
+	}
+	rec := c.do("POST", "/api/v1/recipes", body)
+	if rec.Code != 201 {
+		t.Fatalf("create: %d %s", rec.Code, rec.Body)
+	}
+	var created recipeJSON
+	decode(t, rec, &created)
+
+	var got nutritionResp
+	decode(t, c.do("GET", "/api/v1/recipes/"+created.ID, nil), &got)
+	if got.Nutrition.Protein == nil || *got.Nutrition.Protein != 7 || got.Nutrition.Kcal != nil {
+		t.Fatalf("given: %+v", got.Nutrition)
+	}
+	if got.Ingredients[0].ProductID == nil || *got.Ingredients[0].ProductID != prod.ID || got.Ingredients[1].ProductID != nil {
+		t.Fatalf("productId: %+v", got.Ingredients)
+	}
+	n := got.NutritionPerPortion
+	if n == nil || n.Values.Kcal == nil || *n.Values.Kcal != 180 || *n.Values.Protein != 7 || *n.Values.Carbs != 35 || n.Values.Fat != nil {
+		t.Fatalf("per portion: %+v", n)
+	}
+	if n.Sources.Kcal != "computed" || n.Sources.Protein != "recipe" || n.Sources.Carbs != "computed" || n.Sources.Fat != "missing" {
+		t.Fatalf("sources: %+v", n.Sources)
+	}
+	if n.Approximate || n.Unmatched == nil || len(n.Unmatched) != 0 {
+		t.Fatalf("approximate/unmatched: %+v", n)
+	}
+	if !strings.Contains(c.do("GET", "/api/v1/recipes/"+created.ID, nil).Body.String(), `"fat":null`) {
+		t.Fatal("unknown values must be JSON null")
+	}
+
+	// List does not compute nutrition.
+	if strings.Contains(c.do("GET", "/api/v1/recipes", nil).Body.String(), "nutritionPerPortion") {
+		t.Fatal("list must not include nutritionPerPortion")
+	}
+
+	// Old clients: no nutrition, no productId.
+	old := c.do("POST", "/api/v1/recipes", recipeBody("Stary"))
+	if old.Code != 201 {
+		t.Fatalf("old client: %d %s", old.Code, old.Body)
+	}
+	var oc nutritionResp
+	decode(t, old, &oc)
+	if oc.Nutrition.Kcal != nil || oc.Nutrition.Protein != nil || oc.Nutrition.Carbs != nil || oc.Nutrition.Fat != nil {
+		t.Fatalf("old nutrition: %+v", oc.Nutrition)
+	}
+
+	// Out of range, and a foreign product.
+	body["nutrition"] = map[string]any{"kcal": 6000}
+	if rec := c.do("PUT", "/api/v1/recipes/"+created.ID, body); rec.Code != 422 {
+		t.Fatalf("range: %d %s", rec.Code, rec.Body)
+	}
+	body["nutrition"] = nil
+	other := e.secondHouseholdClient(t)
+	var fp productJSON
+	decode(t, other.do("POST", "/api/v1/products", pb), &fp)
+	body["ingredients"] = []map[string]any{{"name": "X", "quantity": 1, "unit": "g", "productId": fp.ID}}
+	if rec := c.do("POST", "/api/v1/recipes", body); rec.Code != 404 {
+		t.Fatalf("foreign product: %d %s", rec.Code, rec.Body)
+	}
+}

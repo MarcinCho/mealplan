@@ -743,6 +743,7 @@ components:
         quantity: { type: number, nullable: true, description: Null when the amount is "to taste" }
         unit: { type: string }
         note: { type: string, maxLength: 200, description: "Remark about the ingredient, e.g. a substitution" }
+        productId: { type: string, nullable: true, description: "Remembered product of the household used for nutrition; 404 when unknown or foreign" }
     RecipeInput:
       type: object
       required: [title, baseServings]
@@ -753,13 +754,51 @@ components:
         tags: { type: array, maxItems: 20, items: { type: string, maxLength: 40 } }
         ingredients: { type: array, maxItems: 200, items: { $ref: "#/components/schemas/Ingredient" } }
         steps: { type: array, maxItems: 100, items: { type: string, maxLength: 2000 } }
+        nutrition: { $ref: "#/components/schemas/RecipeNutritionGiven" }
+    RecipeNutritionGiven:
+      type: object
+      description: Given (manual) values per portion, null when unknown. Kcal 0-5000, others 0-500 g.
+      required: [kcal, protein, carbs, fat]
+      properties:
+        kcal: { type: number, nullable: true, minimum: 0, maximum: 5000 }
+        protein: { type: number, nullable: true, minimum: 0, maximum: 500 }
+        carbs: { type: number, nullable: true, minimum: 0, maximum: 500 }
+        fat: { type: number, nullable: true, minimum: 0, maximum: 500 }
+    NutritionPerPortion:
+      type: object
+      description: Computed per-portion values; given values win per value. Only in GET /recipes/{id}.
+      required: [values, sources, approximate, unmatched]
+      properties:
+        values:
+          type: object
+          required: [kcal, protein, carbs, fat]
+          properties:
+            kcal: { type: number, nullable: true }
+            protein: { type: number, nullable: true }
+            carbs: { type: number, nullable: true }
+            fat: { type: number, nullable: true }
+        sources:
+          type: object
+          required: [kcal, protein, carbs, fat]
+          properties:
+            kcal: { $ref: "#/components/schemas/NutritionSource" }
+            protein: { $ref: "#/components/schemas/NutritionSource" }
+            carbs: { $ref: "#/components/schemas/NutritionSource" }
+            fat: { $ref: "#/components/schemas/NutritionSource" }
+        approximate: { type: boolean }
+        unmatched: { type: array, items: { type: string }, description: Ingredients not counted or only partly counted }
+    NutritionSource:
+      type: string
+      enum: [recipe, computed, missing]
     Recipe:
       type: object
-      required: [id, title, baseServings, sourceUrl, tags, ingredients, steps, createdAt, updatedAt]
+      required: [id, title, baseServings, sourceUrl, tags, ingredients, steps, nutrition, createdAt, updatedAt]
       properties:
         id: { type: string }
         title: { type: string }
         baseServings: { type: integer }
+        nutrition: { $ref: "#/components/schemas/RecipeNutritionGiven" }
+        nutritionPerPortion: { $ref: "#/components/schemas/NutritionPerPortion" }
         sourceUrl: { type: string }
         tags: { type: array, items: { type: string } }
         ingredients: { type: array, items: { $ref: "#/components/schemas/Ingredient" }, description: Empty in list responses }

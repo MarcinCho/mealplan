@@ -5,14 +5,30 @@ import (
 	"time"
 
 	"mealplan/internal/domain"
+	"mealplan/internal/nutrition"
 	"mealplan/internal/recipe"
 )
 
 type ingredientJSON struct {
-	Name     string   `json:"name"`
-	Quantity *float64 `json:"quantity"`
-	Unit     string   `json:"unit"`
-	Note     string   `json:"note"`
+	Name      string   `json:"name"`
+	Quantity  *float64 `json:"quantity"`
+	Unit      string   `json:"unit"`
+	Note      string   `json:"note"`
+	ProductID *string  `json:"productId"`
+}
+
+type sourcesJSON struct {
+	Kcal    string `json:"kcal"`
+	Protein string `json:"protein"`
+	Carbs   string `json:"carbs"`
+	Fat     string `json:"fat"`
+}
+
+type nutritionPerPortionJSON struct {
+	Values      macrosJSON  `json:"values"`
+	Sources     sourcesJSON `json:"sources"`
+	Approximate bool        `json:"approximate"`
+	Unmatched   []string    `json:"unmatched"`
 }
 
 type recipeJSON struct {
@@ -25,6 +41,9 @@ type recipeJSON struct {
 	Steps        []string         `json:"steps"`
 	CreatedAt    time.Time        `json:"createdAt"`
 	UpdatedAt    time.Time        `json:"updatedAt"`
+	Nutrition    macrosJSON       `json:"nutrition"`
+	// NutritionPerPortion is set only by GET /recipes/{id}.
+	NutritionPerPortion *nutritionPerPortionJSON `json:"nutritionPerPortion,omitempty"`
 }
 
 type recipeInJSON struct {
@@ -34,16 +53,31 @@ type recipeInJSON struct {
 	Tags         []string         `json:"tags"`
 	Ingredients  []ingredientJSON `json:"ingredients"`
 	Steps        []string         `json:"steps"`
+	Nutrition    macrosJSON       `json:"nutrition"`
 }
 
 func toRecipeJSON(r domain.Recipe) recipeJSON {
 	out := recipeJSON{ID: r.ID, Title: r.Title, BaseServings: r.BaseServings, SourceURL: r.SourceURL,
 		Tags: orEmpty(r.Tags), Steps: orEmpty(r.Steps), Ingredients: []ingredientJSON{},
-		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt}
+		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, Nutrition: macrosJSON(r.Nutrition)}
 	for _, i := range r.Ingredients {
-		out.Ingredients = append(out.Ingredients, ingredientJSON{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit, Note: i.Note})
+		out.Ingredients = append(out.Ingredients, ingredientJSON{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit, Note: i.Note, ProductID: nullable(i.ProductID)})
 	}
 	return out
+}
+
+func nullable(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 func orEmpty(s []string) []string {
@@ -54,9 +88,9 @@ func orEmpty(s []string) []string {
 }
 
 func (in recipeInJSON) toInput() recipe.Input {
-	out := recipe.Input{Title: in.Title, BaseServings: in.BaseServings, SourceURL: in.SourceURL, Tags: in.Tags, Steps: in.Steps}
+	out := recipe.Input{Title: in.Title, BaseServings: in.BaseServings, SourceURL: in.SourceURL, Tags: in.Tags, Steps: in.Steps, Nutrition: domain.Macros(in.Nutrition)}
 	for _, i := range in.Ingredients {
-		out.Ingredients = append(out.Ingredients, recipe.IngredientInput{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit, Note: i.Note})
+		out.Ingredients = append(out.Ingredients, recipe.IngredientInput{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit, Note: i.Note, ProductID: deref(i.ProductID)})
 	}
 	return out
 }
@@ -93,7 +127,20 @@ func (s *Server) handleGetRecipe(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toRecipeJSON(rc))
+	products, err := s.deps.Products.All(r.Context(), principalFrom(r).HouseholdID)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	n := nutrition.ForRecipe(rc, nutrition.NewMatcher(products))
+	out := toRecipeJSON(rc)
+	out.NutritionPerPortion = &nutritionPerPortionJSON{
+		Values: macrosJSON(n.PerPortion),
+		Sources: sourcesJSON{Kcal: string(n.Sources.Kcal), Protein: string(n.Sources.Protein),
+			Carbs: string(n.Sources.Carbs), Fat: string(n.Sources.Fat)},
+		Approximate: n.Approximate, Unmatched: orEmpty(n.Unmatched),
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) handleUpdateRecipe(w http.ResponseWriter, r *http.Request) {

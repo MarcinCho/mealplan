@@ -3,6 +3,7 @@ package recipe_test
 import (
 	"context"
 	"errors"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -160,5 +161,65 @@ func TestIngredientNote(t *testing.T) {
 	in.Ingredients[0].Note = strings.Repeat("ż", 201)
 	if _, err := svc.Create(context.Background(), hid, in); !errors.Is(err, domain.ErrInvalid) {
 		t.Fatalf("201 runes: %v", err)
+	}
+}
+
+func TestNutritionValidation(t *testing.T) {
+	svc, hid := newSvc(t)
+	bad := map[string]func(*recipe.Input){
+		"negative kcal":  func(i *recipe.Input) { i.Nutrition.Kcal = q(-1) },
+		"huge kcal":      func(i *recipe.Input) { i.Nutrition.Kcal = q(5000.5) },
+		"huge protein":   func(i *recipe.Input) { i.Nutrition.Protein = q(501) },
+		"negative carbs": func(i *recipe.Input) { i.Nutrition.Carbs = q(-0.1) },
+		"huge fat":       func(i *recipe.Input) { i.Nutrition.Fat = q(501) },
+		"nan":            func(i *recipe.Input) { i.Nutrition.Fat = q(math.NaN()) },
+	}
+	for name, m := range bad {
+		in := valid()
+		m(&in)
+		if _, err := svc.Create(context.Background(), hid, in); !errors.Is(err, domain.ErrInvalid) {
+			t.Errorf("%s: expected ErrInvalid, got %v", name, err)
+		}
+	}
+	in := valid()
+	in.Nutrition = domain.Macros{Kcal: q(5000), Protein: q(500), Carbs: q(0), Fat: nil}
+	r, err := svc.Create(context.Background(), hid, in)
+	if err != nil || *r.Nutrition.Kcal != 5000 || r.Nutrition.Fat != nil {
+		t.Fatalf("edge values: %v %+v", err, r.Nutrition)
+	}
+}
+
+func TestIngredientProductMustBelongToHousehold(t *testing.T) {
+	st := store.New(storetest.Open(t))
+	ctx := context.Background()
+	for _, h := range []string{"h1", "h2"} {
+		if err := st.CreateHouseholdWithAdmin(ctx, domain.Household{ID: h, Name: h}, domain.User{ID: "u" + h, Login: "l" + h, PasswordHash: "x", DisplayName: "M"}, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, p := range []domain.Product{{ID: "p1", HouseholdID: "h1", Name: "A", NormalizedName: "a"}, {ID: "p2", HouseholdID: "h2", Name: "B", NormalizedName: "b"}} {
+		if err := st.CreateProduct(ctx, p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	svc := recipe.New(st, nil)
+	in := valid()
+	in.Ingredients[0].ProductID = "p1"
+	r, err := svc.Create(ctx, "h1", in)
+	if err != nil {
+		t.Fatalf("own product: %v", err)
+	}
+	got, _ := svc.Get(ctx, "h1", r.ID)
+	if got.Ingredients[0].ProductID != "p1" || got.Ingredients[1].ProductID != "" {
+		t.Fatalf("product ids: %+v", got.Ingredients)
+	}
+	for _, id := range []string{"p2", "nope"} {
+		in.Ingredients[0].ProductID = id
+		if _, err := svc.Create(ctx, "h1", in); !errors.Is(err, store.ErrNotFound) {
+			t.Errorf("create with %q: %v", id, err)
+		}
+		if _, err := svc.Update(ctx, "h1", r.ID, in); !errors.Is(err, store.ErrNotFound) {
+			t.Errorf("update with %q: %v", id, err)
+		}
 	}
 }
