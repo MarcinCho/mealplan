@@ -61,3 +61,12 @@ describe('movedText', () => {
     expect(movedText(22)).toBe('Przeniesiono 22 pozycje')
   })
 })
+
+describe('undonePreviousText', () => {
+  it('uses Polish plural forms', async () => {
+    const { undonePreviousText } = await import('./messages')
+    expect(undonePreviousText(1)).toBe('W poprzednim tygodniu 1 posiłek nie oznaczono jako zrobione — część zapasów może być już na nie potrzebna.')
+    expect(undonePreviousText(3)).toContain('3 posiłki')
+    expect(undonePreviousText(5)).toContain('5 posiłków')
+  })
+})

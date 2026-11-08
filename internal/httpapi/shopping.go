@@ -25,12 +25,12 @@ func toItemJSON(it domain.ShoppingItem) itemJSON {
 	return itemJSON{ID: it.ID, Week: it.Week, Name: it.Name, Quantity: it.Quantity, Unit: it.Unit, Checked: it.Checked, Manual: it.Manual, HaveQuantity: it.HaveQuantity, Moved: it.Moved}
 }
 
-func writeList(w http.ResponseWriter, week string, items []domain.ShoppingItem) {
+func writeList(w http.ResponseWriter, week string, items []domain.ShoppingItem, undone int) {
 	out := make([]itemJSON, 0, len(items))
 	for _, it := range items {
 		out = append(out, toItemJSON(it))
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"week": week, "items": out})
+	writeJSON(w, http.StatusOK, map[string]any{"week": week, "items": out, "previousWeekUndone": undone})
 }
 
 func (s *Server) handleListShopping(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +40,12 @@ func (s *Server) handleListShopping(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	writeList(w, week, items)
+	undone, err := s.deps.Shopping.PreviousWeekUndone(r.Context(), principalFrom(r).HouseholdID, week)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeList(w, week, items, undone)
 }
 
 func (s *Server) handleGenerateShopping(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +62,12 @@ func (s *Server) handleGenerateShopping(w http.ResponseWriter, r *http.Request) 
 		s.fail(w, r, err)
 		return
 	}
-	writeList(w, in.Week, items)
+	undone, err := s.deps.Shopping.PreviousWeekUndone(r.Context(), principalFrom(r).HouseholdID, in.Week)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeList(w, in.Week, items, undone)
 }
 
 func (s *Server) handleAddShoppingItem(w http.ResponseWriter, r *http.Request) {

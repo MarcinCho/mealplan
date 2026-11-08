@@ -24,4 +24,6 @@ ALTER TABLE household ADD COLUMN pantry_reviewed_at BIGINT;
 
 ALTER TABLE shopping_item ADD COLUMN have_quantity DOUBLE PRECISION;
 
-ALTER TABLE shopping_item ADD COLUMN moved INTEGER NOT NULL DEFAULT 0
+ALTER TABLE shopping_item ADD COLUMN moved INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE shopping_item ADD COLUMN product_id TEXT REFERENCES product(id) ON DELETE SET NULL;

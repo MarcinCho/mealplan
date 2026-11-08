@@ -41,8 +41,8 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `POST /plan/{week}/entries` | dodanie wpisu: przepis albo tekst wolny, slot, porcje, opcjonalnie kucharz |
 | `PUT/DELETE /plan/{week}/entries/{id}` | zamiana i usunięcie wpisu |
 | `POST /plan/{week}/copy` | kopiowanie wpisów z `fromWeek`; tylko na pusty tydzień, inaczej `409 conflict`; ten sam tydzień jako źródło i cel daje `422 invalid_input` |
-| `GET /shopping?week=` | lista zakupów tygodnia |
-| `POST /shopping/generate` | generowanie z planu (`week`, opcjonalnie `from` i `to`) |
+| `GET /shopping?week=` | lista zakupów tygodnia: `{week, items, previousWeekUndone}`; `previousWeekUndone` to liczba posiłków z przepisem z poprzedniego tygodnia, które nie są oznaczone jako zrobione |
+| `POST /shopping/generate` | generowanie z planu (`week`, opcjonalnie `from` i `to`); odpowiedź jak przy `GET /shopping` |
 | `POST /shopping/items` | dodanie pozycji ręcznej |
 | `PATCH /shopping/items/{id}` | samo `checked` przełącza odhaczenie; `name` + `quantity` + `unit` razem edytują pozycję ręczną |
 | `DELETE /shopping/items/{id}` | usunięcie pozycji |

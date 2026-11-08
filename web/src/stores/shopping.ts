@@ -5,6 +5,7 @@ import type { ShoppingItem } from '../api/types'
 interface ListResponse {
   week: string
   items: ShoppingItem[]
+  previousWeekUndone?: number
 }
 
 export const isCovered = (i: ShoppingItem) => i.quantity === 0 && (i.haveQuantity ?? 0) > 0
@@ -13,7 +14,7 @@ export const isCovered = (i: ShoppingItem) => i.quantity === 0 && (i.haveQuantit
 let requested = ''
 
 export const useShopping = defineStore('shopping', {
-  state: () => ({ week: '', items: [] as ShoppingItem[] }),
+  state: () => ({ week: '', items: [] as ShoppingItem[], previousWeekUndone: 0 }),
   getters: {
     open: (s) => s.items.filter((i) => !i.checked && !isCovered(i)),
     done: (s) => s.items.filter((i) => i.checked && !isCovered(i)),
@@ -26,6 +27,7 @@ export const useShopping = defineStore('shopping', {
       if (requested !== week) return
       this.week = res.week
       this.items = res.items
+      this.previousWeekUndone = res.previousWeekUndone ?? 0
     },
     async generate(week: string, range?: { from: string; to: string }) {
       requested = week
@@ -33,6 +35,7 @@ export const useShopping = defineStore('shopping', {
       if (requested !== week) return
       this.week = res.week
       this.items = res.items
+      this.previousWeekUndone = res.previousWeekUndone ?? 0
     },
     async addManual(name: string, quantity: number | null, unit: string) {
       const week = this.week

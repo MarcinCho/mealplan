@@ -272,3 +272,12 @@ func TestStapleAndStockInKgShareOneRow(t *testing.T) {
 		t.Fatalf("items: %+v", items)
 	}
 }
+
+func TestDeductionsUnitlessIngredientCountsAsPieces(t *testing.T) {
+	r := domain.Recipe{BaseServings: 2, Ingredients: []domain.Ingredient{{Name: "jajka", Quantity: fp(3)}}}
+	stock := []domain.PantryItem{{ProductID: "p-jajko", Quantity: fp(6), Unit: "szt"}}
+	ms := pantry.Deductions(r, 2, nutrition.NewMatcher(testProducts), stock, "e1")
+	if len(ms) != 1 || ms[0].Unit != "szt" || ms[0].Amount != -3 {
+		t.Fatalf("want -3 szt, got %+v", ms)
+	}
+}

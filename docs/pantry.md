@@ -43,15 +43,15 @@ Generowanie listy (`POST /shopping/generate`):
 - odejmuje zapas **per produkt i jednostka bazowa**: potrzeba w `g` pomniejsza się o gramy tego samego produktu. Składnik bez jednostki liczy się jako `szt`;
 - wiersz w pełni pokryty zapasem zostaje z ilością 0 jako „masz w domu: X"; pokryty częściowo pokazuje „kup X (masz Y)" (`haveQuantity` w API);
 - składniki produktów oznaczonych jako stały zapas są pomijane;
-- zapas **nie jest rezerwowany między tygodniami**: dwa tygodnie potrzebujące tej samej mąki odejmują od niej oba pełną ilość.
+- zapas **nie jest rezerwowany między tygodniami**: dwa tygodnie potrzebujące tej samej mąki odejmują od niej oba pełną ilość. Dlatego odpowiedź listy zawiera `previousWeekUndone` (posiłki z przepisem z poprzedniego tygodnia bez „Zrobione"), a widok zakupów ostrzega, że część zapasów może być już na nie potrzebna.
 
-Przycisk „Przenieś kupione do spiżarni" (`POST /shopping/move-to-pantry`) dodaje odhaczone pozycje tygodnia do spiżarni i oznacza je jako przeniesione (znaczek „w spiżarni", pole `moved`). Pozycja jest zajmowana najpierw (atomowo), więc ponowne lub równoległe kliknięcie nie doda jej drugi raz (`moved: 0`). Pozycje bez ilości są pomijane, pozycje pokryte zapasem (ilość 0) też, a pozycja bez jednostki trafia jako `szt`. Gdy dodanie którejś się nie uda, jest zwalniana i następna próba ją ponowi. Zmiana ilości odhaczonej pozycji przy regeneracji zeruje `checked` i `moved`.
+Przycisk „Przenieś kupione do spiżarni" (`POST /shopping/move-to-pantry`) dodaje odhaczone pozycje tygodnia do spiżarni i oznacza je jako przeniesione (znaczek „w spiżarni", pole `moved`). Pozycja jest zajmowana najpierw (atomowo), więc ponowne lub równoległe kliknięcie nie doda jej drugi raz (`moved: 0`). Pozycje bez ilości są pomijane, pozycje pokryte zapasem (ilość 0) też, a pozycja bez jednostki trafia jako `szt`. Pozycja wygenerowana z przepisu zapamiętuje dopasowany produkt (także ręcznie powiązany) i trafia do jego zapasu; pozycje ręczne są dopasowywane po nazwie. Gdy dodanie którejś się nie uda, jest zwalniana i następna próba ją ponowi. Zmiana ilości odhaczonej pozycji przy regeneracji zeruje `checked` i `moved`.
 
 ## „Zrobione" zdejmuje składniki
 
 Oznaczenie posiłku z przepisu jako „Zrobione" (zapis wpisu planu z `done: true`) zdejmuje składniki ze spiżarni:
 
-- ilości są **przeskalowane do porcji wpisu**;
+- ilości są **przeskalowane do porcji wpisu**; składnik bez jednostki liczy się jako `szt`;
 - liczą się tylko składniki z ilością, dopasowane do produktu, który masz w spiżarni **w tej samej jednostce bazowej** (łyżka oleju nie odejmuje ml), i nie będące stałym zapasem;
 - stan **nie spada poniżej 0**;
 - zapisywane jest, ile faktycznie zdjęto; **cofnięcie** („Zrobione" wyłączone) zwraca dokładnie to;
@@ -68,6 +68,6 @@ Znane zachowanie: posiłek zrobiony, zanim w spiżarni pojawiły się zapasy, mo
 - Nie przelicza łyżek, szklanek ani sztuk na gramy i mililitry: składnik w łyżkach nie pomniejsza zapasu w ml, ani odwrotnie.
 - Dwie nazwy tego samego produktu w przepisach (np. „cebula" i „cebule") bez wspólnego dopasowania zostają dwoma wierszami listy zakupów.
 - Dowolne jednostki są przyjmowane, ale nigdy nie są dopasowywane do składników.
-- Nie rezerwuje zapasu między tygodniami (patrz wyżej).
+- Nie rezerwuje zapasu między tygodniami (patrz wyżej); ostrzega tylko liczbą niezrobionych posiłków z poprzedniego tygodnia.
 
 API: [api.md](api.md).

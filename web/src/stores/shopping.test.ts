@@ -24,6 +24,16 @@ describe('useShopping', () => {
     expect(s.done.map((i) => i.id)).toEqual(['b'])
   })
 
+  it('keeps the previous-week undone count from load and generate', async () => {
+    const s = useShopping()
+    stub(200, { week: '2026-11-02', items: [], previousWeekUndone: 3 })
+    await s.load('2026-11-02')
+    expect(s.previousWeekUndone).toBe(3)
+    stub(200, { week: '2026-11-02', items: [], previousWeekUndone: 0 })
+    await s.generate('2026-11-02')
+    expect(s.previousWeekUndone).toBe(0)
+  })
+
   it('generate replaces the list with the server result', async () => {
     const s = useShopping()
     const spy = stub(200, { week: '2026-11-02', items: [item('a', 'Mąka')] })

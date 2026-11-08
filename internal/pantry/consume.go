@@ -29,6 +29,9 @@ func Deductions(r domain.Recipe, servings int, m *nutrition.Matcher, stock []dom
 			continue
 		}
 		base, unit := units.ToBase(*ing.Quantity, ing.Unit)
+		if unit == "" {
+			unit = "szt" // a unit-less amount counts pieces, as on the shopping list
+		}
 		key := [2]string{p.ID, unit}
 		it, ok := have[key]
 		if !ok || it.Staple || it.Quantity == nil {

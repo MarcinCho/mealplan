@@ -1213,9 +1213,13 @@ components:
         reviewedAt: { type: string, format: date-time, nullable: true }
     ShoppingList:
       type: object
-      required: [week, items]
+      required: [week, items, previousWeekUndone]
       properties:
         week: { type: string, format: date }
         items:
           type: array
           items: { $ref: "#/components/schemas/ShoppingItem" }
+        previousWeekUndone:
+          type: integer
+          minimum: 0
+          description: Recipe meals of the previous week not marked done; part of the stock may still be needed for them.

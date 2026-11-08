@@ -234,6 +234,10 @@ export function movedText(n: number): string {
   return `Przeniesiono ${n} ${plural(n, 'pozycję', 'pozycje', 'pozycji')}`
 }
 
+export function undonePreviousText(n: number): string {
+  return `W poprzednim tygodniu ${n} ${plural(n, 'posiłek', 'posiłki', 'posiłków')} nie oznaczono jako zrobione — część zapasów może być już na nie potrzebna.`
+}
+
 const errors: Record<string, string> = {
   invalid_credentials: 'Nieprawidłowy login lub hasło.',
   setup_done: 'Konfiguracja została już wykonana.',

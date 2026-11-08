@@ -112,6 +112,27 @@ func (s *Service) List(ctx context.Context, householdID, week string) ([]domain.
 	return s.repo.ShoppingItems(ctx, householdID, week)
 }
 
+// PreviousWeekUndone counts the recipe entries of the week before the given one that were not marked
+// done: their ingredients may still be needed from stock the new list subtracts.
+func (s *Service) PreviousWeekUndone(ctx context.Context, householdID, week string) (int, error) {
+	start, err := plan.ValidWeek(week)
+	if err != nil {
+		return 0, err
+	}
+	const layout = "2006-01-02"
+	entries, err := s.plans.PlanEntries(ctx, householdID, start.AddDate(0, 0, -7).Format(layout), start.AddDate(0, 0, -1).Format(layout))
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, e := range entries {
+		if e.RecipeID != "" && !e.Done {
+			n++
+		}
+	}
+	return n, nil
+}
+
 // Generate rebuilds the generated part of the week's list from the plan. Manual items are kept, and
 // a generated item whose key and quantity did not change keeps its id and checked state.
 func (s *Service) Generate(ctx context.Context, householdID, week, from, to string) ([]domain.ShoppingItem, error) {
@@ -181,7 +202,7 @@ func (s *Service) Generate(ctx context.Context, householdID, week, from, to stri
 	}
 	fresh := make([]domain.ShoppingItem, 0, len(lines))
 	for _, l := range lines {
-		it := domain.ShoppingItem{ID: auth.NewID(), Week: week, Name: l.Name, NormalizedName: l.NormalizedName, Quantity: l.Quantity, Unit: l.Unit, HaveQuantity: l.Have}
+		it := domain.ShoppingItem{ID: auth.NewID(), Week: week, Name: l.Name, NormalizedName: l.NormalizedName, Quantity: l.Quantity, Unit: l.Unit, HaveQuantity: l.Have, ProductID: l.ProductID}
 		if old, ok := prev[itemKey(l.NormalizedName, l.Unit, l.Quantity != nil)]; ok {
 			it.ID = old.ID
 			it.Checked = old.Checked && sameQty(old.Quantity, l.Quantity)
@@ -263,7 +284,7 @@ func (s *Service) MoveCheckedToPantry(ctx context.Context, householdID, week str
 		if unit == "" {
 			unit = "szt"
 		}
-		if _, err := s.pantry.Add(ctx, householdID, pantry.Input{Name: it.Name, Quantity: it.Quantity, Unit: unit}); err != nil {
+		if _, err := s.pantry.Add(ctx, householdID, pantry.Input{ProductID: it.ProductID, Name: it.Name, Quantity: it.Quantity, Unit: unit}); err != nil {
 			if firstErr == nil {
 				firstErr = err
 			}

@@ -144,6 +144,7 @@ type ShoppingItem struct {
 	Manual         bool
 	HaveQuantity   *float64
 	Moved          bool
+	ProductID      string // product the generated line matched, "" for manual or unmatched items
 }
 
 // PantryItem is household stock of a product in one unit. Quantity is nil for a staple.

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"sort"
 	"time"
 
 	"mealplan/internal/domain"
@@ -231,6 +232,14 @@ func (s *Store) RestoreForEntry(ctx context.Context, householdID, entryID string
 }
 
 func (s *Store) applyMovements(ctx context.Context, tx *sql.Tx, householdID string, ms []domain.PantryMovement) error {
+	// Always touch pantry rows in one order so concurrent consume/restore cannot deadlock.
+	ms = append([]domain.PantryMovement(nil), ms...)
+	sort.SliceStable(ms, func(i, j int) bool {
+		if ms[i].ProductID != ms[j].ProductID {
+			return ms[i].ProductID < ms[j].ProductID
+		}
+		return ms[i].Unit < ms[j].Unit
+	})
 	{
 		for _, m := range ms {
 			var n int

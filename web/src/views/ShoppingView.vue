@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import EmptyState from '../components/EmptyState.vue'
-import { errorText, movedText, t } from '../messages'
+import { errorText, movedText, t, undonePreviousText } from '../messages'
 import { useShopping } from '../stores/shopping'
 import { shoppingLine } from '../pantry'
 import { usePantry } from '../stores/pantry'
@@ -107,6 +107,7 @@ function add() {
     </v-btn>
   </div>
   <v-alert v-if="movedMsg" type="success" variant="tonal" class="mb-4" closable @click:close="movedMsg = ''">{{ movedMsg }}</v-alert>
+  <v-alert v-if="ready && shop.previousWeekUndone > 0" type="warning" variant="tonal" class="mb-4" data-testid="undone-warning">{{ undonePreviousText(shop.previousWeekUndone) }}</v-alert>
   <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
 
   <v-alert v-if="loadError" type="error" variant="tonal" class="mb-4">

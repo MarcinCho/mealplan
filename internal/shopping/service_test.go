@@ -422,3 +422,73 @@ func TestMoveCheckedParallelAddsOnce(t *testing.T) {
 		}
 	}
 }
+
+func (f *fx) planIn(t *testing.T, week, date string, in plan.EntryInput) {
+	t.Helper()
+	in.Date, in.Slot = date, domain.SlotDinner
+	if _, err := f.plans.Add(context.Background(), hid, week, in); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPreviousWeekUndoneCountsOnlyNotDoneRecipeEntries(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	r := f.cook(t, "Zupa", 1, recipe.IngredientInput{Name: "Marchew", Quantity: q(2), Unit: "szt"})
+	prev := "2026-10-26"
+	if n, err := f.svc.PreviousWeekUndone(ctx, hid, wk); err != nil || n != 0 {
+		t.Fatalf("empty: %d %v", n, err)
+	}
+	f.planIn(t, prev, "2026-10-26", plan.EntryInput{RecipeID: r})
+	f.planIn(t, prev, "2026-11-01", plan.EntryInput{RecipeID: r})
+	f.planIn(t, prev, "2026-10-28", plan.EntryInput{RecipeID: r, Done: true})
+	f.planIn(t, prev, "2026-10-29", plan.EntryInput{FreeText: "pizza"})
+	f.planIn(t, wk, "2026-11-03", plan.EntryInput{RecipeID: r}) // current week does not count
+	n, err := f.svc.PreviousWeekUndone(ctx, hid, wk)
+	if err != nil || n != 2 {
+		t.Fatalf("want 2, got %d %v", n, err)
+	}
+	if _, err := f.svc.PreviousWeekUndone(ctx, hid, "bad"); err == nil {
+		t.Fatal("invalid week must fail")
+	}
+}
+
+func TestMoveCheckedUsesLinkedProduct(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	now := func() time.Time { return time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC) }
+	prods := product.New(f.st, now)
+	p, err := prods.Create(ctx, hid, product.Input{Name: "mąka amarantusowa"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := f.cook(t, "Placek", 1, recipe.IngredientInput{Name: "mąki", Quantity: q(500), Unit: "g", ProductID: p.ID})
+	f.plan(t, "2026-11-03", r, 1)
+	items, err := f.svc.Generate(ctx, hid, wk, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	it := byName(items, "mąki")
+	if it == nil {
+		t.Fatalf("items: %+v", items)
+	}
+	if err := f.svc.SetChecked(ctx, hid, it.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := f.svc.MoveCheckedToPantry(ctx, hid, wk); err != nil || n != 1 {
+		t.Fatalf("move: %d %v", n, err)
+	}
+	list, _, err := f.pan.List(ctx, hid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ProductID != p.ID || *list[0].Quantity != 500 {
+		t.Fatalf("pantry: %+v", list)
+	}
+	all, _ := prods.All(ctx, hid)
+	for _, pr := range all {
+		if pr.NormalizedName == "mąki" {
+			t.Fatalf("stray product created: %+v", pr)
+		}
+	}
+}
