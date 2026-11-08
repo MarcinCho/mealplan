@@ -153,6 +153,9 @@ func (s *Service) Create(ctx context.Context, householdID string, in Input) (dom
 	if err != nil {
 		return domain.Product{}, err
 	}
+	if err := s.ensureSeeded(ctx, householdID); err != nil {
+		return domain.Product{}, err
+	}
 	p.ID, p.HouseholdID = auth.NewID(), householdID
 	p.CreatedAt = s.now().UTC()
 	p.UpdatedAt = p.CreatedAt
@@ -168,6 +171,9 @@ func (s *Service) Create(ctx context.Context, householdID string, in Input) (dom
 func (s *Service) Update(ctx context.Context, householdID, id string, in Input) (domain.Product, error) {
 	p, err := build(in)
 	if err != nil {
+		return domain.Product{}, err
+	}
+	if err := s.ensureSeeded(ctx, householdID); err != nil {
 		return domain.Product{}, err
 	}
 	old, err := s.repo.ProductByID(ctx, householdID, id)
@@ -186,6 +192,9 @@ func (s *Service) Update(ctx context.Context, householdID, id string, in Input) 
 }
 
 func (s *Service) Delete(ctx context.Context, householdID, id string) error {
+	if err := s.ensureSeeded(ctx, householdID); err != nil {
+		return err
+	}
 	return s.repo.DeleteProduct(ctx, householdID, id)
 }
 

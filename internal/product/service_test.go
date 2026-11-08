@@ -93,24 +93,24 @@ func TestValidation(t *testing.T) {
 func TestAliasMustNotEqualOtherProductName(t *testing.T) {
 	s, _ := setup(t)
 	ctx := context.Background()
-	if _, err := s.Create(ctx, "hA", product.Input{Name: "Ser"}); err != nil {
+	if _, err := s.Create(ctx, "hA", product.Input{Name: "Ser testowy"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Create(ctx, "hA", product.Input{Name: "Twaróg", Aliases: []string{"SER"}}); !errors.Is(err, store.ErrConflict) {
+	if _, err := s.Create(ctx, "hA", product.Input{Name: "Twaróg testowy", Aliases: []string{"SER TESTOWY"}}); !errors.Is(err, store.ErrConflict) {
 		t.Fatalf("create: %v", err)
 	}
-	other, err := s.Create(ctx, "hA", product.Input{Name: "Masło"})
+	other, err := s.Create(ctx, "hA", product.Input{Name: "Masło testowe"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Update(ctx, "hA", other.ID, product.Input{Name: "Masło", Aliases: []string{"ser"}}); !errors.Is(err, store.ErrConflict) {
+	if _, err := s.Update(ctx, "hA", other.ID, product.Input{Name: "Masło testowe", Aliases: []string{"ser testowy"}}); !errors.Is(err, store.ErrConflict) {
 		t.Fatalf("update: %v", err)
 	}
 	// Same alias in another household is fine, and an alias equal to the own name is harmless.
-	if _, err := s.Create(ctx, "hB", product.Input{Name: "Masło", Aliases: []string{"ser", "masło"}}); err != nil {
+	if _, err := s.Create(ctx, "hB", product.Input{Name: "Masło testowe", Aliases: []string{"ser testowy", "masło testowe"}}); err != nil {
 		t.Fatalf("other household: %v", err)
 	}
-	if _, err := s.Create(ctx, "hA", product.Input{Name: "Ser"}); !errors.Is(err, store.ErrConflict) {
+	if _, err := s.Create(ctx, "hA", product.Input{Name: "Ser testowy"}); !errors.Is(err, store.ErrConflict) {
 		t.Fatalf("duplicate name: %v", err)
 	}
 }
@@ -190,4 +190,42 @@ func TestListSeedsOnceAndFilters(t *testing.T) {
 	if left, _ := s.All(ctx, "hA"); len(left) != 0 {
 		t.Fatalf("reseeded after wipe: %d", len(left))
 	}
+}
+
+func TestWriteBeforeFirstListSeedsFirst(t *testing.T) {
+	ctx := context.Background()
+	seedName := func(t *testing.T) string {
+		ps, err := seed.Products()
+		if err != nil || len(ps) == 0 {
+			t.Fatal(err)
+		}
+		return ps[0].Name
+	}
+	t.Run("name collision", func(t *testing.T) {
+		s, _ := setup(t)
+		if _, err := s.Create(ctx, "hA", product.Input{Name: seedName(t)}); !errors.Is(err, store.ErrConflict) {
+			t.Fatalf("want ErrConflict, got %v", err)
+		}
+		want, _ := seed.Products()
+		got, err := s.List(ctx, "hA", "")
+		if err != nil || len(got) != len(want) {
+			t.Fatalf("list after: %d (%v)", len(got), err)
+		}
+	})
+	t.Run("alias equals seed name", func(t *testing.T) {
+		s, _ := setup(t)
+		if _, err := s.Create(ctx, "hA", product.Input{Name: "Zupełnie nowy", Aliases: []string{seedName(t)}}); !errors.Is(err, store.ErrConflict) {
+			t.Fatalf("want ErrConflict, got %v", err)
+		}
+	})
+	t.Run("update and delete seed first", func(t *testing.T) {
+		s, _ := setup(t)
+		if _, err := s.Update(ctx, "hA", "nope", product.Input{Name: "X"}); !errors.Is(err, store.ErrNotFound) {
+			t.Fatalf("update: %v", err)
+		}
+		want, _ := seed.Products()
+		if got, err := s.List(ctx, "hA", ""); err != nil || len(got) != len(want) {
+			t.Fatalf("list: %d %v", len(got), err)
+		}
+	})
 }
