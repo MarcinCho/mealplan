@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<title>Meal planner — light</title>
+<defs><linearGradient id="background" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8ba477"/><stop offset="1" stop-color="#789560"/></linearGradient></defs>
+<rect x="0" y="0" width="256" height="256" rx="64" fill="url(#background)"/>
+<rect x="79" y="51" width="13" height="28" rx="6.5" fill="#eef1d8"/><rect x="164" y="51" width="13" height="28" rx="6.5" fill="#eef1d8"/>
+  <path d="M54 96H202V181Q202 205 178 205H78Q54 205 54 181Z" fill="#eef1d8"/>
+<g fill="#81976a">
+<path d="M92 116Q91 114 89 116L87 143Q86 153 95 158L97 160L94 205H110L107 160L109 158Q118 153 117 143L115 116Q113 114 112 116L111 139Q111 142 109 142Q107 142 107 139L106 116Q104 114 102 116L101 139Q101 142 99 142Q97 142 97 139L96 116Q94 114 92 116Z"/>
+<path d="M151 113C138 113 132 128 132 140C132 151 137 158 144 161L140 205H158L154 161C162 157 168 149 168 139C168 127 162 113 151 113Z"/>
+</g></svg>

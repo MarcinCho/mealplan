@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BrandLogo from '../components/BrandLogo.vue'
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSession } from '../stores/session'
@@ -25,7 +26,8 @@ async function submit() {
 </script>
 
 <template>
-  <v-main class="d-flex align-center justify-center">
+  <v-main class="d-flex flex-column align-center justify-center">
+    <BrandLogo :height="50" class="mb-6" style="max-width: 70vw" />
     <v-card width="440" max-width="92vw" class="pa-4" elevation="2">
       <v-card-title>{{ t.setupTitle }}</v-card-title>
       <v-card-subtitle class="mb-4">{{ t.setupIntro }}</v-card-subtitle>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BrandLogo from '../components/BrandLogo.vue'
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/client'
@@ -40,7 +41,8 @@ async function submit() {
 </script>
 
 <template>
-  <v-main class="d-flex align-center justify-center">
+  <v-main class="d-flex flex-column align-center justify-center">
+    <BrandLogo :height="50" class="mb-6" style="max-width: 70vw" />
     <v-card width="440" max-width="92vw" class="pa-4" elevation="2">
       <v-card-title>{{ t.inviteTitle }}</v-card-title>
       <v-alert v-if="valid === false" type="error" variant="tonal" class="mt-2">{{ t.inviteInvalid }}</v-alert>

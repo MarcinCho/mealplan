@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Wygląd
+
+- Nowa domyślna paleta „Mealplan" (zieleń szałwiowa i ciemna zieleń, jasny i ciemny motyw) oraz logo: napis w nagłówku i na ekranach logowania, konfiguracji i zaproszenia (wariant dobierany do tła), ikona na telefonie i favicon zależny od motywu systemu. Przyciski mają ciemniejszą zieleń (#4F6B3F) niż zieleń marki (#7B9A68), żeby biały tekst spełniał kontrast WCAG AA; zieleń marki jest kolorem akcentu (paski postępu, ikony). Zapisany wybór palety użytkownika nie zmienia się.
+
 ### Wartości odżywcze
 
 - Przepis ma wartości na porcję (kcal, białko, węglowodany, tłuszcz) z osobnym źródłem każdej wartości: wpisane w przepisie, wyliczone ze składników przez bazę produktów gospodarstwa albo brak. Wyliczenie oznacza „przybliżone", gdy składnik nie ma produktu lub jego ilości nie da się przeliczyć na gramy.
