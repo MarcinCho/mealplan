@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Wartości odżywcze
+
+- Przepis ma wartości na porcję (kcal, białko, węglowodany, tłuszcz) z osobnym źródłem każdej wartości: wpisane w przepisie, wyliczone ze składników przez bazę produktów gospodarstwa albo brak. Wyliczenie oznacza „przybliżone", gdy składnik nie ma produktu lub jego ilości nie da się przeliczyć na gramy.
+- Produkty gospodarstwa (`/products`, wartości na 100 g, gęstość, waga sztuki, aliasy). Dane startowe: ok. 197 produktów z USDA FoodData Central SR Legacy (kwiecień 2018, CC0 1.0), generator w `internal/nutrition/seed/gen`; kopiowane do gospodarstwa przy pierwszym użyciu. Znane ograniczenie: brak suszonych przypraw i wody, więc przepisy z nimi są „przybliżone", dopóki ich nie dodasz.
+- Konto: włączenie śledzenia, dzienny cel (każda wartość opcjonalna), dziennik jedzenia (produkt i ilość w g lub szt) i podsumowanie dnia z ostrzeżeniami o brakujących danych (`/me/nutrition`, `/me/nutrition/days`, `/me/food-log`).
+- Import: opcjonalna linia `Wartości na porcję: …` w tekście i pole `nutrition` w JSON-LD; umiejętność Claude `mealplan-recipe-format` zna nową linię. Opis: `docs/nutrition.md`, `docs/import.md`.
+
 ### Notatki do składników
 
 - Składnik przepisu ma opcjonalną notatkę (`note`, do 200 znaków), np. „można zastąpić jogurtem greckim". Jest zapisywana razem z przepisem (migracja `0004`), a import zapisuje ją zamiast odrzucać; żądania bez `note` nadal działają. Długie linie zaczynające się od ilości (11-30 słów) są teraz składnikami, a notatki dłuższe niż 200 znaków są ucinane z ostrzeżeniem.

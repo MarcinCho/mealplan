@@ -7,5 +7,6 @@ describe('claude skill download', () => {
     expect(text.split('---')[1]).toContain('name: mealplan-recipe-format')
     expect(text).toContain('Składniki:')
     expect(text).toContain('Przygotowanie:')
+    expect(text).toContain('Wartości na porcję:')
   })
 })

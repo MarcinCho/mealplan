@@ -32,6 +32,11 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `GET/PUT/DELETE /recipes/{id}` | odczyt, pełna zamiana i usunięcie; `409 in_use`, gdy przepis jest w planie |
 | `POST /recipes/import/url` | szkic przepisu ze strony (`{"url"}`); niczego nie zapisuje; `422 import_blocked`, `import_unparsable`, `import_failed`, `504 import_timeout`; limit 10 na minutę na użytkownika (`429 rate_limited` + `Retry-After`) |
 | `POST /recipes/import/text` | szkic przepisu z wklejonego tekstu (`{"text"}`, do 100 KB); niczego nie zapisuje; `422 import_unparsable` |
+| `GET /products?q=`, `POST /products` | produkty gospodarstwa (wartości na 100 g, opcjonalnie gęstość i waga sztuki); `q` filtruje po nazwie i aliasach |
+| `PUT/DELETE /products/{id}` | zmiana i usunięcie produktu |
+| `GET/PUT /me/nutrition` | ustawienia konta: włączone śledzenie i dzienny cel (każda wartość opcjonalna) |
+| `GET /me/nutrition/days?from=&to=` | podsumowanie dni z zakresu (najwyżej 31 dni) względem celu; pusta lista `days`, gdy śledzenie jest wyłączone |
+| `POST /me/food-log`, `DELETE /me/food-log/{id}` | dziennik jedzenia konta: produkt i ilość w `g` lub `szt` (`szt` tylko dla produktu z wagą sztuki) |
 | `GET /plan/{week}` | wpisy planu tygodnia |
 | `POST /plan/{week}/entries` | dodanie wpisu: przepis albo tekst wolny, slot, porcje, opcjonalnie kucharz |
 | `PUT/DELETE /plan/{week}/entries/{id}` | zamiana i usunięcie wpisu |
@@ -49,6 +54,7 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 - Pozycje wygenerowane są tylko do odhaczania; edycja wygenerowanej pozycji daje `422 invalid_input`. Pozycje ręczne można edytować i usuwać.
 - Regeneracja zachowuje pozycje ręczne oraz `id` i `checked` pozycji wygenerowanych o niezmienionej nazwie, jednostce i ilości. Zmiana ilości zeruje odhaczenie.
 - Generowanie z zakresem dni (`from`, `to`) zastępuje wygenerowane pozycje całego tygodnia pozycjami z tego zakresu.
+- Przepis ma opcjonalne `nutrition` (`kcal`, `protein`, `carbs`, `fat` na porcję) i `ingredients[].productId` (zapamiętany produkt). Tylko w odpowiedziach `GET` są `nutritionPerPortion` (wartości wraz ze źródłem każdej) i `ingredients[].matchedProductId`; szkic importu też ma `nutrition`. Opis: [nutrition.md](nutrition.md).
 - Odejmowanie zapasów jest podpięte, ale nieaktywne do Etapu 3.
 - `sourceUrl` przepisu musi być adresem `http` lub `https` (albo pusty).
 
