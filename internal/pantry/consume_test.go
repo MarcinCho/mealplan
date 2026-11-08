@@ -281,3 +281,27 @@ func TestDeductionsUnitlessIngredientCountsAsPieces(t *testing.T) {
 		t.Fatalf("want -3 szt, got %+v", ms)
 	}
 }
+
+func TestEntryDoneSkipsPrepEntries(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	prod := f.product("Kasza testowa")
+	r, err := recipe.New(f.st, nil).Create(ctx, f.hid, recipe.Input{Title: "Kasza", BaseServings: 1,
+		Ingredients: []recipe.IngredientInput{{Name: "Kasza testowa", Quantity: fp(100), Unit: "g", ProductID: prod.ID}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.st.AddToPantry(ctx, f.hid, prod.ID, "g", 300); err != nil {
+		t.Fatal(err)
+	}
+	e := domain.PlanEntry{ID: "e1", HouseholdID: f.hid, RecipeID: r.ID, Servings: 1, Kind: domain.EntryPrep, PrepDishID: "d1"}
+	if err := f.svc.EntryDone(ctx, f.hid, e); err != nil {
+		t.Fatal(err)
+	}
+	items, _ := f.st.PantryItems(ctx, f.hid)
+	for _, it := range items {
+		if it.ProductID == prod.ID && (it.Quantity == nil || *it.Quantity != 300) {
+			t.Fatalf("stock changed: %v", *it.Quantity)
+		}
+	}
+}
