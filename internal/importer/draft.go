@@ -62,6 +62,7 @@ type Draft struct {
 	Tags        []string
 	Ingredients []IngredientLine
 	Steps       []string
+	Nutrition   domain.Macros // per portion, nil values are unknown
 	Warnings    []string
 }
 
@@ -131,6 +132,7 @@ func (d *Draft) finish() {
 	if d.Servings == 0 {
 		d.warn("Nie znaleziono liczby porcji, ustaw ją ręcznie.")
 	}
+	d.limitNutrition()
 	if d.SourceURL = strings.TrimSpace(d.SourceURL); !validSourceURL(d.SourceURL) {
 		d.SourceURL = ""
 	}

@@ -31,12 +31,13 @@ type draftJSON struct {
 	Tags        []string              `json:"tags"`
 	Ingredients []draftIngredientJSON `json:"ingredients"`
 	Steps       []string              `json:"steps"`
+	Nutrition   macrosJSON            `json:"nutrition"`
 	Warnings    []string              `json:"warnings"`
 }
 
 func toDraftJSON(d importer.Draft) draftJSON {
 	out := draftJSON{Title: d.Title, Servings: d.Servings, SourceURL: d.SourceURL,
-		Tags: orEmpty(d.Tags), Steps: orEmpty(d.Steps), Warnings: orEmpty(d.Warnings),
+		Tags: orEmpty(d.Tags), Steps: orEmpty(d.Steps), Warnings: orEmpty(d.Warnings), Nutrition: macrosJSON(d.Nutrition),
 		Ingredients: []draftIngredientJSON{}}
 	for _, i := range d.Ingredients {
 		out.Ingredients = append(out.Ingredients, draftIngredientJSON{Raw: i.Raw, Name: i.Name, Quantity: i.Quantity,

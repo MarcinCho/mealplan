@@ -855,10 +855,11 @@ components:
         confidence: { type: string, enum: [ok, guess, unparsed] }
     RecipeDraft:
       type: object
-      required: [title, servings, sourceUrl, tags, ingredients, steps, warnings]
+      required: [title, servings, sourceUrl, tags, ingredients, steps, nutrition, warnings]
       properties:
         title: { type: string }
         servings: { type: integer, description: 0 when unknown }
+        nutrition: { $ref: "#/components/schemas/RecipeNutritionGiven" }
         sourceUrl: { type: string }
         tags: { type: array, items: { type: string } }
         ingredients: { type: array, items: { $ref: "#/components/schemas/DraftIngredient" } }
