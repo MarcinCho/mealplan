@@ -4,7 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { draftToRecipe, mergeIntoExisting } from '../importDraft'
 import { useImport } from '../stores/import'
 import { emptyRecipe, useRecipes } from '../stores/recipes'
-import type { Recipe } from '../api/types'
+import type { Macros, Recipe } from '../api/types'
+import ProductPicker from '../components/ProductPicker.vue'
+import { formatNumber } from '../nutrition'
 import { errorText, t } from '../messages'
 
 const route = useRoute()
@@ -16,21 +18,45 @@ const error = ref('')
 const busy = ref(false)
 const confirming = ref(false)
 const loaded = ref(false)
+const savedOk = ref(false)
 const isNew = computed(() => !route.params.id)
+
+const FIELDS: { key: keyof Macros; label: string; unit: 'kcal' | 'g' }[] = [
+  { key: 'kcal', label: t.kcalShort, unit: 'kcal' },
+  { key: 'protein', label: t.proteinShort, unit: 'g' },
+  { key: 'carbs', label: t.carbsShort, unit: 'g' },
+  { key: 'fat', label: t.fatShort, unit: 'g' },
+]
+
+function normalize(r: Recipe): Recipe {
+  return {
+    ...r,
+    ingredients: r.ingredients.map((i) => ({ ...i, note: i.note ?? '', productId: i.productId ?? null })),
+    nutrition: { kcal: null, protein: null, carbs: null, fat: null, ...(r.nutrition ?? {}) },
+  }
+}
+
+// Hint for an empty field: the computed value, or that there is none.
+function hint(k: keyof Macros, unit: 'kcal' | 'g'): string {
+  const np = recipe.value.nutritionPerPortion
+  const v = np?.values[k]
+  if (!np || v === null || v === undefined || np.sources[k] === 'missing') return t.nutritionMissing
+  return `${formatNumber(v, unit)} (${t.nutritionComputed})`
+}
 
 onMounted(async () => {
   const d = imports.draft
   if (isNew.value) {
-    if (d && !imports.targetId) recipe.value = draftToRecipe(d)
+    if (d && !imports.targetId) recipe.value = normalize(draftToRecipe(d))
     loaded.value = true
     return
   }
   try {
     const existing = await recipes.get(String(route.params.id))
     if (d && imports.targetId === existing.id) {
-      recipe.value = mergeIntoExisting(d, existing)
+      recipe.value = normalize({ ...mergeIntoExisting(d, existing), nutritionPerPortion: existing.nutritionPerPortion })
     } else {
-      recipe.value = { ...existing, ingredients: existing.ingredients.map((i) => ({ ...i, note: i.note ?? '' })) }
+      recipe.value = normalize(existing)
     }
     loaded.value = true
   } catch (e) {
@@ -44,7 +70,7 @@ onBeforeUnmount(() => imports.clear())
 const fromImport = computed(() => Boolean(imports.draft) && (isNew.value ? !imports.targetId : imports.targetId === recipe.value.id))
 
 function addIngredient() {
-  recipe.value.ingredients.push({ name: '', quantity: null, unit: '', note: '' })
+  recipe.value.ingredients.push({ name: '', quantity: null, unit: '', note: '', productId: null })
 }
 function addStep() {
   recipe.value.steps.push('')
@@ -53,14 +79,22 @@ function addStep() {
 async function submit() {
   if (!loaded.value || (!isNew.value && !recipe.value.id)) return
   error.value = ''
+  savedOk.value = false
   if (!recipe.value.title.trim()) {
     error.value = t.titleRequired
     return
   }
   busy.value = true
   try {
-    await recipes.save(recipe.value)
-    await router.push({ name: 'recipes' })
+    const saved = await recipes.save(recipe.value)
+    imports.clear()
+    if (isNew.value) {
+      // The edit route reloads the recipe, including the freshly computed values.
+      await router.replace({ name: 'recipe-edit', params: { id: saved.id } })
+    } else {
+      recipe.value = normalize(await recipes.get(saved.id))
+      savedOk.value = true
+    }
   } catch (e) {
     error.value = errorText(e)
   } finally {
@@ -84,6 +118,7 @@ async function remove() {
 <template>
   <h1 class="text-h5 mb-4">{{ isNew ? t.newRecipe : t.editRecipe }}</h1>
   <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
+  <v-alert v-if="savedOk" type="success" variant="tonal" class="mb-4" closable @click:close="savedOk = false">{{ t.saved }}</v-alert>
   <v-alert v-if="loaded && fromImport" type="info" variant="tonal" class="mb-4">
     {{ t.importedBanner }}
     <div v-if="!isNew" class="mt-2">{{ t.importedUpdateNote }}</div>
@@ -101,6 +136,26 @@ async function remove() {
     </div>
     <v-combobox v-model="recipe.tags" :label="t.tags" multiple chips closable-chips />
 
+    <h2 class="text-h6 mb-1">{{ t.nutritionPerPortion }}</h2>
+    <div class="text-caption text-medium-emphasis mb-2">{{ t.nutritionPerPortionHint }}</div>
+    <v-alert v-if="recipe.nutritionPerPortion?.unmatched.length" type="warning" variant="tonal" density="compact" class="mb-3">
+      {{ t.nutritionApproxPrefix }} {{ recipe.nutritionPerPortion.unmatched.join(', ') }}
+    </v-alert>
+    <div class="nutri-grid mb-2">
+      <v-text-field
+        v-for="f in FIELDS"
+        :key="f.key"
+        v-model.number="recipe.nutrition![f.key]"
+        :label="f.label"
+        :placeholder="hint(f.key, f.unit)"
+        persistent-placeholder
+        type="number"
+        min="0"
+        step="any"
+        density="compact"
+      />
+    </div>
+
     <h2 class="text-h6 mb-2">{{ t.ingredients }}</h2>
     <div v-for="(ing, i) in recipe.ingredients" :key="i" :class="['ing-row', ing.confidence && `ing-${ing.confidence}`]">
       <div class="d-flex ga-2 align-start ing-fields">
@@ -109,6 +164,7 @@ async function remove() {
         <v-text-field v-model="ing.unit" :label="t.unit" density="compact" class="ing-unit" />
         <v-btn icon="mdi-close" variant="text" :title="t.remove" @click="recipe.ingredients.splice(i, 1)" />
       </div>
+      <ProductPicker :model-value="ing.productId ?? null" @update:model-value="ing.productId = $event" />
       <v-text-field v-model="ing.note" :label="t.ingredientNote" :placeholder="t.ingredientNotePlaceholder" maxlength="200" density="compact" />
       <div v-if="ing.confidence && ing.confidence !== 'ok'" class="text-caption text-medium-emphasis pb-1">{{ t.fromText }}: „{{ ing.raw }}"</div>
     </div>
@@ -156,6 +212,16 @@ async function remove() {
 .ing-qty,
 .ing-unit {
   max-width: 110px;
+}
+.nutri-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (max-width: 599.98px) {
+  .nutri-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 599.98px) {
   .ing-fields {

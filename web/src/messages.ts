@@ -161,6 +161,12 @@ export const t = {
   addProduct: 'Dodaj produkt',
   product: 'Produkt',
   confirmDeleteProduct: 'Usunąć ten produkt?',
+  nutritionPerPortion: 'Wartości na porcję',
+  nutritionPerPortionHint: 'Wpisz własne wartości albo zostaw puste, by użyć wyliczonych z produktów.',
+  nutritionComputed: 'wyliczone',
+  nutritionMissing: 'brak',
+  nutritionApproxPrefix: 'Wartości przybliżone — niepełne dane dla:',
+  ingredientProduct: 'Produkt dla składnika',
   skillDownload: 'Pobierz SKILL.md',
   skillInstall: 'Zapisz plik w folderze mealplan-recipe-format w katalogu umiejętności Claude, np. ~/.claude/skills/mealplan-recipe-format/SKILL.md.',
 }

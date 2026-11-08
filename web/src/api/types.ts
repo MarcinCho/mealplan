@@ -8,6 +8,8 @@ export interface Ingredient {
   unit: string
   // Saved with the recipe (max 200 characters); an absent value is sent as empty.
   note?: string
+  // Remembered product used for nutrition; null/absent when none.
+  productId?: string | null
   // Import-only hints, used for highlighting and never sent to the API.
   raw?: string
   confidence?: Confidence
@@ -26,6 +28,7 @@ export interface RecipeDraft {
   tags: string[]
   ingredients: DraftIngredient[]
   steps: string[]
+  nutrition: Macros
   warnings: string[]
 }
 
@@ -37,6 +40,10 @@ export interface Recipe {
   tags: string[]
   ingredients: Ingredient[]
   steps: string[]
+  // Given (manual) per-portion values; null when unknown.
+  nutrition?: Macros
+  // Only in GET /recipes/{id}.
+  nutritionPerPortion?: RecipeNutrition
 }
 
 export interface PlanEntry {
