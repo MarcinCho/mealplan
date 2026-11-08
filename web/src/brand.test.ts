@@ -18,4 +18,10 @@ describe('logoVariantFor', () => {
   it('accepts lowercase hex', () => {
     expect(logoVariantFor('#233831'.toLowerCase())).toBe('dark')
   })
+  it('picks the right variant for every palette background', () => {
+    for (const p of PALETTES) {
+      expect(logoVariantFor((p.light.colors as Record<string, string>).background), `${p.id} light`).toBe('light')
+      expect(logoVariantFor((p.dark.colors as Record<string, string>).background), `${p.id} dark`).toBe('dark')
+    }
+  })
 })

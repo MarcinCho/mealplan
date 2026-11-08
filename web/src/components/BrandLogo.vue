@@ -19,7 +19,7 @@ const src = computed(() => {
 </script>
 
 <template>
-  <img :src="src" alt="Mealplan" :height="height" :width="icon ? height : undefined" class="brand-logo" :style="{ height: height + 'px' }" />
+  <img :src="src" alt="Mealplan" :height="height" :width="icon ? height : undefined" class="brand-logo" />
 </template>
 
 <style scoped>

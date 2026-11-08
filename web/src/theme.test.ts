@@ -66,6 +66,14 @@ describe('storage', () => {
 })
 
 describe('palettes', () => {
+  it('defines accent and on-accent in every registered theme', () => {
+    for (const [name, def] of Object.entries(VUETIFY_THEMES)) {
+      const c = def.colors as Record<string, string>
+      expect(c.accent, `${name}.accent`).toMatch(/^#[0-9A-Fa-f]{6}$/)
+      expect(c['on-accent'], `${name}.on-accent`).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    }
+  })
+
   it('has the Mealplan brand palette first and as default', () => {
     expect(PALETTES[0].id).toBe('mealplan')
     expect(DEFAULT_PALETTE).toBe('mealplan')

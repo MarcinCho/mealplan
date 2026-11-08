@@ -20,7 +20,11 @@ const statusLight = { error: '#B3261E', info: '#1565C0', success: '#2E7D32', war
 const statusDark = { error: '#F2B8B5', info: '#90CAF9', success: '#A5D6A7', warning: '#FFCC80' }
 
 function define(dark: boolean, colors: Record<string, string>): ThemeDefinition {
-  return { dark, colors: { ...(dark ? statusDark : statusLight), ...colors } }
+  // accent defaults to the primary pair so every palette defines it (progress bars, highlights).
+  return {
+    dark,
+    colors: { ...(dark ? statusDark : statusLight), accent: colors.primary, 'on-accent': colors['on-primary'], ...colors },
+  }
 }
 
 // `bar` is the app bar color (own theme color so each palette can brand it).
