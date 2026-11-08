@@ -82,6 +82,9 @@ func TestPantryValidationAndIsolation(t *testing.T) {
 
 	var a pantryItemJSON
 	decode(t, c.do("POST", "/api/v1/pantry", map[string]any{"name": "Sól", "quantity": 1000, "unit": "g"}), &a)
+	if rec := c.do("PUT", "/api/v1/pantry/"+a.ID, map[string]any{"productId": a.ProductID, "quantity": 0, "unit": "g"}); rec.Code != 200 {
+		t.Errorf("put zero: %d %s", rec.Code, rec.Body)
+	}
 	other := e.secondHouseholdClient(t)
 	if rec := other.do("PUT", "/api/v1/pantry/"+a.ID, map[string]any{"name": "Sól", "quantity": 1, "unit": "g"}); rec.Code != 404 {
 		t.Errorf("foreign put: %d", rec.Code)

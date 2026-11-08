@@ -51,6 +51,7 @@ export function validExpiry(v: string | null | undefined): boolean {
 
 export interface SerialSaver<T> {
   set(v: T): void
+  cancel(): void
   readonly pending: boolean
 }
 
@@ -67,6 +68,7 @@ export function createSerialSaver<T>(opts: {
   let queued: { v: T } | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
   let inflight = false
+  let gen = 0 // bumped by cancel(): a send already in flight no longer reports
 
   async function flush() {
     timer = undefined
@@ -74,9 +76,11 @@ export function createSerialSaver<T>(opts: {
     const { v } = queued
     queued = null
     inflight = true
+    const mine = gen
     try {
       await opts.send(v)
     } catch (e) {
+      if (mine !== gen) return
       queued = null
       clearTimeout(timer)
       timer = undefined
@@ -84,6 +88,7 @@ export function createSerialSaver<T>(opts: {
       opts.onError(e)
       return
     }
+    if (mine !== gen) return
     inflight = false
     if (queued && timer === undefined) void flush()
     else if (!queued && timer === undefined) opts.onIdle?.()
@@ -94,6 +99,13 @@ export function createSerialSaver<T>(opts: {
       queued = { v: queued && opts.merge ? opts.merge(queued.v, v) : v }
       clearTimeout(timer)
       timer = setTimeout(flush, opts.delay)
+    },
+    cancel() {
+      gen++
+      queued = null
+      clearTimeout(timer)
+      timer = undefined
+      inflight = false
     },
     get pending() {
       return queued !== null || inflight || timer !== undefined

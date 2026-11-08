@@ -71,6 +71,7 @@ const keep = () =>
   guarded(async () => {
     const c = current.value
     if (c && changed.value && valid.value) {
+      pantry.cancelSaves(c.id) // an explicit review answer wins over pending stepper saves
       await pantry.update(c.id, { quantity: Number(quantity.value), unit: c.unit, expiresOn: c.expiresOn, staple: c.staple })
     }
     next()

@@ -81,13 +81,29 @@ func TestAddStaple(t *testing.T) {
 	}
 }
 
+func TestZeroQuantityAllowed(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	p := f.product("Zerowy")
+	it, err := f.svc.Add(ctx, f.hid, pantry.Input{ProductID: p.ID, Quantity: fp(0), Unit: "g"})
+	if err != nil || it.Quantity == nil || *it.Quantity != 0 {
+		t.Fatalf("add zero: %v %+v", err, it)
+	}
+	it2, err := f.svc.Add(ctx, f.hid, pantry.Input{ProductID: p.ID, Quantity: fp(5), Unit: "g"})
+	if err != nil || *it2.Quantity != 5 {
+		t.Fatalf("add onto zero: %v %+v", err, it2)
+	}
+	if _, err := f.svc.Add(ctx, f.hid, pantry.Input{ProductID: p.ID, Quantity: fp(1e6 + 1), Unit: "g"}); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("huge: %v", err)
+	}
+}
+
 func TestInputValidation(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
 	p := f.product("Walidacja")
 	cases := map[string]pantry.Input{
 		"nil quantity non staple": {ProductID: p.ID, Unit: "g"},
-		"zero quantity":           {ProductID: p.ID, Quantity: fp(0), Unit: "g"},
 		"negative quantity":       {ProductID: p.ID, Quantity: fp(-1), Unit: "g"},
 		"huge quantity":           {ProductID: p.ID, Quantity: fp(1e6 + 1), Unit: "g"},
 		"empty unit":              {ProductID: p.ID, Quantity: fp(1)},

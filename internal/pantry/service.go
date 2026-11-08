@@ -101,13 +101,13 @@ func normalize(in Input) (*float64, string, error) {
 		return nil, "", invalid("quantity is required unless the item is a staple")
 	}
 	q := *in.Quantity
-	if math.IsNaN(q) || q <= 0 || q > maxQuantity {
-		return nil, "", invalid("quantity must be greater than 0 and at most %v", maxQuantity)
+	if math.IsNaN(q) || q < 0 || q > maxQuantity {
+		return nil, "", invalid("quantity must be between 0 and %v", maxQuantity)
 	}
 	base, unit := units.ToBase(q, unit)
 	base = units.Round(base)
-	if base <= 0 || base > maxQuantity {
-		return nil, "", invalid("quantity must be greater than 0 and at most %v", maxQuantity)
+	if base < 0 || base > maxQuantity {
+		return nil, "", invalid("quantity must be between 0 and %v", maxQuantity)
 	}
 	return &base, unit, nil
 }

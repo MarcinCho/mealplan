@@ -115,4 +115,30 @@ describe('createSerialSaver', () => {
     await vi.advanceTimersByTimeAsync(10)
     expect(send).toHaveBeenCalledWith({ quantity: 5, expiresOn: '2027-01-01' })
   })
+
+  it('cancel drops queued changes and silences an in-flight send', async () => {
+    let fail!: (e: unknown) => void
+    const send = vi.fn((_v: number) => new Promise<void>((_, rej) => (fail = rej)))
+    const onError = vi.fn()
+    const onIdle = vi.fn()
+    const s = createSerialSaver<number>({ send, delay: 100, onError, onIdle })
+    s.set(1)
+    await vi.advanceTimersByTimeAsync(100)
+    s.set(2)
+    s.cancel()
+    fail(new Error('404'))
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(onError).not.toHaveBeenCalled()
+    expect(onIdle).not.toHaveBeenCalled()
+    expect(s.pending).toBe(false)
+  })
+
+  it('merges a staple toggle with a pending quantity', async () => {
+    const send = vi.fn(async (_v: object) => {})
+    const s = createSerialSaver<object>({ send, delay: 10, onError: vi.fn(), merge: (a, b) => ({ ...a, ...b }) })
+    s.set({ quantity: 650 }); s.set({ staple: true })
+    await vi.advanceTimersByTimeAsync(10)
+    expect(send).toHaveBeenCalledWith({ quantity: 650, staple: true })
+  })
 })
