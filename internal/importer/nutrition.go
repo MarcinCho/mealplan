@@ -15,8 +15,11 @@ const (
 )
 
 var (
-	nutritionPrefix = regexp.MustCompile(`(?i)^\s*(?:wartości\s+odżywcze|wartosci\s+odzywcze|wartości\s+na\s+porcję|wartosci\s+na\s+porcje|nutrition(?:\s+per\s+serving)?|per\s+serving)\s*:`)
+	nutritionPrefix = regexp.MustCompile(`(?i)^\s*(?:wartości\s+odżywcze(?:\s*\(?\s*na\s+porcję\s*\)?)?|wartosci\s+odzywcze(?:\s*\(?\s*na\s+porcje\s*\)?)?|wartości\s+na\s+porcję|wartosci\s+na\s+porcje|na\s+porcję|na\s+porcje|nutrition(?:\s+per\s+serving)?|per\s+serving)\s*(?::|\s[-–—]\s)`)
 	numberInText    = regexp.MustCompile(`\d+(?:[.,]\d+)?`)
+	kcalRe          = regexp.MustCompile(`(?i)(\d+(?:[.,]\d+)?)\s*(?:kcal|calories|kalorii|kalorie)`)
+	gramsAfterRe    = regexp.MustCompile(`^\D{0,20}?(\d+(?:[.,]\d+)?)\s*g\b`)
+	gramsBeforeRe   = regexp.MustCompile(`(\d+(?:[.,]\d+)?)\s*g\b`)
 )
 
 // firstNumber returns the first decimal number in s ("30,5 g" -> 30.5).
@@ -37,34 +40,59 @@ func parseNutritionLine(line string) (domain.Macros, bool) {
 	if loc == nil {
 		return domain.Macros{}, false
 	}
+	rest := line[loc[1]:]
 	var m domain.Macros
 	found := false
-	for _, part := range strings.Split(line[loc[1]:], ";") {
-		// A comma separates values unless it is a decimal comma between digits.
-		for _, seg := range splitOutsideDecimals(part) {
-			low := strings.ToLower(seg)
-			n, ok := firstNumber(low)
-			if !ok {
-				continue
+	// kcal is the number attached to its unit, so a kJ figure in front of it is never used.
+	if mm := kcalRe.FindStringSubmatch(rest); mm != nil {
+		if n, ok := parseNumber(mm[1]); ok {
+			m.Kcal, found = &n, true
+		}
+	}
+	for _, seg := range splitOutsideDecimals(strings.NewReplacer(";", ",", "/", ",").Replace(rest)) {
+		low := strings.ToLower(seg)
+		var dst **float64
+		var kw []string
+		switch {
+		case containsAny(low, "biał", "bial", "protein"):
+			dst, kw = &m.Protein, []string{"biał", "bial", "protein"}
+		case containsAny(low, "węgl", "wegl", "carb"):
+			dst, kw = &m.Carbs, []string{"węgl", "wegl", "carb"}
+		case containsAny(low, "tłuszcz", "tluszcz", "fat"):
+			dst, kw = &m.Fat, []string{"tłuszcz", "tluszcz", "fat"}
+		default:
+			continue
+		}
+		var tok string
+		for _, k := range kw {
+			if i := strings.Index(low, k); i >= 0 {
+				if mm := gramsAfterRe.FindStringSubmatch(low[i+len(k):]); mm != nil {
+					tok = mm[1]
+				} else if mm := numberInText.FindString(low[i+len(k):]); mm != "" {
+					tok = mm
+				}
+				break
 			}
-			var dst **float64
-			switch {
-			case strings.Contains(low, "kcal") || strings.Contains(low, "kalori") || strings.Contains(low, "calor"):
-				dst = &m.Kcal
-			case strings.Contains(low, "biał") || strings.Contains(low, "bial") || strings.Contains(low, "protein"):
-				dst = &m.Protein
-			case strings.Contains(low, "węgl") || strings.Contains(low, "wegl") || strings.Contains(low, "carb"):
-				dst = &m.Carbs
-			case strings.Contains(low, "tłuszcz") || strings.Contains(low, "tluszcz") || strings.Contains(low, "fat"):
-				dst = &m.Fat
-			default:
-				continue
+		}
+		if tok == "" {
+			if mm := gramsBeforeRe.FindStringSubmatch(low); mm != nil {
+				tok = mm[1]
 			}
-			v := n
-			*dst, found = &v, true
+		}
+		if n, ok := parseNumber(tok); ok && tok != "" {
+			*dst, found = &n, true
 		}
 	}
 	return m, found
+}
+
+func containsAny(s string, subs ...string) bool {
+	for _, x := range subs {
+		if strings.Contains(s, x) {
+			return true
+		}
+	}
+	return false
 }
 
 // splitOutsideDecimals splits on commas that are not between two digits.

@@ -31,6 +31,25 @@ func TestParseNutritionLine(t *testing.T) {
 	}
 }
 
+func TestParseNutritionLineForms(t *testing.T) {
+	for _, c := range []struct {
+		in            string
+		kcal, protein float64
+	}{
+		{"Wartości na porcję: 2184 kJ / 520 kcal", 520, 0},
+		{"Wartości odżywcze na porcję: 520 kcal, białko 32 g", 520, 32},
+		{"Wartości odżywcze (na porcję): 410 kcal", 410, 0},
+		{"Per serving - 300 kcal", 300, 0},
+		{"Na porcję: 100 kcal", 100, 0},
+		{"NUTRITION PER SERVING: 90 kcal, protein 5 g", 90, 5},
+	} {
+		m, ok := parseNutritionLine(c.in)
+		if !ok || !eqf(m.Kcal, c.kcal) || (c.protein != 0 && !eqf(m.Protein, c.protein)) || !isNutritionLine(c.in) {
+			t.Errorf("%q: %+v %v", c.in, m, ok)
+		}
+	}
+}
+
 func TestNutritionFromLD(t *testing.T) {
 	m := nutritionFromLD(map[string]any{"@type": "NutritionInformation", "calories": "250 kcal", "proteinContent": "10 g",
 		"carbohydrateContent": "30,5 g", "fatContent": "8 g"})
