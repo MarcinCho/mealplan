@@ -7,6 +7,15 @@ import (
 	"time"
 )
 
+// The race detector slows this code about ten times, so the time bound is wider there. The bound only has to
+// separate "linear" (about 0.1 s) from the old quadratic merge (about 8 s); the structural checks do the rest.
+func timeBound() time.Duration {
+	if raceEnabled {
+		return 15 * time.Second
+	}
+	return 3 * time.Second
+}
+
 func hasWarning(d Draft, sub string) bool {
 	return strings.Contains(strings.Join(d.Warnings, "|"), sub)
 }
@@ -19,7 +28,7 @@ func TestParseHTMLBoundsWorkOnHugePage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if el := time.Since(start); el > 1500*time.Millisecond {
+	if el := time.Since(start); el > timeBound() {
 		t.Errorf("took %v", el)
 	}
 	if len(d.Steps) > maxSteps+10 || len(d.Ingredients) != 2 || !hasWarning(d, "pierwsze") {
@@ -31,7 +40,7 @@ func TestParseTextBoundsWorkOnLargePaste(t *testing.T) {
 	text := "Składniki\n200 g mąki\n2 jajka\nPrzygotowanie\n1. Start\n" + strings.Repeat("x\n", MaxTextBytes/2-20)
 	start := time.Now()
 	d := ParseText(text)
-	if el := time.Since(start); el > 1500*time.Millisecond {
+	if el := time.Since(start); el > timeBound() {
 		t.Errorf("took %v", el)
 	}
 	if len(d.Steps) > maxSteps+10 || !hasWarning(d, "pierwsze") {
