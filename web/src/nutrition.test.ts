@@ -111,3 +111,14 @@ describe('dayLine', () => {
     expect(dayLine(day(m(null, null, null, null), m(null, null, null, null)))).toBe('— kcal · białko — g')
   })
 })
+
+describe('dayLine incompleteness', () => {
+  const inc = (o: Partial<Record<keyof Macros, boolean>>) => ({ ...none, ...o })
+  it('marks an incomplete known total with a lower bound', () => {
+    expect(dayLine(day(m(1850, 92.4, 1, 1), m(2000, 100, null, null), inc({ kcal: true })))).toBe('≥1850 / 2000 kcal · białko 92,4 g')
+    expect(dayLine(day(m(1850, 92.4, 1, 1), m(2000, 100, null, null), inc({ protein: true })))).toBe('1850 / 2000 kcal · białko ≥92,4 g')
+  })
+  it('shows a dash for an unknown total even with a goal', () => {
+    expect(dayLine(day(m(null, null, 1, 1), m(2000, 100, null, null), inc({ kcal: true })))).toBe('— / 2000 kcal · białko — g')
+  })
+})

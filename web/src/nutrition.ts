@@ -74,8 +74,13 @@ export function validQuantity(q: number | null | undefined): boolean {
   return typeof q === 'number' && Number.isFinite(q) && q > 0 && q <= 10000
 }
 
-// One-line day digest for the week plan: "1850 / 2000 kcal · białko 92 g".
+// One-line day digest for the week plan: "≥1850 / 2000 kcal · białko 92 g".
+// A total built from incomplete data is marked as a lower bound, never shown as exact.
 export function dayLine(d: DaySummary): string {
+  const val = (k: keyof Macros, unit: 'kcal' | 'g') => {
+    const v = d.total[k]
+    return v === null || v === undefined ? '—' : `${d.incomplete[k] ? '≥' : ''}${formatNumber(v, unit)}`
+  }
   const goal = d.goal.kcal !== null && d.goal.kcal !== undefined ? ` / ${formatNumber(d.goal.kcal, 'kcal')}` : ''
-  return `${formatNumber(d.total.kcal, 'kcal')}${goal} kcal · białko ${formatNumber(d.total.protein, 'g')} g`
+  return `${val('kcal', 'kcal')}${goal} kcal · białko ${val('protein', 'g')} g`
 }

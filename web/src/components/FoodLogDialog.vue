@@ -3,14 +3,15 @@ import { computed, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import { VBottomSheet, VDialog } from 'vuetify/components'
 import type { Product } from '../api/types'
-import { t } from '../messages'
+import { errorText, t } from '../messages'
 import { validQuantity } from '../nutrition'
 import { useProducts } from '../stores/products'
 import type { LogInput } from '../stores/nutrition'
 import ProductPicker from './ProductPicker.vue'
 
-const props = defineProps<{ modelValue: boolean; date: string }>()
-const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void; (e: 'save', input: LogInput): void }>()
+// `submit` rejects on failure; the dialog shows the error itself and stays open.
+const props = defineProps<{ modelValue: boolean; date: string; submit: (input: LogInput) => Promise<void> }>()
+const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
 
 const { mdAndUp } = useDisplay()
 const products = useProducts()
@@ -18,6 +19,8 @@ const productId = ref<string | null>(null)
 const picked = ref<Product | null>(null)
 const quantity = ref<number | null>(null)
 const unit = ref<'g' | 'szt'>('g')
+const saving = ref(false)
+const error = ref('')
 
 watch(
   () => props.modelValue,
@@ -27,6 +30,8 @@ watch(
     picked.value = null
     quantity.value = null
     unit.value = 'g'
+    saving.value = false
+    error.value = ''
   },
 )
 
@@ -40,9 +45,18 @@ const quantityOk = computed(() => validQuantity(quantity.value))
 const quantityError = computed(() => (quantity.value !== null && quantity.value !== undefined && !quantityOk.value ? [t.logQuantityInvalid] : []))
 const valid = computed(() => !!productId.value && quantityOk.value)
 
-function save() {
-  if (!valid.value) return
-  emit('save', { date: props.date, productId: productId.value!, quantity: quantity.value!, unit: unit.value })
+async function save() {
+  if (!valid.value || saving.value) return
+  saving.value = true
+  error.value = ''
+  try {
+    await props.submit({ date: props.date, productId: productId.value!, quantity: quantity.value!, unit: unit.value })
+    emit('update:modelValue', false)
+  } catch (e) {
+    error.value = errorText(e)
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -56,6 +70,7 @@ function save() {
     <v-card>
       <v-card-title>{{ t.logTitle }}</v-card-title>
       <v-card-text>
+        <v-alert v-if="error" type="error" variant="tonal" density="compact" class="mb-3">{{ error }}</v-alert>
         <ProductPicker v-model="productId" allow-create @picked="picked = $event" />
         <v-text-field v-model.number="quantity" :label="t.logQuantity" type="number" min="0" max="10000" step="any" :error-messages="quantityError" />
         <v-btn-toggle v-model="unit" mandatory density="comfortable" color="primary" :aria-label="t.logUnit">
@@ -66,7 +81,7 @@ function save() {
       <v-card-actions>
         <v-spacer />
         <v-btn variant="text" @click="emit('update:modelValue', false)">{{ t.cancel }}</v-btn>
-        <v-btn color="primary" :disabled="!valid" @click="save">{{ t.logAdd }}</v-btn>
+        <v-btn color="primary" :disabled="!valid || saving" :loading="saving" @click="save">{{ t.logAdd }}</v-btn>
       </v-card-actions>
     </v-card>
   </component>

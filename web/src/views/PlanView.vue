@@ -5,7 +5,7 @@ import { api } from '../api/client'
 import type { PlanEntry, Slot } from '../api/types'
 import EntryDialog from '../components/EntryDialog.vue'
 import { errorText, t } from '../messages'
-import { dayLine } from '../nutrition'
+import { dayLine, dayWarnings } from '../nutrition'
 import { useNutrition } from '../stores/nutrition'
 import { usePlan, type EntryInput } from '../stores/plan'
 import { useRecipes } from '../stores/recipes'
@@ -29,6 +29,7 @@ const initial = ref<{ date: string; slot: Slot }>({ date: week.value, slot: 'din
 const dates = computed(() => weekDates(week.value))
 const recipeTitle = computed(() => Object.fromEntries(recipes.items.map((r) => [r.id, r.title])))
 const tracking = computed(() => nutrition.settings?.enabled === true)
+const warnOf = (d: string) => (tracking.value && nutrition.days[d] ? dayWarnings(nutrition.days[d]).join(' · ') : '')
 const lineOf = (d: string) => (tracking.value && nutrition.days[d] ? dayLine(nutrition.days[d]) : '')
 // A failed summary must not break the plan, so its errors are swallowed here.
 async function refreshDays() {
@@ -58,10 +59,14 @@ async function init() {
   try {
     await Promise.all([recipes.load(), api<Member[]>('GET', '/household/members').then((m) => (members.value = m))])
     ready.value = true
-    await nutrition.loadSettings()
   } catch (e) {
     error.value = errorText(e)
     return
+  }
+  try {
+    await nutrition.loadSettings()
+  } catch {
+    /* nutrition stays hidden; the plan loads regardless */
   }
   await load()
 }
@@ -162,7 +167,10 @@ async function copyPrev() {
         <th />
         <th v-for="d in dates" :key="d">
           {{ formatDay(d) }}
-          <div v-if="lineOf(d)" class="day-line">{{ lineOf(d) }}</div>
+          <div v-if="lineOf(d)" class="day-line">
+            {{ lineOf(d) }}
+            <v-icon v-if="warnOf(d)" icon="mdi-alert-outline" size="x-small" color="warning" :title="warnOf(d)" :aria-label="warnOf(d)" />
+          </div>
         </th>
       </tr>
     </thead>
@@ -190,7 +198,11 @@ async function copyPrev() {
   <div v-else>
     <v-card v-for="d in dates" :key="d" class="mb-3">
       <v-card-title class="text-subtitle-1">{{ formatDay(d) }}</v-card-title>
-      <v-card-subtitle v-if="lineOf(d)" class="text-wrap">{{ lineOf(d) }}</v-card-subtitle>
+      <v-card-subtitle v-if="lineOf(d)" class="text-wrap">
+        {{ lineOf(d) }}
+        <v-icon v-if="warnOf(d)" icon="mdi-alert-outline" size="small" color="warning" :title="warnOf(d)" :aria-label="warnOf(d)" />
+        <span v-if="warnOf(d)" class="d-block">{{ warnOf(d) }}</span>
+      </v-card-subtitle>
       <v-list density="compact" bg-color="transparent">
         <template v-for="s in SLOTS" :key="s.value">
           <v-list-item

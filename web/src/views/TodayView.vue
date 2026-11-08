@@ -123,11 +123,10 @@ async function save(input: EntryInput) {
     dialog.value = false
   })
 }
-async function saveLog(input: LogInput) {
-  await run(async () => {
-    await nutrition.addLog(input)
-    logDialog.value = false
-  })
+// Failures of the add itself go to the dialog; a failed refresh afterwards is a page-level error.
+async function submitLog(input: LogInput) {
+  await nutrition.addLog(input)
+  void run(async () => {}) // run() refreshes the summaries and reports a failure on the page
 }
 const removeLog = (id: string) => run(() => nutrition.removeLog(id))
 
@@ -273,7 +272,7 @@ async function removeEntry() {
     @save="save"
     @remove="removeEntry"
   />
-  <FoodLogDialog v-model="logDialog" :date="selected" @save="saveLog" />
+  <FoodLogDialog v-model="logDialog" :date="selected" :submit="submitLog" />
   <MealNutritionDialog v-model="mealDialog" :meal="shownMeal" />
 </template>
 
