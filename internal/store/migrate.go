@@ -13,7 +13,10 @@ var migrationsFS embed.FS
 
 // Migrate applies pending migrations in filename order, each in its own transaction.
 // Migration files are split on ";", so they must not contain ";" inside strings or comments.
-func (d *DB) Migrate(ctx context.Context) error {
+func (d *DB) Migrate(ctx context.Context) error { return d.migrateTo(ctx, "") }
+
+// migrateTo applies pending migrations; a non-empty last stops after applying that version.
+func (d *DB) migrateTo(ctx context.Context, last string) error {
 	if _, err := d.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at BIGINT NOT NULL)`); err != nil {
 		return err
 	}
@@ -54,6 +57,9 @@ func (d *DB) Migrate(ctx context.Context) error {
 		}
 		if err := tx.Commit(); err != nil {
 			return err
+		}
+		if last != "" && version == last {
+			return nil
 		}
 	}
 	return nil
