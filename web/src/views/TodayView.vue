@@ -10,6 +10,8 @@ import MealNutritionDialog from '../components/MealNutritionDialog.vue'
 import QuickAdd from '../components/QuickAdd.vue'
 import { errorText, t } from '../messages'
 import { useMembers } from '../stores/members'
+import { usePantry } from '../stores/pantry'
+import { reviewDue } from '../pantry'
 import { useNutrition, type LogInput } from '../stores/nutrition'
 import { usePlan, type EntryInput } from '../stores/plan'
 import { useRecipes } from '../stores/recipes'
@@ -24,6 +26,8 @@ const recipes = useRecipes()
 const members = useMembers()
 const session = useSession()
 const nutrition = useNutrition()
+const pantry = usePantry()
+const needsReview = computed(() => pantry.loaded && reviewDue(pantry.reviewedAt, pantry.items.length, now))
 
 const now = new Date()
 const todayDate = isoDate(now)
@@ -96,7 +100,10 @@ async function init() {
     error.value = errorText(e)
   }
 }
-onMounted(init)
+onMounted(() => {
+  void init()
+  pantry.load().catch(() => {}) // the reminder is optional; stay silent on failure
+})
 
 async function run(fn: () => Promise<unknown>) {
   error.value = ''
@@ -157,6 +164,7 @@ async function removeEntry() {
         <template v-if="!ready_" #append><v-btn variant="text" @click="init">{{ t.retry }}</v-btn></template>
       </v-alert>
       <v-progress-linear v-if="!ready_ && !error" indeterminate class="mb-4" />
+      <v-chip v-if="needsReview" :to="{ name: 'pantry' }" color="warning" variant="tonal" prepend-icon="mdi-fridge-outline" class="mb-4">{{ t.pantryReviewDue }}</v-chip>
 
       <template v-if="ready_">
         <section class="hero mb-5">

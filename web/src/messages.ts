@@ -187,6 +187,39 @@ export const t = {
   macroProtein: 'Białko',
   macroCarbs: 'Węglowodany',
   macroFat: 'Tłuszcz',
+  navPantry: 'Spiżarnia',
+  pantry: 'Spiżarnia',
+  pantrySearch: 'Szukaj w spiżarni',
+  pantryEmpty: 'Spiżarnia jest pusta',
+  pantryEmptyHint: 'Dodaj produkty, które masz w domu, a lista zakupów je uwzględni.',
+  pantryAdd: 'Dodaj',
+  pantryAddTitle: 'Dodaj do spiżarni',
+  pantryStaple: 'stały zapas',
+  pantryStapleSwitch: 'Stały zapas',
+  pantryExpires: 'Ważne do',
+  pantryExpired: 'Przeterminowane',
+  pantryExpiresShort: 'do',
+  pantryQuantityRequired: 'Podaj ilość (od 0 do 1 000 000) albo zaznacz „Stały zapas”.',
+  pantryDecrease: 'Zmniejsz ilość',
+  pantryIncrease: 'Zwiększ ilość',
+  pantryZeroTitle: 'Skończyło się?',
+  pantryDeleteAtZero: 'Usuń ze spiżarni',
+  pantryKeepZero: 'Zostaw',
+  pantryNoMatches: 'Brak pasujących pozycji.',
+  pantryReview: 'Przegląd',
+  pantryReviewTitle: 'Przegląd spiżarni',
+  pantryReviewDue: 'Czas na przegląd spiżarni',
+  pantryReviewQuantity: 'Ilość',
+  pantryReviewSame: 'Bez zmian',
+  pantryReviewSave: 'Zapisz ilość',
+  pantryReviewNone: 'Nie mamy',
+  pantryReviewAddMissing: 'Dodaj brakujący',
+  pantryReviewFinish: 'Zakończ przegląd',
+  pantryReviewAllSeen: 'To już wszystkie pozycje.',
+  pantryReviewEmpty: 'Nie ma nic do przeglądu.',
+  pantryReviewDone: 'Przegląd zakończony',
+  pantryLastReview: 'Ostatni przegląd',
+  pantryNeverReviewed: 'Jeszcze nie było przeglądu',
   skillDownload: 'Pobierz SKILL.md',
   skillInstall: 'Zapisz plik w folderze mealplan-recipe-format w katalogu umiejętności Claude, np. ~/.claude/skills/mealplan-recipe-format/SKILL.md.',
 }
@@ -221,6 +254,15 @@ const errors: Record<string, string> = {
 const productErrors: Record<string, string> = {
   in_use: 'Ten produkt jest używany w dzienniku posiłków domowników, więc nie można go usunąć.',
   conflict: 'Produkt o takiej nazwie lub aliasie już istnieje.',
+}
+
+const pantryErrors: Record<string, string> = {
+  conflict: 'W spiżarni jest już pozycja z tą jednostką. Zmień ilość tamtej pozycji albo usuń jedną z nich.',
+}
+
+export function pantryErrorText(e: unknown): string {
+  if (e instanceof ApiError && pantryErrors[e.code]) return pantryErrors[e.code]
+  return errorText(e)
 }
 
 // Like errorText, but with wording that fits the product database.

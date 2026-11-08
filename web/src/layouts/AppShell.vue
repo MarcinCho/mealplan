@@ -16,6 +16,7 @@ const items = [
   { title: t.navToday, icon: 'mdi-home-variant-outline', active: 'mdi-home-variant', to: { name: 'home' } },
   { title: t.navPlan, icon: 'mdi-calendar-week-outline', active: 'mdi-calendar-week', to: { name: 'plan' } },
   { title: t.navRecipes, icon: 'mdi-book-open-variant-outline', active: 'mdi-book-open-variant', to: { name: 'recipes' } },
+  { title: t.navPantry, icon: 'mdi-fridge-outline', active: 'mdi-fridge', to: { name: 'pantry' } },
   { title: t.navShopping, icon: 'mdi-cart-outline', active: 'mdi-cart', to: { name: 'shopping' } },
 ]
 
@@ -126,7 +127,7 @@ async function logout() {
 .nav-item.on { color: rgb(var(--v-theme-on-bar)); font-weight: 700; }
 .nav-item.on .pill { background: rgba(var(--v-theme-on-bar), 0.18); }
 .bottom-nav { background: rgb(var(--v-theme-surface-variant)) !important; }
-.bottom-nav .nav-item { color: rgba(var(--v-theme-on-surface), 0.7); justify-content: center; }
+.bottom-nav .nav-item { color: rgba(var(--v-theme-on-surface), 0.7); justify-content: center; min-width: 0; font-size: 11px; }
 .bottom-nav .nav-item.on { color: rgb(var(--v-theme-on-surface)); }
 .bottom-nav .nav-item.on .pill { background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); }
 .page-enter-active, .page-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }

@@ -131,3 +131,18 @@ export interface RecipeNutrition {
   approximate: boolean
   unmatched: string[]
 }
+
+export interface PantryItem {
+  id: string
+  productId: string
+  name: string
+  quantity: number | null
+  unit: string
+  expiresOn: string // YYYY-MM-DD or empty
+  staple: boolean
+}
+
+export interface PantryList {
+  items: PantryItem[]
+  reviewedAt: string | null
+}
