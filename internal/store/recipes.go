@@ -42,8 +42,8 @@ func (s *Store) insertRecipeChildren(ctx context.Context, tx *sql.Tx, r domain.R
 		if ing.Quantity != nil {
 			q = *ing.Quantity
 		}
-		if err := s.exec(ctx, tx, `INSERT INTO ingredient (recipe_id, position, name, normalized_name, quantity, unit) VALUES (?, ?, ?, ?, ?, ?)`,
-			r.ID, i, ing.Name, ing.NormalizedName, q, ing.Unit); err != nil {
+		if err := s.exec(ctx, tx, `INSERT INTO ingredient (recipe_id, position, name, normalized_name, quantity, unit, note) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			r.ID, i, ing.Name, ing.NormalizedName, q, ing.Unit, ing.Note); err != nil {
 			return err
 		}
 	}
@@ -71,14 +71,14 @@ func (s *Store) RecipeByID(ctx context.Context, householdID, id string) (domain.
 	}
 	r.CreatedAt, r.UpdatedAt = fromTS(created), fromTS(updated)
 
-	rows, err := s.db.QueryContext(ctx, s.db.Rebind(`SELECT name, normalized_name, quantity, unit FROM ingredient WHERE recipe_id = ? ORDER BY position`), id)
+	rows, err := s.db.QueryContext(ctx, s.db.Rebind(`SELECT name, normalized_name, quantity, unit, note FROM ingredient WHERE recipe_id = ? ORDER BY position`), id)
 	if err != nil {
 		return domain.Recipe{}, err
 	}
 	for rows.Next() {
 		var ing domain.Ingredient
 		var q sql.NullFloat64
-		if err := rows.Scan(&ing.Name, &ing.NormalizedName, &q, &ing.Unit); err != nil {
+		if err := rows.Scan(&ing.Name, &ing.NormalizedName, &q, &ing.Unit, &ing.Note); err != nil {
 			_ = rows.Close()
 			return domain.Recipe{}, err
 		}

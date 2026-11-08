@@ -28,7 +28,7 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `GET /household/members` | członkowie gospodarstwa (np. do wyboru kucharza) |
 | `PATCH /household/members/{id}` | zmiana roli (admin); `409 last_admin` przy degradacji ostatniego administratora |
 | `DELETE /household/members/{id}` | usunięcie członka (admin); kasuje jego sesje w gospodarstwie i czyści go jako kucharza we wpisach planu; `409 last_admin` dla ostatniego administratora |
-| `GET /recipes`, `POST /recipes` | lista (bez składników i kroków) i tworzenie przepisu |
+| `GET /recipes`, `POST /recipes` | lista (bez składników i kroków) i tworzenie przepisu; składnik ma `name`, `quantity`, `unit` i opcjonalną `note` (uwaga do składnika, do 200 znaków) |
 | `GET/PUT/DELETE /recipes/{id}` | odczyt, pełna zamiana i usunięcie; `409 in_use`, gdy przepis jest w planie |
 | `POST /recipes/import/url` | szkic przepisu ze strony (`{"url"}`); niczego nie zapisuje; `422 import_blocked`, `import_unparsable`, `import_failed`, `504 import_timeout`; limit 10 na minutę na użytkownika (`429 rate_limited` + `Retry-After`) |
 | `POST /recipes/import/text` | szkic przepisu z wklejonego tekstu (`{"text"}`, do 100 KB); niczego nie zapisuje; `422 import_unparsable` |

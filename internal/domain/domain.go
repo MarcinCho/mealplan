@@ -72,6 +72,7 @@ type Ingredient struct {
 	NormalizedName string
 	Quantity       *float64
 	Unit           string
+	Note           string
 }
 
 type Recipe struct {

@@ -2,10 +2,14 @@
 
 ## Unreleased
 
+### Notatki do składników
+
+- Składnik przepisu ma opcjonalną notatkę (`note`, do 200 znaków), np. „można zastąpić jogurtem greckim". Jest zapisywana razem z przepisem (migracja `0004`), a import zapisuje ją zamiast odrzucać; żądania bez `note` nadal działają. Długie linie z ilością (11-30 słów) są teraz składnikami, a notatki dłuższe niż 200 znaków są ucinane z ostrzeżeniem.
+
 ### Import przepisów
 
 - Import przepisu z linku (`POST /recipes/import/url`) lub wklejonego tekstu (`POST /recipes/import/text`, do 100 KB). Źródła strony: JSON-LD, microdata, a w ostateczności tekst strony (min. 2 składniki i 1 krok, z ostrzeżeniem). Parser linii składnika (ilość, jednostka, nazwa, notatka; `ok`/`guess`/`unparsed`). Import niczego nie zapisuje.
-- Podgląd w edytorze przepisu: niepewne wiersze (`guess`, `unparsed`) są podświetlone, linia `unparsed` zachowuje oryginalny tekst jako nazwę, notatka składnika jest tylko podglądem i nie jest zapisywana. Wykrywanie duplikatów (ten sam adres źródła lub tytuł) z wyborem „Zaktualizuj istniejący" albo „Dodaj jako nowy".
+- Podgląd w edytorze przepisu: niepewne wiersze (`guess`, `unparsed`) są podświetlone, linia `unparsed` zachowuje oryginalny tekst jako nazwę, notatka składnika jest zapisywana razem ze składnikiem. Wykrywanie duplikatów (ten sam adres źródła lub tytuł) z wyborem „Zaktualizuj istniejący" albo „Dodaj jako nowy".
 - Ochrona SSRF: blokada zakresów prywatnych, loopback, link-local i `100.64.0.0/10`, kontrola w dialerze po rozwiązaniu DNS (także przekierowania i rebinding), porty 80/443, bez proxy z otoczenia, limity 2 MB, 10 s i 5 przekierowań. Limit 10 importów z linku na minutę na użytkownika (`429 rate_limited`). Nowe kody błędów `import_blocked`, `import_unparsable`, `import_failed`, `import_timeout`.
 - Nowa zależność: `golang.org/x/net` (parser HTML i dekodowanie kodowań stron). Opis: `docs/import.md`.
 - Rozszerzona blokada adresów (NAT64, 6to4, Teredo, `::/96`, `fec0::/10`, `198.18.0.0/15`, `240.0.0.0/4`, `192.0.0.0/24`), limity pracy parsera (linie, składniki, kroki), usuwanie znaków sterujących ze szkicu, ilość po nazwie składnika („czosnek 2 ząbki") i przymiotniki przed jednostką.

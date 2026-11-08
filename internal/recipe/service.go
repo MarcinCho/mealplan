@@ -24,6 +24,7 @@ const (
 	maxTags        = 20
 	maxTagLen      = 40
 	maxUnitLen     = 30
+	maxNote        = 200
 	maxQuantity    = 1e6
 	maxURL         = 2000
 )
@@ -40,6 +41,7 @@ type IngredientInput struct {
 	Name     string
 	Quantity *float64
 	Unit     string
+	Note     string
 }
 
 type Input struct {
@@ -71,7 +73,7 @@ func invalid(format string, a ...any) error {
 func checkText(in Input) error {
 	bad := domain.HasControl(in.Title) || domain.HasControl(in.SourceURL)
 	for _, ing := range in.Ingredients {
-		bad = bad || domain.HasControl(ing.Name) || domain.HasControl(ing.Unit)
+		bad = bad || domain.HasControl(ing.Name) || domain.HasControl(ing.Unit) || domain.HasControl(ing.Note)
 	}
 	for _, st := range in.Steps {
 		bad = bad || domain.HasControl(st)
@@ -109,11 +111,15 @@ func build(in Input) (domain.Recipe, error) {
 	for _, ing := range in.Ingredients {
 		name := strings.TrimSpace(ing.Name)
 		unit := units.CanonUnit(ing.Unit)
+		note := strings.TrimSpace(ing.Note)
 		if n := utf8.RuneCountInString(name); n == 0 || n > maxTitle {
 			return r, invalid("ingredient name must be 1 to %d characters", maxTitle)
 		}
 		if utf8.RuneCountInString(unit) > maxUnitLen {
 			return r, invalid("unit must be at most %d characters", maxUnitLen)
+		}
+		if utf8.RuneCountInString(note) > maxNote {
+			return r, invalid("ingredient note must be at most %d characters", maxNote)
 		}
 		if ing.Quantity != nil {
 			v := *ing.Quantity
@@ -121,7 +127,7 @@ func build(in Input) (domain.Recipe, error) {
 				return r, invalid("quantity must be greater than 0 and at most %v", maxQuantity)
 			}
 		}
-		r.Ingredients = append(r.Ingredients, domain.Ingredient{Name: name, NormalizedName: units.NormalizeName(name), Quantity: ing.Quantity, Unit: unit})
+		r.Ingredients = append(r.Ingredients, domain.Ingredient{Name: name, NormalizedName: units.NormalizeName(name), Quantity: ing.Quantity, Unit: unit, Note: note})
 	}
 	if len(in.Steps) > maxSteps {
 		return r, invalid("at most %d steps", maxSteps)

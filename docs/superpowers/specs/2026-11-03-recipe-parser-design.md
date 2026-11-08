@@ -23,7 +23,7 @@ Dodanie przepisu ma zajmować sekundy, nie minuty pisania. Użytkownik wkleja li
 | Rozszerzalność | Interfejs `Parser`; opcjonalny fallback LLM (własny klucz, domyślnie wyłączony) może być dodany później bez zmian w pipeline |
 | Wynik niepewny | Linia składnika z `confidence: unparsed` zachowuje tekst oryginalny i jest podświetlona w podglądzie |
 | Zapis | Brak nowych endpointów zapisu |
-| Notatka składnika | `note` jest tylko podglądem w edytorze i nie jest zapisywana (przepis nie ma takiego pola) |
+| Notatka składnika | `note` jest zapisywana razem ze składnikiem (pole `note`, do 200 znaków; dłuższa jest ucinana z ostrzeżeniem) |
 
 ## 3. Architektura (`internal/importer`)
 
@@ -85,6 +85,7 @@ Wejście: `"2 łyżki oliwy z oliwek, podgrzanej"`. Wyjście: `Quantity 2, Unit 
 **Nazwa i notatka**
 - nazwa to reszta po ilości i jednostce, bez przyimka `z`/`ze` na początku, w formie jak w tekście (bez lematyzacji);
 - tekst po przecinku i w nawiasach trafia do `Note`;
+- linia dłuższa niż 10 słów jest składnikiem tylko z rozpoznaną ilością (maks. 30 słów);
 - gdy nie da się wskazać nazwy, linia dostaje `unparsed` i zachowuje `Raw`.
 
 **Confidence**
@@ -125,7 +126,7 @@ Zgodnie z §7.3 pierwszego specu, rozszerzone o `text`. Wszystkie wymagają sesj
 **Przepisy → Importuj**: dwie zakładki (Link, Tekst), pole i przycisk "Analizuj". Wynik w podglądzie:
 
 - tytuł, porcje, źródło, tagi (edytowalne);
-- tabela składników: ilość, jednostka, nazwa, notatka (notatka jest tylko podglądem i nie jest zapisywana); wiersze `guess` podświetlone łagodnie, `unparsed` wyraźnie i z oryginalnym tekstem; można poprawić, usunąć, dodać wiersz;
+- tabela składników: ilość, jednostka, nazwa, notatka (notatka jest zapisywana razem ze składnikiem); wiersze `guess` podświetlone łagodnie, `unparsed` wyraźnie i z oryginalnym tekstem; można poprawić, usunąć, dodać wiersz;
 - lista kroków (edytowalna, zmiana kolejności);
 - ostrzeżenia nad formularzem;
 - "Zapisz" wywołuje istniejące `POST /recipes`;

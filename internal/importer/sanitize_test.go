@@ -25,7 +25,7 @@ func accepted(t *testing.T, d importer.Draft) {
 	svc := recipe.New(st, time.Now)
 	in := recipe.Input{Title: d.Title, BaseServings: 4, SourceURL: d.SourceURL, Tags: d.Tags, Steps: d.Steps}
 	for _, i := range d.Ingredients {
-		in.Ingredients = append(in.Ingredients, recipe.IngredientInput{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit})
+		in.Ingredients = append(in.Ingredients, recipe.IngredientInput{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit, Note: i.Note})
 		for _, s := range []string{i.Raw, i.Name, i.Note, i.Unit} {
 			if domain.HasControl(s) {
 				t.Errorf("control chars left in %q", s)
@@ -56,6 +56,18 @@ func TestPastedTextWithControlCharsIsSavable(t *testing.T) {
 	}
 	if strings.ContainsAny(d.Title, "\f\v") {
 		t.Errorf("title=%q", d.Title)
+	}
+	accepted(t, d)
+}
+
+func TestDraftWithSavedNotePassesRecipeValidation(t *testing.T) {
+	d, err := importer.New().Import(context.Background(), importer.Source{Kind: importer.KindText,
+		Text: "Sernik\nSkładniki\n250 g jogurt grecki (można zastąpić kefirem lub śmietaną 18%)\n2 jajka\nPrzygotowanie\n1. Wymieszaj."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Ingredients[0].Note != "można zastąpić kefirem lub śmietaną 18%" {
+		t.Fatalf("draft: %+v", d.Ingredients)
 	}
 	accepted(t, d)
 }

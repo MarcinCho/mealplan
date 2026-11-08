@@ -15,6 +15,7 @@ type recipeJSON struct {
 		Name     string   `json:"name"`
 		Quantity *float64 `json:"quantity"`
 		Unit     string   `json:"unit"`
+		Note     string   `json:"note"`
 	} `json:"ingredients"`
 	Steps []string `json:"steps"`
 }
@@ -124,5 +125,45 @@ func TestRecipesAreIsolatedBetweenHouseholds(t *testing.T) {
 	decode(t, a.do("GET", "/api/v1/recipes/"+created.ID, nil), &mine)
 	if mine.Title != "Sekret A" {
 		t.Fatalf("victim changed: %+v", mine)
+	}
+}
+
+func TestRecipeIngredientNoteOverHTTP(t *testing.T) {
+	e := newEnv(t)
+	c := e.client(t)
+	setup(t, c)
+
+	body := recipeBody("Sernik")
+	body["ingredients"] = []map[string]any{
+		{"name": "Jogurt", "quantity": 250, "unit": "g", "note": "można zastąpić jogurtem greckim"},
+		{"name": "Sól", "quantity": nil, "unit": ""},
+	}
+	rec := c.do("POST", "/api/v1/recipes", body)
+	if rec.Code != 201 {
+		t.Fatalf("create: %d %s", rec.Code, rec.Body)
+	}
+	var created recipeJSON
+	decode(t, rec, &created)
+	if created.Ingredients[0].Note != "można zastąpić jogurtem greckim" || created.Ingredients[1].Note != "" {
+		t.Fatalf("created: %+v", created.Ingredients)
+	}
+	var got recipeJSON
+	decode(t, c.do("GET", "/api/v1/recipes/"+created.ID, nil), &got)
+	if got.Ingredients[0].Note != "można zastąpić jogurtem greckim" || got.Ingredients[1].Note != "" {
+		t.Fatalf("get: %+v", got.Ingredients)
+	}
+
+	body["ingredients"] = []map[string]any{{"name": "Jogurt", "quantity": 250, "unit": "g", "note": "kefir"}}
+	if rec := c.do("PUT", "/api/v1/recipes/"+created.ID, body); rec.Code != 200 {
+		t.Fatalf("update: %d %s", rec.Code, rec.Body)
+	}
+	decode(t, c.do("GET", "/api/v1/recipes/"+created.ID, nil), &got)
+	if got.Ingredients[0].Note != "kefir" {
+		t.Fatalf("after update: %+v", got.Ingredients)
+	}
+
+	body["ingredients"] = []map[string]any{{"name": "Jogurt", "quantity": 250, "unit": "g", "note": strings.Repeat("ż", 201)}}
+	if rec := c.do("POST", "/api/v1/recipes", body); rec.Code != 422 || !strings.Contains(rec.Body.String(), "invalid_input") {
+		t.Fatalf("long note: %d %s", rec.Code, rec.Body)
 	}
 }

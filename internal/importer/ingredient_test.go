@@ -1,6 +1,9 @@
 package importer
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func f(v float64) *float64 { return &v }
 
@@ -88,6 +91,11 @@ func TestParseIngredient(t *testing.T) {
 		{"jogurt naturalny 2 opakowania po 150 g", "jogurt naturalny", f(2), "opakowanie", "po 150 g", ConfGuess},
 		{"cebula 1 sztuka - około 200 g", "cebula", f(1), "szt", "około 200 g", ConfGuess},
 		{"0 g mąki", "", nil, "", "", ConfUnparsed},
+		{"250 g jogurt grecki (można zastąpić kefirem lub śmietaną 18%)", "jogurt grecki", f(250), "g", "można zastąpić kefirem lub śmietaną 18%", ConfOK},
+		{"2 łyżki miodu (można zastąpić syropem klonowym lub z agawy, ale zmieni się smak potrawy)", "miodu", f(2), "łyżka", "można zastąpić syropem klonowym lub z agawy, ale zmieni się smak potrawy", ConfOK},
+		{"Wymieszaj wszystko dokładnie i odstaw na godzinę do lodówki, aż ciasto wyrośnie.", "", nil, "", "", ConfUnparsed},
+		{"Wymieszaj wszystko dokładnie i odstaw na godzinę do lodówki aż ciasto wyrośnie", "", nil, "", "", ConfUnparsed},
+		{"250 g mąki " + strings.Repeat("słowo ", 29), "", nil, "", "", ConfUnparsed},
 	}
 	for _, c := range cases {
 		got := ParseIngredient(c.raw)

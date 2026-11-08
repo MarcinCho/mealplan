@@ -22,6 +22,7 @@ const (
 	MaxTextBytes = 100 << 10
 
 	maxTitle       = 200
+	maxNote        = 200
 	maxServings    = 100
 	maxIngredients = 200
 	maxSteps       = 100
@@ -142,6 +143,10 @@ func (d *Draft) finish() {
 	for _, l := range d.Ingredients {
 		l.Raw, l.Name = cleanText(l.Raw, true), cleanText(l.Name, true)
 		l.Note, l.Unit = cleanText(l.Note, true), cleanText(l.Unit, true)
+		if utf8.RuneCountInString(l.Note) > maxNote {
+			l.Note = cut(l.Note, maxNote)
+			d.warn("Notatka jednego ze składników została skrócona do %d znaków.", maxNote)
+		}
 		if l.Raw != "" || l.Name != "" {
 			kept = append(kept, l)
 		}

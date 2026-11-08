@@ -674,6 +674,7 @@ components:
         name: { type: string }
         quantity: { type: number, nullable: true, description: Null when the amount is "to taste" }
         unit: { type: string }
+        note: { type: string, maxLength: 200, description: "Remark about the ingredient, e.g. a substitution" }
     RecipeInput:
       type: object
       required: [title, baseServings]
@@ -715,7 +716,7 @@ components:
         name: { type: string, description: Empty when confidence is unparsed }
         quantity: { type: number, nullable: true }
         unit: { type: string }
-        note: { type: string, description: Preparation hint such as "posiekana"; shown in the preview, not stored }
+        note: { type: string, description: Remark such as "posiekana" or a substitution; saved with the ingredient (max 200 characters, longer ones are cut with a warning) }
         confidence: { type: string, enum: [ok, guess, unparsed] }
     RecipeDraft:
       type: object

@@ -109,3 +109,25 @@ func TestCapWarningsAppearOnce(t *testing.T) {
 		}
 	}
 }
+
+func TestFinishCutsLongNotes(t *testing.T) {
+	d := Draft{Title: "T", Ingredients: []IngredientLine{
+		{Raw: "a", Name: "a", Note: strings.Repeat("ż", 250)},
+		{Raw: "b", Name: "b", Note: strings.Repeat("ó", 300)},
+	}}
+	d.finish()
+	for _, l := range d.Ingredients {
+		if n := len([]rune(l.Note)); n != 200 {
+			t.Errorf("note runes=%d", n)
+		}
+	}
+	count := 0
+	for _, w := range d.Warnings {
+		if strings.Contains(w, "Notatka jednego ze składników została skrócona do 200 znaków.") {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("warnings=%v", d.Warnings)
+	}
+}

@@ -264,12 +264,18 @@ func noteLikeTail(tail []string) bool {
 	return false
 }
 
+const (
+	shortLineWords     = 10 // longer lines need a quantity to count as an ingredient
+	maxIngredientWords = 30 // hard limit, so a long note still fits but a paragraph does not
+)
+
 // ParseIngredient splits one ingredient line into amount, unit, name and note. It never drops the line:
 // anything it cannot make sense of is returned as ConfUnparsed with Raw intact.
 func ParseIngredient(raw string) IngredientLine {
 	line := IngredientLine{Raw: raw, Confidence: ConfUnparsed}
 	s := cleanLine(raw)
-	if s == "" || len(strings.Fields(s)) > 10 {
+	words := len(strings.Fields(s))
+	if s == "" || words > maxIngredientWords {
 		return line
 	}
 	main, note := splitNote(s)
@@ -315,6 +321,11 @@ func ParseIngredient(raw string) IngredientLine {
 				note = tn + ", " + note
 			}
 		}
+	}
+
+	// A long line is an ingredient only when it starts with an amount; otherwise it is probably a pasted sentence.
+	if words > shortLineWords && qty == nil {
+		return line
 	}
 
 	name := strings.Trim(strings.Join(rest, " "), " ,;:-–—")

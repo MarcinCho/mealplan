@@ -12,6 +12,7 @@ type ingredientJSON struct {
 	Name     string   `json:"name"`
 	Quantity *float64 `json:"quantity"`
 	Unit     string   `json:"unit"`
+	Note     string   `json:"note"`
 }
 
 type recipeJSON struct {
@@ -40,7 +41,7 @@ func toRecipeJSON(r domain.Recipe) recipeJSON {
 		Tags: orEmpty(r.Tags), Steps: orEmpty(r.Steps), Ingredients: []ingredientJSON{},
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt}
 	for _, i := range r.Ingredients {
-		out.Ingredients = append(out.Ingredients, ingredientJSON{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit})
+		out.Ingredients = append(out.Ingredients, ingredientJSON{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit, Note: i.Note})
 	}
 	return out
 }
@@ -55,7 +56,7 @@ func orEmpty(s []string) []string {
 func (in recipeInJSON) toInput() recipe.Input {
 	out := recipe.Input{Title: in.Title, BaseServings: in.BaseServings, SourceURL: in.SourceURL, Tags: in.Tags, Steps: in.Steps}
 	for _, i := range in.Ingredients {
-		out.Ingredients = append(out.Ingredients, recipe.IngredientInput{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit})
+		out.Ingredients = append(out.Ingredients, recipe.IngredientInput{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit, Note: i.Note})
 	}
 	return out
 }
