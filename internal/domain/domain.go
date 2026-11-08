@@ -143,3 +143,18 @@ type ShoppingItem struct {
 	Checked        bool
 	Manual         bool
 }
+
+// NutritionSettings are per-user, per-household nutrition preferences.
+type NutritionSettings struct {
+	UserID, HouseholdID string
+	Enabled             bool
+	Goal                Macros
+}
+
+// FoodLogEntry is one logged product amount; Unit is "g" or "szt".
+type FoodLogEntry struct {
+	ID, HouseholdID, UserID, Date, ProductID string
+	Quantity                                 float64
+	Unit                                     string
+	CreatedAt                                time.Time
+}

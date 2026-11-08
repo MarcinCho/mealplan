@@ -167,3 +167,42 @@ func TestRecipeIngredientNotes(t *testing.T) {
 		t.Fatalf("notes after update: %+v", got.Ingredients)
 	}
 }
+
+func TestRecipeNutritionRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedTwoHouseholds(t, s)
+	if err := s.CreateProduct(ctx, prod("p1", "hA", "mąka")); err != nil {
+		t.Fatal(err)
+	}
+	r := sampleRecipe("r1", "hA")
+	r.Nutrition = domain.Macros{Kcal: f(500), Fat: f(12)}
+	r.Ingredients[0].ProductID = "p1"
+	if err := s.CreateRecipe(ctx, r); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.RecipeByID(ctx, "hA", "r1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := got.Nutrition
+	if n.Kcal == nil || *n.Kcal != 500 || n.Fat == nil || *n.Fat != 12 || n.Protein != nil || n.Carbs != nil {
+		t.Fatalf("nutrition %+v", n)
+	}
+	if got.Ingredients[0].ProductID != "p1" || got.Ingredients[1].ProductID != "" {
+		t.Fatalf("ingredients %+v", got.Ingredients)
+	}
+	m, err := s.RecipesByIDs(ctx, "hA", []string{"r1"})
+	if err != nil || m["r1"].Nutrition.Kcal == nil || m["r1"].Ingredients[0].ProductID != "p1" {
+		t.Fatalf("byids %+v %v", m, err)
+	}
+	r.Nutrition = domain.Macros{Protein: f(30)}
+	r.Ingredients[0].ProductID = ""
+	if err := s.UpdateRecipe(ctx, r); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = s.RecipeByID(ctx, "hA", "r1")
+	if got.Nutrition.Kcal != nil || got.Nutrition.Fat != nil || got.Nutrition.Protein == nil || *got.Nutrition.Protein != 30 || got.Ingredients[0].ProductID != "" {
+		t.Fatalf("after update %+v", got)
+	}
+}
