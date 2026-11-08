@@ -166,6 +166,7 @@ export const t = {
   nutritionComputed: 'wyliczone',
   nutritionMissing: 'brak',
   nutritionApproxPrefix: 'Wartości przybliżone — niepełne dane dla:',
+  productDeleted: 'produkt usunięty — wybierz inny',
   matchedProduct: 'dopasowano',
   ingredientProduct: 'Produkt dla składnika',
   skillDownload: 'Pobierz SKILL.md',

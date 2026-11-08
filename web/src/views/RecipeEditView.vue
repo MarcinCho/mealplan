@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { draftToRecipe, mergeIntoExisting } from '../importDraft'
+import { useProducts } from '../stores/products'
 import { useImport } from '../stores/import'
 import { emptyRecipe, useRecipes } from '../stores/recipes'
 import type { Macros, Recipe } from '../api/types'
@@ -45,6 +46,8 @@ function hint(k: keyof Macros, unit: 'kcal' | 'g'): string {
 }
 
 onMounted(async () => {
+  // Products may have changed since the shared list was first loaded.
+  void useProducts().ensureLoaded(true).catch(() => {})
   const d = imports.draft
   if (isNew.value) {
     if (d && !imports.targetId) recipe.value = normalize(draftToRecipe(d))

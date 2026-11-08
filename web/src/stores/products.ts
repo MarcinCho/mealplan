@@ -73,13 +73,21 @@ export const useProducts = defineStore('products', {
         densityGPerMl: num(p.densityGPerMl),
         aliases: p.aliases,
       }
-      return p.id
-        ? api<Product>('PUT', `/products/${encodeURIComponent(p.id)}`, body)
-        : api<Product>('POST', '/products', body)
+      const saved = p.id
+        ? await api<Product>('PUT', `/products/${encodeURIComponent(p.id)}`, body)
+        : await api<Product>('POST', '/products', body)
+      // Keep the shared list other views read in step with the change.
+      if (this.catalogLoaded) {
+        const i = this.catalog.findIndex((x) => x.id === saved.id)
+        if (i >= 0) this.catalog.splice(i, 1, saved)
+        else this.catalog = [saved, ...this.catalog]
+      }
+      return saved
     },
     async remove(id: string) {
       await api('DELETE', `/products/${encodeURIComponent(id)}`)
       this.items = this.items.filter((p) => p.id !== id)
+      this.catalog = this.catalog.filter((p) => p.id !== id)
     },
   },
 })

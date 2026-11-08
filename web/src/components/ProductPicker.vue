@@ -20,6 +20,7 @@ const found = ref<Product[] | null>(null) // server search results; null while t
 const search = ref('')
 const error = ref('')
 const creating = ref(false)
+const gone = ref(false) // the remembered product no longer exists
 const resolved = ref<Product | null>(null) // current value / matched product when not in the shared list
 let timer: ReturnType<typeof setTimeout> | undefined
 let seq = 0
@@ -41,7 +42,9 @@ const matched = computed(() => {
   if (props.modelValue || !props.matchedId) return null
   return items.value.find((p) => p.id === props.matchedId) ?? null
 })
-const placeholder = computed(() => (matched.value ? `${t.matchedProduct}: ${matched.value.name}` : ''))
+const placeholder = computed(() =>
+  gone.value ? t.productDeleted : matched.value ? `${t.matchedProduct}: ${matched.value.name}` : '',
+)
 
 // A value missing from the list is resolved by id (one refresh), never shown raw.
 watch(
@@ -50,7 +53,13 @@ watch(
     for (const id of [props.modelValue, props.matchedId]) {
       if (id && !store.catalog.some((p) => p.id === id) && resolved.value?.id !== id) {
         try {
-          resolved.value = (await store.resolve(id)) ?? resolved.value
+          const p = await store.resolve(id)
+          if (p) resolved.value = p
+          else if (id === props.modelValue) {
+            // Deleted product: clear the choice so no raw id shows and it is saved as null.
+            gone.value = true
+            emit('update:modelValue', null)
+          }
         } catch (e) {
           error.value = errorText(e)
         }
@@ -84,6 +93,7 @@ function onSearch(q: string | null) {
 }
 
 function pick(id: string | null) {
+  gone.value = false
   emit('update:modelValue', id)
   emit('picked', items.value.find((p) => p.id === id) ?? null)
 }

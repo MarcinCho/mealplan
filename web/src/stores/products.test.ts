@@ -95,7 +95,7 @@ describe('useProducts shared catalog', () => {
     vi.restoreAllMocks()
   })
   function mockFetch(status: number, body: unknown) {
-    const spy = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status }))
+    const spy = vi.fn(async (_url: string, _init?: RequestInit) => new Response(status === 204 ? null : JSON.stringify(body), { status }))
     vi.stubGlobal('fetch', spy)
     return spy
   }
@@ -144,5 +144,37 @@ describe('useProducts shared catalog', () => {
     await s.ensureLoaded()
     s.addToCatalog({ id: 'n', name: 'Nowy' } as never)
     expect(s.catalog.map((p) => p.id)).toEqual(['n'])
+  })
+
+  it('save upserts into the loaded catalog (create and rename)', async () => {
+    const s = useProducts()
+    mockFetch(200, [{ id: 'a', name: 'Mleko' }])
+    await s.ensureLoaded()
+    mockFetch(201, { id: 'n', name: 'Nowy' })
+    await s.save({ ...emptyProduct(), name: 'Nowy' })
+    expect(s.catalog.map((p) => p.id)).toEqual(['n', 'a'])
+    mockFetch(200, { id: 'a', name: 'Mleko 2%' })
+    await s.save({ ...emptyProduct(), id: 'a', name: 'Mleko 2%' })
+    expect(s.catalog.find((p) => p.id === 'a')?.name).toBe('Mleko 2%')
+    expect(s.catalog).toHaveLength(2)
+  })
+
+  it('remove drops the product from the catalog', async () => {
+    const s = useProducts()
+    mockFetch(200, [{ id: 'a', name: 'Mleko' }, { id: 'b', name: 'Ser' }])
+    await s.ensureLoaded()
+    mockFetch(204, null)
+    await s.remove('a')
+    expect(s.catalog.map((p) => p.id)).toEqual(['b'])
+  })
+
+  it('ensureLoaded(true) refetches a loaded catalog', async () => {
+    const s = useProducts()
+    mockFetch(200, [{ id: 'a', name: 'Mleko' }])
+    await s.ensureLoaded()
+    const spy = mockFetch(200, [{ id: 'b', name: 'Ser' }])
+    await s.ensureLoaded(true)
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(s.catalog.map((p) => p.id)).toEqual(['b'])
   })
 })
