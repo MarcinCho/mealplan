@@ -115,3 +115,32 @@ func TestShoppingItemHaveAndMovedRoundTrip(t *testing.T) {
 		t.Fatalf("replace: %+v", list)
 	}
 }
+
+func TestClaimShoppingItemsForMove(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedTwoHouseholds(t, s)
+	mk := func(id, hid string, checked bool, q *float64) domain.ShoppingItem {
+		it := item(id, hid, "2026-11-02", id, false)
+		it.Checked, it.Quantity = checked, q
+		return it
+	}
+	for _, it := range []domain.ShoppingItem{mk("a", "hA", true, f(1)), mk("b", "hA", false, f(1)), mk("c", "hA", true, f(0)), mk("d", "hA", true, nil), mk("e", "hB", true, f(1))} {
+		if err := s.InsertShoppingItem(ctx, it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := s.ClaimShoppingItemsForMove(ctx, "hA", "2026-11-02")
+	if err != nil || len(got) != 1 || got[0].ID != "a" || !got[0].Moved {
+		t.Fatalf("claim: %v %+v", err, got)
+	}
+	if again, _ := s.ClaimShoppingItemsForMove(ctx, "hA", "2026-11-02"); len(again) != 0 {
+		t.Fatalf("second claim: %+v", again)
+	}
+	if err := s.UnclaimShoppingItems(ctx, "hA", []string{"a"}); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := s.ClaimShoppingItemsForMove(ctx, "hA", "2026-11-02"); len(again) != 1 {
+		t.Fatalf("after unclaim: %+v", again)
+	}
+}

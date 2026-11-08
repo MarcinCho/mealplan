@@ -333,3 +333,36 @@ func (s *Store) SetShoppingItemsMoved(ctx context.Context, householdID string, i
 		return nil
 	})
 }
+
+// ClaimShoppingItemsForMove atomically marks the week's checked, unmoved items that have a positive
+// quantity as moved and returns exactly the rows it changed, so concurrent callers never share one.
+func (s *Store) ClaimShoppingItemsForMove(ctx context.Context, householdID, week string) ([]domain.ShoppingItem, error) {
+	rows, err := s.db.QueryContext(ctx, s.db.Rebind(
+		`UPDATE shopping_item SET moved = 1 WHERE household_id = ? AND week = ? AND checked = 1 AND moved = 0 AND quantity > 0 RETURNING `+itemCols),
+		householdID, week)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	defer rows.Close()
+	var out []domain.ShoppingItem
+	for rows.Next() {
+		it, err := scanItem(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, it)
+	}
+	return out, rows.Err()
+}
+
+// UnclaimShoppingItems clears the moved flag again, for items whose move to the pantry failed.
+func (s *Store) UnclaimShoppingItems(ctx context.Context, householdID string, ids []string) error {
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		for _, id := range ids {
+			if err := s.exec(ctx, tx, `UPDATE shopping_item SET moved = 0 WHERE id = ? AND household_id = ?`, id, householdID); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}

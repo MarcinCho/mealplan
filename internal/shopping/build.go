@@ -110,7 +110,11 @@ func Build(entries []domain.PlanEntry, recipes map[string]domain.Recipe, product
 		if !a.hasAmount || a.productID == "" {
 			continue
 		}
-		sk := a.productID + "|" + a.unit
+		stockUnit := a.unit
+		if stockUnit == "" {
+			stockUnit = "szt" // a unit-less amount counts pieces
+		}
+		sk := a.productID + "|" + stockUnit
 		take := math.Min(have[sk], a.amount)
 		if take <= 0 {
 			continue

@@ -186,3 +186,11 @@ func TestBuildDropsStaples(t *testing.T) {
 		t.Fatalf("staple must not appear: %+v", got)
 	}
 }
+
+func TestBuildMatchesUnitlessIngredientAsPieces(t *testing.T) {
+	r := domain.Recipe{ID: "r", BaseServings: 1, Ingredients: []domain.Ingredient{ing("jajka", q(2), "")}}
+	got, _ := shopping.Build([]domain.PlanEntry{entry("r", 1)}, recipes(r), byNorm, []shopping.StockLine{{ProductID: "p-jajka", Quantity: q(2), Unit: "szt"}})
+	if len(got) != 1 || got[0].Quantity == nil || *got[0].Quantity != 0 || got[0].Have == nil || *got[0].Have != 2 {
+		t.Fatalf("szt stock must offset a unit-less amount: %+v", got)
+	}
+}

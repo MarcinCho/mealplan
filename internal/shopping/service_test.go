@@ -3,7 +3,10 @@ package shopping_test
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -330,5 +333,92 @@ func TestMoveCheckedSkipsCoveredAndNoQuantity(t *testing.T) {
 	}
 	if n, err := f.svc.MoveCheckedToPantry(ctx, hid, wk); err != nil || n != 0 {
 		t.Fatalf("covered/no-quantity must not move: %d %v", n, err)
+	}
+}
+
+type failingPantry struct {
+	shopping.Pantry
+	failName string
+	fail     bool
+}
+
+func (p *failingPantry) Add(ctx context.Context, hid string, in pantry.Input) (domain.PantryItem, error) {
+	if p.fail && in.Name == p.failName {
+		return domain.PantryItem{}, errors.New("boom")
+	}
+	return p.Pantry.Add(ctx, hid, in)
+}
+
+func TestMoveCheckedFailureReleasesOnlyFailedItem(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	fp := &failingPantry{Pantry: f.pan, failName: "Pory", fail: true}
+	prods := product.New(f.st, nil)
+	svc := shopping.New(f.st, f.st, fp, prods)
+	var ids []string
+	for _, n := range []string{"Marchew", "Pory", "Seler"} {
+		it, err := svc.AddManual(ctx, hid, wk, shopping.ItemInput{Name: n, Quantity: q(1), Unit: "szt"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, it.ID)
+		if err := svc.SetChecked(ctx, hid, it.ID, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	n, err := svc.MoveCheckedToPantry(ctx, hid, wk)
+	if err == nil || n != 2 {
+		t.Fatalf("partial failure: %d %v", n, err)
+	}
+	items, _ := svc.List(ctx, hid, wk)
+	for _, it := range items {
+		if it.Moved != (it.NormalizedName != "pory") {
+			t.Fatalf("moved flags: %+v", items)
+		}
+	}
+	fp.fail = false
+	if n, err := svc.MoveCheckedToPantry(ctx, hid, wk); err != nil || n != 1 {
+		t.Fatalf("retry: %d %v", n, err)
+	}
+	list, _, _ := f.pan.List(ctx, hid)
+	if len(list) != 3 {
+		t.Fatalf("each item once: %+v", list)
+	}
+	for _, it := range list {
+		if *it.Quantity != 1 {
+			t.Fatalf("doubled: %+v", list)
+		}
+	}
+}
+
+func TestMoveCheckedParallelAddsOnce(t *testing.T) {
+	if os.Getenv("MEALPLAN_TEST_DRIVER") != "postgres" {
+		t.Skip("parallel claim test needs Postgres")
+	}
+	f := newFx(t)
+	ctx := context.Background()
+	for _, n := range []string{"Marchew", "Pory", "Seler"} {
+		it, _ := f.svc.AddManual(ctx, hid, wk, shopping.ItemInput{Name: n, Quantity: q(1), Unit: "szt"})
+		_ = f.svc.SetChecked(ctx, hid, it.ID, true)
+	}
+	var wg sync.WaitGroup
+	var total atomic.Int64
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			n, _ := f.svc.MoveCheckedToPantry(ctx, hid, wk)
+			total.Add(int64(n))
+		}()
+	}
+	wg.Wait()
+	list, _, _ := f.pan.List(ctx, hid)
+	if total.Load() != 3 || len(list) != 3 {
+		t.Fatalf("total %d, pantry %+v", total.Load(), list)
+	}
+	for _, it := range list {
+		if *it.Quantity != 1 {
+			t.Fatalf("doubled: %+v", list)
+		}
 	}
 }

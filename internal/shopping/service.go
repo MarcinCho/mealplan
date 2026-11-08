@@ -29,7 +29,8 @@ type Repo interface {
 	UpdateShoppingItem(ctx context.Context, it domain.ShoppingItem) error
 	DeleteShoppingItem(ctx context.Context, householdID, id string) error
 	ShoppingItemByID(ctx context.Context, householdID, id string) (domain.ShoppingItem, error)
-	SetShoppingItemsMoved(ctx context.Context, householdID string, ids []string) error
+	ClaimShoppingItemsForMove(ctx context.Context, householdID, week string) ([]domain.ShoppingItem, error)
+	UnclaimShoppingItems(ctx context.Context, householdID string, ids []string) error
 }
 
 // Pantry is the part of pantry.Service the list needs.
@@ -242,33 +243,39 @@ func (s *Service) Remove(ctx context.Context, householdID, id string) error {
 	return s.repo.DeleteShoppingItem(ctx, householdID, id)
 }
 
-// MoveCheckedToPantry adds every checked, not yet moved item that has a quantity to the pantry and
-// marks it moved, so a second call moves nothing. Covered lines (quantity 0) stay out. An item
-// without a unit is stocked as pieces.
+// MoveCheckedToPantry claims every checked, not yet moved item that has a quantity (atomically, so a
+// second or concurrent call gets nothing) and adds each to the pantry. An item whose add fails is
+// released again so a retry picks it up. Returns the number added and the first error. Covered lines
+// (quantity 0) stay out; an item without a unit is stocked as pieces.
 func (s *Service) MoveCheckedToPantry(ctx context.Context, householdID, week string) (int, error) {
-	items, err := s.List(ctx, householdID, week)
+	if _, err := plan.ValidWeek(week); err != nil {
+		return 0, err
+	}
+	claimed, err := s.repo.ClaimShoppingItemsForMove(ctx, householdID, week)
 	if err != nil {
 		return 0, err
 	}
-	var moved []string
-	for _, it := range items {
-		if !it.Checked || it.Moved || it.Quantity == nil || *it.Quantity <= 0 {
-			continue
-		}
+	added := 0
+	var firstErr error
+	var failed []string
+	for _, it := range claimed {
 		unit := it.Unit
 		if unit == "" {
 			unit = "szt"
 		}
 		if _, err := s.pantry.Add(ctx, householdID, pantry.Input{Name: it.Name, Quantity: it.Quantity, Unit: unit}); err != nil {
-			return 0, err
+			if firstErr == nil {
+				firstErr = err
+			}
+			failed = append(failed, it.ID)
+			continue
 		}
-		moved = append(moved, it.ID)
+		added++
 	}
-	if len(moved) == 0 {
-		return 0, nil
+	if len(failed) > 0 {
+		if err := s.repo.UnclaimShoppingItems(ctx, householdID, failed); err != nil && firstErr == nil {
+			firstErr = err
+		}
 	}
-	if err := s.repo.SetShoppingItemsMoved(ctx, householdID, moved); err != nil {
-		return len(moved), err
-	}
-	return len(moved), nil
+	return added, firstErr
 }
