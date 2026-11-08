@@ -23,6 +23,8 @@ type dayOut struct {
 		Missing                   bool
 	}
 	MissingMeals int
+	MissingLog   int
+	Incomplete   struct{ Kcal, Protein, Carbs, Fat bool }
 	Approximate  bool
 }
 
@@ -98,6 +100,9 @@ func TestNutritionSettingsAndDays(t *testing.T) {
 	d := days.Days[1]
 	if d.Date != "2026-11-03" || len(d.Meals) != 2 || len(d.Log) != 1 || d.MissingMeals != 1 || *d.Log[0].Values.Kcal != 90 || *d.Total.Kcal != 317.5 || *d.Remaining.Kcal != 1682.5 || d.Remaining.Carbs != nil {
 		t.Fatalf("day: %+v", d)
+	}
+	if !d.Incomplete.Carbs || !d.Approximate || d.MissingLog != 0 {
+		t.Fatalf("flags: %+v", d)
 	}
 	if d.Log[0].Name != "Jogurt domowy" || d.Log[0].Values.Carbs != nil {
 		t.Fatalf("log: %+v", d.Log[0])

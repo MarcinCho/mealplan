@@ -11,7 +11,15 @@ type DaySummary struct {
 	Meals        []MealNutrition
 	Log          []LogNutrition
 	MissingMeals int
-	Approximate  bool
+	MissingLog   int // log items that supply no value at all
+	Incomplete   IncompleteFlags
+	Approximate  bool // approximate recipes, or any Incomplete flag
+}
+
+// IncompleteFlags is true per value when some meal or log item did not supply it,
+// so the total (and what remains) understates the day.
+type IncompleteFlags struct {
+	Kcal, Protein, Carbs, Fat bool
 }
 
 // MealNutrition is one planned meal counted as a single portion.
@@ -40,10 +48,14 @@ func BuildDay(date string, goal domain.Macros, entries []domain.PlanEntry, recip
 	logs []domain.FoodLogEntry, products map[string]domain.Product, m *Matcher) DaySummary {
 	d := DaySummary{Date: date, Goal: goal, Meals: []MealNutrition{}, Log: []LogNutrition{}}
 	var total [4]float64
+	var supplied, incomplete [4]bool
 	add := func(v domain.Macros) {
 		for i, p := range []*float64{v.Kcal, v.Protein, v.Carbs, v.Fat} {
 			if p != nil {
 				total[i] += *p
+				supplied[i] = true
+			} else {
+				incomplete[i] = true
 			}
 		}
 	}
@@ -85,13 +97,26 @@ func BuildDay(date string, goal domain.Macros, entries []domain.PlanEntry, recip
 			}
 			item.Values = domain.Macros{Kcal: scale(p.Per100g.Kcal), Protein: scale(p.Per100g.Protein), Carbs: scale(p.Per100g.Carbs), Fat: scale(p.Per100g.Fat)}
 		}
+		if item.Missing {
+			d.MissingLog++
+		}
 		add(item.Values)
 		d.Log = append(d.Log, item)
 	}
-	ptr := func(i int) *float64 { v := total[i]; return &v }
+	d.Incomplete = IncompleteFlags{incomplete[0], incomplete[1], incomplete[2], incomplete[3]}
+	if incomplete[0] || incomplete[1] || incomplete[2] || incomplete[3] {
+		d.Approximate = true
+	}
+	ptr := func(i int) *float64 {
+		if !supplied[i] {
+			return nil
+		}
+		v := total[i]
+		return &v
+	}
 	d.Total = domain.Macros{Kcal: ptr(0), Protein: ptr(1), Carbs: ptr(2), Fat: ptr(3)}
 	rem := func(g *float64, i int) *float64 {
-		if g == nil {
+		if g == nil || !supplied[i] {
 			return nil
 		}
 		v := *g - total[i]

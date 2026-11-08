@@ -88,7 +88,7 @@ func TestBuildDayNegativeRemainingAndMissingLog(t *testing.T) {
 	if d.Log[0].Missing || !d.Log[1].Missing || !d.Log[2].Missing || !d.Log[3].Missing {
 		t.Fatalf("missing flags: %+v", d.Log)
 	}
-	if d.Log[1].Values.Kcal != nil || d.Meals == nil || d.Approximate {
+	if d.Log[1].Values.Kcal != nil || d.Meals == nil || !d.Approximate {
 		t.Fatalf("%+v meals=%v", d.Log[1], d.Meals)
 	}
 }
@@ -96,6 +96,39 @@ func TestBuildDayNegativeRemainingAndMissingLog(t *testing.T) {
 func TestBuildDayEmptyAndNilGoal(t *testing.T) {
 	d := BuildDay("2026-11-03", domain.Macros{}, nil, nil, nil, nil, NewMatcher(nil))
 	if d.Meals == nil || d.Log == nil || d.Remaining.Kcal != nil {
+		t.Fatalf("%+v", d)
+	}
+}
+
+func TestDayFlagsIncompleteValues(t *testing.T) {
+	products := map[string]domain.Product{
+		"prot": {ID: "prot", Name: "Białko", Per100g: domain.Macros{Protein: f(20)}},
+		"none": {ID: "none", Name: "Woda"},
+	}
+	recipes := map[string]domain.Recipe{"r": {ID: "r", Title: "Sama proteina", BaseServings: 1, Nutrition: domain.Macros{Protein: f(30)}}}
+	entries := []domain.PlanEntry{{ID: "e", Slot: domain.SlotLunch, RecipeID: "r"}}
+	logs := []domain.FoodLogEntry{{ID: "a", ProductID: "prot", Quantity: 100, Unit: "g"}, {ID: "b", ProductID: "none", Quantity: 100, Unit: "g"}}
+	d := BuildDay("2026-11-03", domain.Macros{Kcal: f(2000), Protein: f(100)}, entries, recipes, logs, products, NewMatcher(nil))
+	if d.Total.Kcal != nil || d.Remaining.Kcal != nil || !d.Incomplete.Kcal {
+		t.Fatalf("kcal must be unknown: %+v %+v %+v", d.Total, d.Remaining, d.Incomplete)
+	}
+	if d.Total.Protein == nil || !near(*d.Total.Protein, 50) || !near(*d.Remaining.Protein, 50) {
+		t.Fatalf("protein: %+v", d.Total)
+	}
+	if !d.Incomplete.Protein { // the water log item supplies no protein
+		t.Fatal("protein incomplete expected")
+	}
+	if !d.Approximate || d.MissingLog != 1 || d.MissingMeals != 0 || d.Log[0].Missing || !d.Log[1].Missing {
+		t.Fatalf("%+v", d)
+	}
+}
+
+func TestDayCompleteWhenEverythingSupplied(t *testing.T) {
+	products := map[string]domain.Product{"jog": {ID: "jog", Name: "Jogurt", Per100g: macros(60, 4, 5, 3)}}
+	recipes := map[string]domain.Recipe{"r": {ID: "r", Title: "Zupa", BaseServings: 1, Nutrition: macros(100, 5, 10, 2)}}
+	d := BuildDay("2026-11-03", domain.Macros{}, []domain.PlanEntry{{ID: "e", RecipeID: "r"}}, recipes,
+		[]domain.FoodLogEntry{{ID: "a", ProductID: "jog", Quantity: 100, Unit: "g"}}, products, NewMatcher(nil))
+	if d.Incomplete != (IncompleteFlags{}) || d.Approximate || d.MissingLog != 0 || *d.Total.Kcal != 160 {
 		t.Fatalf("%+v", d)
 	}
 }

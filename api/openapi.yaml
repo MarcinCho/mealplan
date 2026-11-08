@@ -763,7 +763,7 @@ components:
         goal: { $ref: "#/components/schemas/Macros" }
     Macros:
       type: object
-      description: Values are null when unknown.
+      description: Values are null when unknown (in a day, total and remaining are null for a value nothing supplied).
       required: [kcal, protein, carbs, fat]
       properties:
         kcal: { type: number, nullable: true }
@@ -780,7 +780,7 @@ components:
         fat: { type: string, enum: [recipe, computed, missing] }
     DaySummary:
       type: object
-      required: [date, total, goal, remaining, meals, log, missingMeals, approximate]
+      required: [date, total, goal, remaining, meals, log, missingMeals, missingLog, incomplete, approximate]
       properties:
         date: { type: string, format: date }
         total: { $ref: "#/components/schemas/Macros" }
@@ -813,7 +813,17 @@ components:
               values: { $ref: "#/components/schemas/Macros" }
               missing: { type: boolean }
         missingMeals: { type: integer }
-        approximate: { type: boolean }
+        missingLog: { type: integer, description: "Log items that supply no value at all" }
+        incomplete:
+          type: object
+          description: Per value, true when some meal or log item did not supply it, so total understates the day
+          required: [kcal, protein, carbs, fat]
+          properties:
+            kcal: { type: boolean }
+            protein: { type: boolean }
+            carbs: { type: boolean }
+            fat: { type: boolean }
+        approximate: { type: boolean, description: "Approximate recipe or any incomplete value" }
     Error:
       type: object
       required: [code, message]
