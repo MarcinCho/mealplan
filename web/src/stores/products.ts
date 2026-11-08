@@ -21,9 +21,39 @@ export function normalizeQuery(q: string | null | undefined): string {
   return (q ?? '').trim()
 }
 
+let inflight: Promise<void> | null = null
+
 export const useProducts = defineStore('products', {
-  state: () => ({ items: [] as Product[], loaded: false }),
+  state: () => ({ items: [] as Product[], loaded: false, catalog: [] as Product[], catalogLoaded: false }),
   actions: {
+    // The whole household list, shared by every picker: one request no matter how many ask.
+    ensureLoaded(force = false): Promise<void> {
+      if (inflight) return inflight
+      if (this.catalogLoaded && !force) return Promise.resolve()
+      inflight = api<Product[]>('GET', '/products')
+        .then((list) => {
+          this.catalog = list
+          this.catalogLoaded = true
+        })
+        .finally(() => {
+          inflight = null
+        })
+      return inflight
+    },
+    // Finds a product by id for display; refreshes the cache once when it is not there.
+    async resolve(id: string | null | undefined): Promise<Product | null> {
+      if (!id) return null
+      await this.ensureLoaded()
+      let p = this.catalog.find((x) => x.id === id)
+      if (!p) {
+        await this.ensureLoaded(true)
+        p = this.catalog.find((x) => x.id === id)
+      }
+      return p ?? null
+    },
+    addToCatalog(p: Product) {
+      this.catalog = [p, ...this.catalog.filter((x) => x.id !== p.id)]
+    },
     async load(q?: string | null) {
       const n = normalizeQuery(q)
       const query = n ? `?q=${encodeURIComponent(n)}` : ''

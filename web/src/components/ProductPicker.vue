@@ -1,29 +1,75 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { api } from '../api/client'
 import type { Product } from '../api/types'
 import { errorText, t } from '../messages'
+import { useProducts } from '../stores/products'
 import ProductDialog from './ProductDialog.vue'
 
-withDefaults(defineProps<{ modelValue: string | null; allowCreate?: boolean }>(), { allowCreate: false })
+const props = withDefaults(defineProps<{ modelValue: string | null; allowCreate?: boolean; matchedId?: string | null }>(), {
+  allowCreate: false,
+  matchedId: null,
+})
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string | null): void
   (e: 'picked', p: Product | null): void
 }>()
 
-const items = ref<Product[]>([])
+const store = useProducts()
+const found = ref<Product[] | null>(null) // server search results; null while the search box is empty
 const search = ref('')
 const error = ref('')
 const creating = ref(false)
+const resolved = ref<Product | null>(null) // current value / matched product when not in the shared list
 let timer: ReturnType<typeof setTimeout> | undefined
 let seq = 0
 
+// The shared list is loaded once for all pickers on the page.
+store.ensureLoaded().catch((e) => {
+  error.value = errorText(e)
+})
+
+const items = computed(() => {
+  const base = found.value ?? store.catalog
+  const extra = [props.modelValue, props.matchedId]
+    .map((id) => (id ? (store.catalog.find((p) => p.id === id) ?? (resolved.value?.id === id ? resolved.value : undefined)) : undefined))
+    .filter((p): p is Product => Boolean(p) && !base.some((b) => b.id === p!.id))
+  return [...extra, ...base]
+})
+
+const matched = computed(() => {
+  if (props.modelValue || !props.matchedId) return null
+  return items.value.find((p) => p.id === props.matchedId) ?? null
+})
+const placeholder = computed(() => (matched.value ? `${t.matchedProduct}: ${matched.value.name}` : ''))
+
+// A value missing from the list is resolved by id (one refresh), never shown raw.
+watch(
+  () => [props.modelValue, props.matchedId, store.catalogLoaded],
+  async () => {
+    for (const id of [props.modelValue, props.matchedId]) {
+      if (id && !store.catalog.some((p) => p.id === id) && resolved.value?.id !== id) {
+        try {
+          resolved.value = (await store.resolve(id)) ?? resolved.value
+        } catch (e) {
+          error.value = errorText(e)
+        }
+      }
+    }
+  },
+  { immediate: true },
+)
+
 async function fetchItems(q: string) {
   const mine = ++seq
+  if (!q) {
+    found.value = null
+    return
+  }
   try {
-    const res = await api<Product[]>('GET', '/products' + (q ? `?q=${encodeURIComponent(q)}` : ''))
+    const res = await api<Product[]>('GET', `/products?q=${encodeURIComponent(q)}`)
     if (mine === seq) {
-      items.value = res
+      found.value = res
       error.value = ''
     }
   } catch (e) {
@@ -43,12 +89,11 @@ function pick(id: string | null) {
 }
 
 function created(p: Product) {
-  items.value = [p, ...items.value.filter((i) => i.id !== p.id)]
+  store.addToCatalog(p)
   pick(p.id)
 }
 
 onBeforeUnmount(() => clearTimeout(timer))
-fetchItems('')
 </script>
 
 <template>
@@ -58,6 +103,8 @@ fetchItems('')
     item-title="name"
     item-value="id"
     :label="t.product"
+    :placeholder="placeholder"
+    persistent-placeholder
     :error-messages="error"
     no-filter
     clearable

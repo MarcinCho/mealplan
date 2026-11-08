@@ -86,4 +86,63 @@ describe('useProducts.load with a cleared search', () => {
     expect(spy.mock.calls[0][0]).toBe('/api/v1/products')
     expect(spy.mock.calls[1][0]).toBe('/api/v1/products?q=mleko')
   })
+
+})
+
+describe('useProducts shared catalog', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.restoreAllMocks()
+  })
+  function mockFetch(status: number, body: unknown) {
+    const spy = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status }))
+    vi.stubGlobal('fetch', spy)
+    return spy
+  }
+
+  it('fetches the full list once for many callers', async () => {
+    const spy = mockFetch(200, [{ id: 'a', name: 'Mleko' }])
+    const s = useProducts()
+    await Promise.all(Array.from({ length: 25 }, () => s.ensureLoaded()))
+    await s.ensureLoaded()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy.mock.calls[0][0]).toBe('/api/v1/products')
+    expect(s.catalog.map((p) => p.id)).toEqual(['a'])
+  })
+
+  it('retries after a failed fetch', async () => {
+    const s = useProducts()
+    mockFetch(500, { error: { code: 'internal', message: 'x' } })
+    await expect(s.ensureLoaded()).rejects.toBeTruthy()
+    const spy = mockFetch(200, [{ id: 'a', name: 'Mleko' }])
+    await s.ensureLoaded()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('resolves an id from the cache without a request', async () => {
+    const spy = mockFetch(200, [{ id: 'a', name: 'Mleko' }])
+    const s = useProducts()
+    expect((await s.resolve('a'))?.name).toBe('Mleko')
+    expect((await s.resolve('a'))?.name).toBe('Mleko')
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('refreshes once for an id missing from the cache, then gives up', async () => {
+    const s = useProducts()
+    mockFetch(200, [{ id: 'a', name: 'Mleko' }])
+    await s.ensureLoaded()
+    const spy = mockFetch(200, [{ id: 'a', name: 'Mleko' }, { id: 'b', name: 'Mąka' }])
+    expect((await s.resolve('b'))?.name).toBe('Mąka')
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(await s.resolve('zzz')).toBeNull()
+    expect(await s.resolve(null)).toBeNull()
+  })
+
+  it('adds a created product to the catalog', async () => {
+    mockFetch(200, [])
+    const s = useProducts()
+    await s.ensureLoaded()
+    s.addToCatalog({ id: 'n', name: 'Nowy' } as never)
+    expect(s.catalog.map((p) => p.id)).toEqual(['n'])
+  })
 })

@@ -10,6 +10,8 @@ export interface Ingredient {
   note?: string
   // Remembered product used for nutrition; null/absent when none.
   productId?: string | null
+  // Output only (GET /recipes/{id}): the product the matcher used, remembered or by name.
+  matchedProductId?: string | null
   // Import-only hints, used for highlighting and never sent to the API.
   raw?: string
   confidence?: Confidence

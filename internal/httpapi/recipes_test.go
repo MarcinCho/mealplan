@@ -173,7 +173,8 @@ type nutritionResp struct {
 		Kcal, Protein, Carbs, Fat *float64
 	} `json:"nutrition"`
 	Ingredients []struct {
-		ProductID *string `json:"productId"`
+		ProductID        *string `json:"productId"`
+		MatchedProductID *string `json:"matchedProductId"`
 	} `json:"ingredients"`
 	NutritionPerPortion *struct {
 		Values struct {
@@ -259,5 +260,48 @@ func TestRecipeNutritionOverHTTP(t *testing.T) {
 	body["ingredients"] = []map[string]any{{"name": "X", "quantity": 1, "unit": "g", "productId": fp.ID}}
 	if rec := c.do("POST", "/api/v1/recipes", body); rec.Code != 404 {
 		t.Fatalf("foreign product: %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestRecipeMatchedProductIDOverHTTP(t *testing.T) {
+	e := newEnv(t)
+	c := e.client(t)
+	setup(t, c)
+
+	mk := func(name string) productJSON {
+		var p productJSON
+		decode(t, c.do("POST", "/api/v1/products", map[string]any{"name": name, "per100g": map[string]any{"kcal": 100, "protein": nil, "carbs": nil, "fat": nil}, "aliases": []string{}}), &p)
+		return p
+	}
+	remembered := mk("Zapamiętany")
+	byName := mk("Mąka testowa")
+
+	body := recipeBody("Placek")
+	body["ingredients"] = []map[string]any{
+		{"name": "coś innego", "quantity": 1, "unit": "g", "productId": remembered.ID},
+		{"name": "mąka testowa", "quantity": 1, "unit": "g"},
+		{"name": "nieznany składnik", "quantity": 1, "unit": "g"},
+	}
+	rec := c.do("POST", "/api/v1/recipes", body)
+	if rec.Code != 201 {
+		t.Fatalf("create: %d %s", rec.Code, rec.Body)
+	}
+	if strings.Contains(rec.Body.String(), "matchedProductId") {
+		t.Fatal("create response must not carry matchedProductId")
+	}
+	var created recipeJSON
+	decode(t, rec, &created)
+	var got nutritionResp
+	raw := c.do("GET", "/api/v1/recipes/"+created.ID, nil)
+	decode(t, raw, &got)
+	m := got.Ingredients
+	if m[0].MatchedProductID == nil || *m[0].MatchedProductID != remembered.ID {
+		t.Fatalf("remembered: %+v", m[0])
+	}
+	if m[1].ProductID != nil || m[1].MatchedProductID == nil || *m[1].MatchedProductID != byName.ID {
+		t.Fatalf("by name: %+v", m[1])
+	}
+	if m[2].MatchedProductID != nil || strings.Count(raw.Body.String(), `"matchedProductId":null`) != 1 {
+		t.Fatalf("unmatched must be null: %s", raw.Body)
 	}
 }

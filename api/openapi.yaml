@@ -913,6 +913,7 @@ components:
         unit: { type: string }
         note: { type: string, maxLength: 200, description: "Remark about the ingredient, e.g. a substitution" }
         productId: { type: string, nullable: true, description: "Remembered product of the household used for nutrition; 404 when unknown or foreign" }
+        matchedProductId: { type: string, nullable: true, readOnly: true, description: "Output only, only in GET /recipes/{id}: the product the nutrition matcher used (the remembered productId, else the name/alias match); null when none. Ignored in requests." }
     RecipeInput:
       type: object
       required: [title, baseServings]

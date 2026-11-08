@@ -164,7 +164,7 @@ async function remove() {
         <v-text-field v-model="ing.unit" :label="t.unit" density="compact" class="ing-unit" />
         <v-btn icon="mdi-close" variant="text" :title="t.remove" @click="recipe.ingredients.splice(i, 1)" />
       </div>
-      <ProductPicker :model-value="ing.productId ?? null" @update:model-value="ing.productId = $event" />
+      <ProductPicker :matched-id="ing.matchedProductId ?? null" :model-value="ing.productId ?? null" @update:model-value="ing.productId = $event" />
       <v-text-field v-model="ing.note" :label="t.ingredientNote" :placeholder="t.ingredientNotePlaceholder" maxlength="200" density="compact" />
       <div v-if="ing.confidence && ing.confidence !== 'ok'" class="text-caption text-medium-emphasis pb-1">{{ t.fromText }}: „{{ ing.raw }}"</div>
     </div>

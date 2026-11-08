@@ -17,6 +17,13 @@ type ingredientJSON struct {
 	ProductID *string  `json:"productId"`
 }
 
+// ingredientOutJSON is an ingredient in a response. MatchedProductID is output-only
+// and set by GET /recipes/{id}: nil omits the key, a pointer to nil renders null.
+type ingredientOutJSON struct {
+	ingredientJSON
+	MatchedProductID **string `json:"matchedProductId,omitempty"`
+}
+
 type sourcesJSON struct {
 	Kcal    string `json:"kcal"`
 	Protein string `json:"protein"`
@@ -32,16 +39,16 @@ type nutritionPerPortionJSON struct {
 }
 
 type recipeJSON struct {
-	ID           string           `json:"id"`
-	Title        string           `json:"title"`
-	BaseServings int              `json:"baseServings"`
-	SourceURL    string           `json:"sourceUrl"`
-	Tags         []string         `json:"tags"`
-	Ingredients  []ingredientJSON `json:"ingredients"`
-	Steps        []string         `json:"steps"`
-	CreatedAt    time.Time        `json:"createdAt"`
-	UpdatedAt    time.Time        `json:"updatedAt"`
-	Nutrition    macrosJSON       `json:"nutrition"`
+	ID           string              `json:"id"`
+	Title        string              `json:"title"`
+	BaseServings int                 `json:"baseServings"`
+	SourceURL    string              `json:"sourceUrl"`
+	Tags         []string            `json:"tags"`
+	Ingredients  []ingredientOutJSON `json:"ingredients"`
+	Steps        []string            `json:"steps"`
+	CreatedAt    time.Time           `json:"createdAt"`
+	UpdatedAt    time.Time           `json:"updatedAt"`
+	Nutrition    macrosJSON          `json:"nutrition"`
 	// NutritionPerPortion is set only by GET /recipes/{id}.
 	NutritionPerPortion *nutritionPerPortionJSON `json:"nutritionPerPortion,omitempty"`
 }
@@ -58,10 +65,10 @@ type recipeInJSON struct {
 
 func toRecipeJSON(r domain.Recipe) recipeJSON {
 	out := recipeJSON{ID: r.ID, Title: r.Title, BaseServings: r.BaseServings, SourceURL: r.SourceURL,
-		Tags: orEmpty(r.Tags), Steps: orEmpty(r.Steps), Ingredients: []ingredientJSON{},
+		Tags: orEmpty(r.Tags), Steps: orEmpty(r.Steps), Ingredients: []ingredientOutJSON{},
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, Nutrition: macrosJSON(r.Nutrition)}
 	for _, i := range r.Ingredients {
-		out.Ingredients = append(out.Ingredients, ingredientJSON{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit, Note: i.Note, ProductID: nullable(i.ProductID)})
+		out.Ingredients = append(out.Ingredients, ingredientOutJSON{ingredientJSON: ingredientJSON{Name: i.Name, Quantity: i.Quantity, Unit: i.Unit, Note: i.Note, ProductID: nullable(i.ProductID)}})
 	}
 	return out
 }
@@ -132,8 +139,16 @@ func (s *Server) handleGetRecipe(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	n := nutrition.ForRecipe(rc, nutrition.NewMatcher(products))
+	matcher := nutrition.NewMatcher(products)
+	n := nutrition.ForRecipe(rc, matcher)
 	out := toRecipeJSON(rc)
+	for i, ing := range rc.Ingredients {
+		var id *string
+		if p, ok := matcher.Match(ing); ok {
+			id = &p.ID
+		}
+		out.Ingredients[i].MatchedProductID = &id
+	}
 	out.NutritionPerPortion = &nutritionPerPortionJSON{
 		Values: macrosJSON(n.PerPortion),
 		Sources: sourcesJSON{Kcal: string(n.Sources.Kcal), Protein: string(n.Sources.Protein),

@@ -166,6 +166,7 @@ export const t = {
   nutritionComputed: 'wyliczone',
   nutritionMissing: 'brak',
   nutritionApproxPrefix: 'Wartości przybliżone — niepełne dane dla:',
+  matchedProduct: 'dopasowano',
   ingredientProduct: 'Produkt dla składnika',
   skillDownload: 'Pobierz SKILL.md',
   skillInstall: 'Zapisz plik w folderze mealplan-recipe-format w katalogu umiejętności Claude, np. ~/.claude/skills/mealplan-recipe-format/SKILL.md.',
