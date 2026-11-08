@@ -16,6 +16,7 @@ import (
 	"mealplan/internal/httpapi"
 	"mealplan/internal/importer"
 	"mealplan/internal/plan"
+	"mealplan/internal/product"
 	"mealplan/internal/recipe"
 	"mealplan/internal/shopping"
 	"mealplan/internal/spa"
@@ -62,7 +63,7 @@ func run(log *slog.Logger) error {
 	}
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.New(svc, httpapi.Deps{Recipes: recipe.New(st, nil), Plan: plan.New(st, st), Shopping: shopping.New(st, st), Importer: importer.New()}, cfg, spa.Handler(dist), log).Handler(),
+		Handler:           httpapi.New(svc, httpapi.Deps{Recipes: recipe.New(st, nil), Products: product.New(st, nil), Plan: plan.New(st, st), Shopping: shopping.New(st, st), Importer: importer.New()}, cfg, spa.Handler(dist), log).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,

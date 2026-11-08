@@ -9,6 +9,7 @@ import (
 	"mealplan/internal/auth"
 	"mealplan/internal/config"
 	"mealplan/internal/plan"
+	"mealplan/internal/product"
 	"mealplan/internal/recipe"
 	"mealplan/internal/shopping"
 )
@@ -16,6 +17,7 @@ import (
 // Deps carries the use-case services the handlers call.
 type Deps struct {
 	Recipes  *recipe.Service
+	Products *product.Service
 	Plan     *plan.Service
 	Shopping *shopping.Service
 	Importer Importer
@@ -60,6 +62,10 @@ func (s *Server) routes() []route {
 		{"DELETE /api/v1/recipes/{id}", s.private(s.handleDeleteRecipe)},
 		{"POST /api/v1/recipes/import/url", s.private(s.handleImportURL)},
 		{"POST /api/v1/recipes/import/text", s.private(s.handleImportText)},
+		{"GET /api/v1/products", s.private(s.handleListProducts)},
+		{"POST /api/v1/products", s.private(s.handleCreateProduct)},
+		{"PUT /api/v1/products/{id}", s.private(s.handleUpdateProduct)},
+		{"DELETE /api/v1/products/{id}", s.private(s.handleDeleteProduct)},
 		{"PATCH /api/v1/household/members/{id}", s.private(s.handleChangeRole)},
 		{"DELETE /api/v1/household/members/{id}", s.private(s.handleRemoveMember)},
 		{"GET /api/v1/plan/{week}", s.private(s.handleGetWeek)},

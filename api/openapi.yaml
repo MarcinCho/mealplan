@@ -260,6 +260,74 @@ paths:
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/products:
+    get:
+      summary: List the household's products (the bundled starter set is installed on first use)
+      security: [{ session: [] }]
+      parameters:
+        - { name: q, in: query, required: false, description: Case-insensitive substring of the name or an alias, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Product" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Create a product
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/products/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    put:
+      summary: Replace a product
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Delete a product (refused with in_use while the food log references it)
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /api/v1/recipes/import/url:
     post:
       summary: Fetch a web page and return a recipe draft (nothing is saved)
@@ -698,6 +766,34 @@ components:
         steps: { type: array, items: { type: string }, description: Empty in list responses }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    Macros:
+      type: object
+      description: Values per 100 g, null when unknown
+      required: [kcal, protein, carbs, fat]
+      properties:
+        kcal: { type: number, nullable: true, minimum: 0, maximum: 900 }
+        protein: { type: number, nullable: true, minimum: 0, maximum: 100 }
+        carbs: { type: number, nullable: true, minimum: 0, maximum: 100 }
+        fat: { type: number, nullable: true, minimum: 0, maximum: 100, description: Protein, carbs and fat together are at most 100 }
+    ProductInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        per100g: { $ref: "#/components/schemas/Macros" }
+        pieceGrams: { type: number, nullable: true, minimum: 0, exclusiveMinimum: true, maximum: 5000 }
+        densityGPerMl: { type: number, nullable: true, minimum: 0.2, exclusiveMinimum: true, maximum: 2 }
+        aliases: { type: array, maxItems: 20, items: { type: string, maxLength: 200 }, description: Normalized by the server; must not equal another product's name }
+    Product:
+      type: object
+      required: [id, name, per100g, pieceGrams, densityGPerMl, aliases]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        per100g: { $ref: "#/components/schemas/Macros" }
+        pieceGrams: { type: number, nullable: true }
+        densityGPerMl: { type: number, nullable: true }
+        aliases: { type: array, items: { type: string } }
     ImportUrlInput:
       type: object
       required: [url]
