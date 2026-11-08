@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from './api/client'
-import { errorText, productErrorText } from './messages'
+import { errorText, movedText, productErrorText } from './messages'
 
 describe('errorText', () => {
   it.each([
@@ -49,5 +49,15 @@ describe('productErrorText', () => {
   })
   it('falls back to the generic texts', () => {
     expect(productErrorText(new ApiError(422, 'invalid_input', 'x'))).toBe(errorText(new ApiError(422, 'invalid_input', 'x')))
+  })
+})
+
+describe('movedText', () => {
+  it('uses Polish plural forms', () => {
+    expect(movedText(1)).toBe('Przeniesiono 1 pozycję')
+    expect(movedText(2)).toBe('Przeniesiono 2 pozycje')
+    expect(movedText(5)).toBe('Przeniesiono 5 pozycji')
+    expect(movedText(12)).toBe('Przeniesiono 12 pozycji')
+    expect(movedText(22)).toBe('Przeniesiono 22 pozycje')
   })
 })

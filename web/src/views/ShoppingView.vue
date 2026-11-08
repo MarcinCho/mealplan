@@ -40,6 +40,7 @@ async function load() {
 onMounted(load)
 
 async function go(n: number) {
+  movedMsg.value = ''
   week.value = shiftWeek(week.value, n)
   await load()
 }
@@ -58,6 +59,7 @@ async function run(fn: () => Promise<void>) {
 
 const generate = () => {
   const requested = week.value
+  movedMsg.value = ''
   return run(async () => {
     await shop.generate(requested)
     if (requested === week.value) loadError.value = ''

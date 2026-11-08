@@ -59,7 +59,8 @@ export const useShopping = defineStore('shopping', {
     },
     async moveToPantry(week: string): Promise<number> {
       const res = await api<{ moved: number }>('POST', '/shopping/move-to-pantry', { week })
-      await this.load(week)
+      // Reload only if the user is still on the moved week; otherwise a late load would clobber the visible one.
+      if (requested === week) await this.load(week)
       return res.moved
     },
     async remove(id: string) {
