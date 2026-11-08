@@ -555,6 +555,9 @@ func (s *Service) UpdateFreezer(ctx context.Context, hh, id string, in FreezerIn
 	if err != nil {
 		return FreezerView{}, err
 	}
+	if in.RecipeID == "" {
+		in.RecipeID = old.RecipeID // an update without a recipe keeps the stored one
+	}
 	f, err := s.freezerFields(ctx, hh, in)
 	if err != nil {
 		return FreezerView{}, err
@@ -562,6 +565,19 @@ func (s *Service) UpdateFreezer(ctx context.Context, hh, id string, in FreezerIn
 	allocs, err := s.repo.Allocations(ctx, hh)
 	if err != nil {
 		return FreezerView{}, err
+	}
+	if inc := f.Portions - old.Portions; old.DishID != "" && inc > 0 {
+		d, err := s.repo.PrepDishByID(ctx, hh, old.DishID)
+		if err != nil {
+			return FreezerView{}, err
+		}
+		items, err := s.repo.FreezerItems(ctx, hh)
+		if err != nil {
+			return FreezerView{}, err
+		}
+		if rem := DishRemaining(d, items, allocs); inc > rem {
+			return FreezerView{}, invalid("portions can grow by at most %d, what is left of the dish", max(rem, 0))
+		}
 	}
 	if used := FreezerAllocated(id, allocs); f.Portions < used {
 		return FreezerView{}, invalid("portions cannot be fewer than the %d already planned", used)

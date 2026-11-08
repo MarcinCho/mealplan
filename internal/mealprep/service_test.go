@@ -304,3 +304,29 @@ func TestPortionsPerMealRange(t *testing.T) {
 		t.Fatal(n)
 	}
 }
+
+func TestUpdateFreezerRespectsDishAndKeepsRecipe(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	s := f.session(t)
+	d := f.dish(t, s.ID, 6)
+	fz, err := f.svc.Freeze(ctx, f.hid, d.ID, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.UpdateFreezer(ctx, f.hid, fz.ID, mealprep.FreezerInput{Label: fz.Label, Portions: 7, FrozenOn: fz.FrozenOn}); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("want ErrInvalid, got %v", err)
+	}
+	got, err := f.svc.UpdateFreezer(ctx, f.hid, fz.ID, mealprep.FreezerInput{Label: fz.Label, Portions: 6, FrozenOn: fz.FrozenOn})
+	if err != nil || got.RecipeID != f.recipe.ID || got.DishID != d.ID {
+		t.Fatalf("%+v %v", got, err)
+	}
+	sv, _ := f.svc.Session(ctx, f.hid, s.ID)
+	if sv.Dishes[0].Remaining != 0 {
+		t.Fatalf("dish remaining %d", sv.Dishes[0].Remaining)
+	}
+	got, err = f.svc.UpdateFreezer(ctx, f.hid, fz.ID, mealprep.FreezerInput{Label: "Inna", Portions: 5})
+	if err != nil || got.RecipeID != f.recipe.ID || got.Label != "Inna" {
+		t.Fatalf("%+v %v", got, err)
+	}
+}
