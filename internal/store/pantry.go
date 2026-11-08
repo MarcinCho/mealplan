@@ -61,7 +61,13 @@ type stockRow struct {
 
 func (s *Store) findStock(ctx context.Context, tx *sql.Tx, householdID, productID, unit string) (stockRow, bool, error) {
 	var r stockRow
-	err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT id, quantity FROM pantry_item WHERE household_id = ? AND product_id = ? AND unit = ?`),
+	q := `SELECT id, quantity FROM pantry_item WHERE household_id = ? AND product_id = ? AND unit = ?`
+	if s.db.Driver == "postgres" {
+		// Lock the row so concurrent movements serialize and clamp against the current value.
+		// SQLite needs no lock: the pool has a single connection, so transactions are serialized.
+		q += ` FOR UPDATE`
+	}
+	err := tx.QueryRowContext(ctx, s.db.Rebind(q),
 		householdID, productID, unit).Scan(&r.id, &r.qty)
 	if err == sql.ErrNoRows {
 		return r, false, nil
@@ -96,20 +102,16 @@ func (s *Store) insertStock(ctx context.Context, tx *sql.Tx, householdID, produc
 func (s *Store) AddToPantry(ctx context.Context, householdID, productID, unit string, amount float64) (domain.PantryItem, error) {
 	var id string
 	err := s.inTx(ctx, func(tx *sql.Tx) error {
-		r, ok, err := s.findStock(ctx, tx, householdID, productID, unit)
-		if err != nil {
+		if err := s.requireProduct(ctx, tx, householdID, productID); err != nil {
 			return err
 		}
-		if !ok {
-			id, err = s.insertStock(ctx, tx, householdID, productID, unit, amount)
-			return err
-		}
-		id = r.id
-		if !r.qty.Valid {
-			return nil
-		}
-		return s.exec(ctx, tx, `UPDATE pantry_item SET quantity = ?, updated_at = ? WHERE id = ? AND household_id = ?`,
-			r.qty.Float64+amount, ts(time.Now()), r.id, householdID)
+		// Atomic upsert; a staple row (NULL quantity) stays a staple.
+		return tx.QueryRowContext(ctx, s.db.Rebind(`INSERT INTO pantry_item (id, household_id, product_id, quantity, unit, expires_on, staple, updated_at)
+VALUES (?, ?, ?, ?, ?, '', 0, ?)
+ON CONFLICT (household_id, product_id, unit) DO UPDATE SET
+  quantity = CASE WHEN pantry_item.quantity IS NULL THEN NULL ELSE pantry_item.quantity + excluded.quantity END,
+  updated_at = excluded.updated_at
+RETURNING id`), newPantryID(), householdID, productID, amount, unit, ts(time.Now())).Scan(&id)
 	})
 	if err != nil {
 		return domain.PantryItem{}, err
@@ -152,6 +154,13 @@ func (s *Store) DeletePantryItem(ctx context.Context, householdID, id string) er
 func (s *Store) ApplyMovements(ctx context.Context, householdID string, ms []domain.PantryMovement) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		for _, m := range ms {
+			var n int
+			if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COUNT(*) FROM plan_entry WHERE id = ? AND household_id = ?`), m.EntryID, householdID).Scan(&n); err != nil {
+				return err
+			}
+			if n == 0 {
+				return ErrNotFound
+			}
 			r, ok, err := s.findStock(ctx, tx, householdID, m.ProductID, m.Unit)
 			if err != nil {
 				return err

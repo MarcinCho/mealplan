@@ -3,6 +3,9 @@ package store_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -202,5 +205,57 @@ func TestPantryIsolationAndReview(t *testing.T) {
 	}
 	if at, _ := s.PantryReviewedAt(ctx, "hB"); at != nil {
 		t.Fatal("hB should be nil")
+	}
+}
+
+func TestApplyMovementsRejectsForeignEntry(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedPantry(t, s)
+	_ = s.InsertPlanEntry(ctx, entry("eB", "hB", "2026-11-02", domain.SlotDinner))
+	_, _ = s.AddToPantry(ctx, "hA", "p1", "g", 100)
+	err := s.ApplyMovements(ctx, "hA", []domain.PantryMovement{{EntryID: "eB", ProductID: "p1", Unit: "g", Amount: -10}})
+	if !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("foreign entry: %v", err)
+	}
+	if ms, _ := s.MovementsForEntry(ctx, "hB", "eB"); len(ms) != 0 {
+		t.Fatalf("recorded: %+v", ms)
+	}
+}
+
+func TestApplyMovementsConcurrent(t *testing.T) {
+	if os.Getenv("MEALPLAN_TEST_DRIVER") != "postgres" {
+		t.Skip("Postgres-only concurrency test")
+	}
+	ctx := context.Background()
+	s := newStore(t)
+	seedPantry(t, s)
+	it, _ := s.AddToPantry(ctx, "hA", "p1", "g", 300)
+	const n = 20
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		id := fmt.Sprintf("e%d", i)
+		if err := s.InsertPlanEntry(ctx, entry(id, "hA", "2026-11-02", domain.SlotDinner)); err != nil {
+			t.Fatal(err)
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := s.ApplyMovements(ctx, "hA", []domain.PantryMovement{{EntryID: id, ProductID: "p1", Unit: "g", Amount: -10}}); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	wg.Wait()
+	got, _ := s.PantryItemByID(ctx, "hA", it.ID)
+	sum := 0.0
+	for i := 0; i < n; i++ {
+		ms, _ := s.MovementsForEntry(ctx, "hA", fmt.Sprintf("e%d", i))
+		for _, m := range ms {
+			sum += m.Amount
+		}
+	}
+	if *got.Quantity != 100 || sum != -200 {
+		t.Fatalf("qty %v sum %v", *got.Quantity, sum)
 	}
 }
