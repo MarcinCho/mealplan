@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatStock, isExpired, reviewDue, stepFor } from './pantry'
+import { formatStock, shoppingLine, isExpired, reviewDue, stepFor } from './pantry'
 import type { PantryItem } from './api/types'
 
 const item = (o: Partial<PantryItem>): PantryItem => ({
@@ -140,5 +140,20 @@ describe('createSerialSaver', () => {
     s.set({ quantity: 650 }); s.set({ staple: true })
     await vi.advanceTimersByTimeAsync(10)
     expect(send).toHaveBeenCalledWith({ quantity: 650, staple: true })
+  })
+})
+
+describe('shoppingLine', () => {
+  const si = (o: object) => ({ id: '1', week: 'w', name: 'Ryż', quantity: 800, unit: 'g', checked: false, manual: false, haveQuantity: null, moved: false, ...o })
+  it('covered item says what is at home', () => {
+    expect(shoppingLine(si({ quantity: 0, haveQuantity: 500 }))).toBe('masz w domu: 500 g')
+  })
+  it('partial item says what to buy and what is at home', () => {
+    expect(shoppingLine(si({ quantity: 300, haveQuantity: 200 }))).toBe('kup 300 g (masz 200 g)')
+  })
+  it('item without stock is shown as before', () => {
+    expect(shoppingLine(si({}))).toBe('800 g')
+    expect(shoppingLine(si({ quantity: null, unit: '' }))).toBe('')
+    expect(shoppingLine(si({ quantity: 1500, haveQuantity: null }))).toBe('1500 g')
   })
 })

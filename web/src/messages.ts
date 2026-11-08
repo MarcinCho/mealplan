@@ -1,4 +1,5 @@
 import { ApiError } from './api/client'
+import { plural } from './nutrition'
 
 export const t = {
   appName: 'Mealplan',
@@ -220,8 +221,17 @@ export const t = {
   pantryReviewDone: 'Przegląd zakończony',
   pantryLastReview: 'Ostatni przegląd',
   pantryNeverReviewed: 'Jeszcze nie było przeglądu',
+  haveAtHome: 'masz w domu',
+  buyPartial: 'kup',
+  haveShort: 'masz',
+  inPantryBadge: 'w spiżarni',
+  moveToPantry: 'Przenieś kupione do spiżarni',
   skillDownload: 'Pobierz SKILL.md',
   skillInstall: 'Zapisz plik w folderze mealplan-recipe-format w katalogu umiejętności Claude, np. ~/.claude/skills/mealplan-recipe-format/SKILL.md.',
+}
+
+export function movedText(n: number): string {
+  return `Przeniesiono ${n} ${plural(n, 'pozycję', 'pozycje', 'pozycji')}`
 }
 
 const errors: Record<string, string> = {

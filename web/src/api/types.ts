@@ -67,6 +67,8 @@ export interface ShoppingItem {
   unit: string
   checked: boolean
   manual: boolean
+  haveQuantity?: number | null
+  moved?: boolean
 }
 
 export interface Macros {

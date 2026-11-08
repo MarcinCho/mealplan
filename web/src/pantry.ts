@@ -1,4 +1,5 @@
-import type { PantryItem } from './api/types'
+import type { PantryItem, ShoppingItem } from './api/types'
+import { formatQuantity } from './stores/recipes'
 import { t } from './messages'
 import { isoDate } from './weeks'
 
@@ -111,4 +112,14 @@ export function createSerialSaver<T>(opts: {
       return queued !== null || inflight || timer !== undefined
     },
   }
+}
+
+// One shopping row's amount text: covered by the pantry, partly covered, or as generated.
+export function shoppingLine(item: Pick<ShoppingItem, 'quantity' | 'unit' | 'haveQuantity'>): string {
+  const have = item.haveQuantity
+  if (have !== null && have !== undefined && have > 0) {
+    if (item.quantity === 0) return `${t.haveAtHome}: ${formatQuantity(have, item.unit)}`
+    if (item.quantity !== null) return `${t.buyPartial} ${formatQuantity(item.quantity, item.unit)} (${t.haveShort} ${formatQuantity(have, item.unit)})`
+  }
+  return formatQuantity(item.quantity, item.unit)
 }

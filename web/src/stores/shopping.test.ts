@@ -95,4 +95,18 @@ describe('useShopping', () => {
     expect(s.week).toBe('2026-11-09')
     expect(s.items).toEqual([])
   })
+
+  it('moveToPantry posts the week, reloads the list and returns the count', async () => {
+    const s = useShopping()
+    const spy = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ moved: 2 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ week: '2026-11-02', items: [{ ...item('a', 'Mąka', true), moved: true }] }), { status: 200 }))
+    vi.stubGlobal('fetch', spy)
+    const n = await s.moveToPantry('2026-11-02')
+    expect(n).toBe(2)
+    expect(spy.mock.calls[0][0]).toBe('/api/v1/shopping/move-to-pantry')
+    expect(JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string)).toEqual({ week: '2026-11-02' })
+    expect(spy.mock.calls[1][0]).toBe('/api/v1/shopping?week=2026-11-02')
+    expect(s.items[0].moved).toBe(true)
+  })
 })

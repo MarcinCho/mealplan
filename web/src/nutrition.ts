@@ -53,7 +53,7 @@ export function goalPercent(total: number | null, goal: number | null): number |
   return Math.min(100, Math.max(0, (total / goal) * 100))
 }
 
-function plural(n: number, one: string, few: string, many: string): string {
+export function plural(n: number, one: string, few: string, many: string): string {
   if (n === 1) return one
   const last = n % 10
   const tens = n % 100

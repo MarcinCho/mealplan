@@ -7,14 +7,17 @@ interface ListResponse {
   items: ShoppingItem[]
 }
 
+export const isCovered = (i: ShoppingItem) => i.quantity === 0 && (i.haveQuantity ?? 0) > 0
+
 // Week most recently requested by load/generate; results for any other week are stale and dropped.
 let requested = ''
 
 export const useShopping = defineStore('shopping', {
   state: () => ({ week: '', items: [] as ShoppingItem[] }),
   getters: {
-    open: (s) => s.items.filter((i) => !i.checked),
-    done: (s) => s.items.filter((i) => i.checked),
+    open: (s) => s.items.filter((i) => !i.checked && !isCovered(i)),
+    done: (s) => s.items.filter((i) => i.checked && !isCovered(i)),
+    covered: (s) => s.items.filter(isCovered),
   },
   actions: {
     async load(week: string) {
@@ -53,6 +56,11 @@ export const useShopping = defineStore('shopping', {
       const body = { ...input, quantity: (input.quantity as unknown) === '' ? null : input.quantity }
       await api('PATCH', `/shopping/items/${encodeURIComponent(id)}`, body)
       this.items = this.items.map((i) => (i.id === id ? { ...i, ...body } : i))
+    },
+    async moveToPantry(week: string): Promise<number> {
+      const res = await api<{ moved: number }>('POST', '/shopping/move-to-pantry', { week })
+      await this.load(week)
+      return res.moved
     },
     async remove(id: string) {
       await api('DELETE', `/shopping/items/${encodeURIComponent(id)}`)
