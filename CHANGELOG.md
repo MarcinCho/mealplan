@@ -12,9 +12,9 @@
 ### Spiżarnia
 
 - Spiżarnia gospodarstwa (`/pantry`, `/pantry/review`): pozycje wskazują produkty (nazwa może rozwiązać się przez alias, nieznana tworzy produkt), ilości w jednostkach bazowych (kg jako g, l jako ml), ilość 0, stały zapas bez ilości, data ważności, przyciski +/- z opóźnionym, szeregowanym zapisem i miesięczny przegląd z przypomnieniem na ekranie „Dziś" po ponad 30 dniach.
-- „Zrobione" na posiłku z przepisu zdejmuje składniki przeskalowane do porcji, tylko w tej samej jednostce bazowej i nie poniżej 0; zapisuje, ile zdjęto, a cofnięcie zwraca dokładnie to. Ponowny zapis nie odejmuje drugi raz, a usunięcie zrobionego wpisu nie zwraca zapasu. Błąd `pantry_failed` oznacza zapisany posiłek bez aktualizacji spiżarni (ponowny zapis naprawia).
+- „Zrobione" na posiłku z przepisu zdejmuje składniki przeskalowane do porcji, w tej samej jednostce bazowej lub przeliczalnej (łyżka 15 ml, łyżeczka 5 ml, szklanka 250 ml; na gramy tylko z gęstością produktu, sztuki tylko z wagą sztuki) i nie poniżej 0; zapisuje, ile zdjęto, a cofnięcie zwraca dokładnie to. Ponowny zapis nie odejmuje drugi raz, a usunięcie zrobionego wpisu nie zwraca zapasu. Błąd `pantry_failed` oznacza zapisany posiłek bez aktualizacji spiżarni (ponowny zapis naprawia).
 - Lista zakupów pomija zrobione posiłki i odejmuje zapas per produkt i jednostka bazowa: pozycje `haveQuantity` („masz w domu", „kup X (masz Y)"), stałe zapasy są pomijane. „Przenieś kupione do spiżarni" (`POST /shopping/move-to-pantry`, pole `moved`) dodaje odhaczone pozycje raz. Opis: `docs/pantry.md`.
-- Ograniczenia: brak przeliczania łyżek i szklanek na g/ml, brak rezerwacji zapasu między tygodniami, dwie nazwy jednego produktu to dwa wiersze listy, dowolne jednostki nigdy nie są dopasowywane.
+- Ograniczenia: bez gęstości lub wagi sztuki produktu objętość i sztuki nie pomniejszają zapasu w gramach, brak rezerwacji zapasu między tygodniami, dwie nazwy jednego produktu to dwa wiersze listy, dowolne jednostki nigdy nie są dopasowywane.
 - Import: linia `Wartości na porcję` z „(w tym nasycone …)", „z czego" lub „of which" przy tłuszczu nie gubi już wartości tłuszczu (segment jest ucinany zamiast pomijany).
 
 ### Wygląd

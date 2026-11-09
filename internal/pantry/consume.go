@@ -9,14 +9,16 @@ import (
 )
 
 // Deductions lists the stock decreases for cooking the recipe for the given servings. Only ingredients
-// with a quantity that match a product held in stock in the same base unit (and not as a staple) count.
+// with a quantity that match a product held in stock (and not as a staple) count. The amount is taken
+// in the stock's unit: the same base unit, or one nutrition.Convert reaches for that product (3 łyżki
+// from a bottle in ml, 2 szklanki of flour from a bag in g when the product has a density).
 func Deductions(r domain.Recipe, servings int, m *nutrition.Matcher, stock []domain.PantryItem, entryID string) []domain.PantryMovement {
 	if r.BaseServings <= 0 || servings <= 0 {
 		return nil
 	}
-	have := map[[2]string]domain.PantryItem{}
+	byProduct := map[string][]domain.PantryItem{}
 	for _, it := range stock {
-		have[[2]string{it.ProductID, it.Unit}] = it
+		byProduct[it.ProductID] = append(byProduct[it.ProductID], it)
 	}
 	totals := map[[2]string]float64{}
 	var order [][2]string
@@ -28,19 +30,15 @@ func Deductions(r domain.Recipe, servings int, m *nutrition.Matcher, stock []dom
 		if !ok {
 			continue
 		}
-		base, unit := units.ToBase(*ing.Quantity, ing.Unit)
-		if unit == "" {
-			unit = "szt" // a unit-less amount counts pieces, as on the shopping list
-		}
-		key := [2]string{p.ID, unit}
-		it, ok := have[key]
-		if !ok || it.Staple || it.Quantity == nil {
+		scaled, err := units.Scale(*ing.Quantity, servings, r.BaseServings)
+		if err != nil || scaled <= 0 {
 			continue
 		}
-		amount, err := units.Scale(base, servings, r.BaseServings)
-		if err != nil || amount <= 0 {
+		it, amount, ok := stockFor(byProduct[p.ID], scaled, ing.Unit, p)
+		if !ok || it.Staple || it.Quantity == nil || amount <= 0 {
 			continue
 		}
+		key := [2]string{p.ID, it.Unit}
 		if _, seen := totals[key]; !seen {
 			order = append(order, key)
 		}
@@ -51,6 +49,26 @@ func Deductions(r domain.Recipe, servings int, m *nutrition.Matcher, stock []dom
 		out = append(out, domain.PantryMovement{EntryID: entryID, ProductID: k[0], Unit: k[1], Amount: -units.Round(totals[k])})
 	}
 	return out
+}
+
+// stockFor picks the product's stock item for an amount in unit, preferring the same base unit, and
+// returns the amount in that item's unit.
+func stockFor(items []domain.PantryItem, amount float64, unit string, p domain.Product) (domain.PantryItem, float64, bool) {
+	base, u := units.ToBase(amount, unit)
+	if u == "" {
+		u = "szt" // a unit-less amount counts pieces, as on the shopping list
+	}
+	for _, it := range items {
+		if it.Unit == u {
+			return it, base, true
+		}
+	}
+	for _, it := range items {
+		if v, ok := nutrition.Convert(amount, unit, it.Unit, p); ok {
+			return it, v, true
+		}
+	}
+	return domain.PantryItem{}, 0, false
 }
 
 // EntryDone takes the recipe's ingredients out of stock. It does nothing for free-text, prep and out

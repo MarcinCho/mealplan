@@ -213,9 +213,13 @@ func (s *Service) Generate(ctx context.Context, householdID, week, from, to stri
 	if err != nil {
 		return nil, err
 	}
+	byID := make(map[string]domain.Product, len(prods))
+	for _, p := range prods {
+		byID[p.ID] = p
+	}
 	stock := make([]StockLine, 0, len(pantryItems))
 	for _, p := range pantryItems {
-		stock = append(stock, StockLine{ProductID: p.ProductID, Quantity: p.Quantity, Unit: p.Unit, Staple: p.Staple})
+		stock = append(stock, StockLine{ProductID: p.ProductID, Quantity: p.Quantity, Unit: p.Unit, Staple: p.Staple, Product: byID[p.ProductID]})
 	}
 	lines, err := Build(entries, recipes, productOf, stock)
 	if err != nil {
