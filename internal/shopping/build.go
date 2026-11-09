@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"mealplan/internal/domain"
+	"mealplan/internal/nutrition"
 	"mealplan/internal/units"
 )
 
@@ -19,12 +20,14 @@ type Line struct {
 	Have           *float64 // amount already in stock that was subtracted, in Unit; nil when none
 }
 
-// StockLine is pantry stock as Build needs it; Quantity is nil for a staple.
+// StockLine is pantry stock as Build needs it; Quantity is nil for a staple. Product, when known,
+// lets an amount in another unit be compared with this stock (nutrition.Convert).
 type StockLine struct {
 	ProductID string
 	Quantity  *float64
 	Unit      string
 	Staple    bool
+	Product   domain.Product
 }
 
 type acc struct {
@@ -49,6 +52,8 @@ func key(norm, unit string, hasAmount bool) string {
 func Build(entries []domain.PlanEntry, recipes map[string]domain.Recipe, productOf func(domain.Ingredient) string, stock []StockLine) ([]Line, error) {
 	staples := map[string]bool{}
 	have := map[string]float64{}
+	stockUnits := map[string][]string{} // product -> its stock units, in stock order
+	products := map[string]domain.Product{}
 	for _, s := range stock {
 		if s.ProductID == "" {
 			continue
@@ -59,7 +64,14 @@ func Build(entries []domain.PlanEntry, recipes map[string]domain.Recipe, product
 		}
 		if s.Quantity != nil {
 			amount, unit := units.ToBase(*s.Quantity, s.Unit)
-			have[s.ProductID+"|"+unit] += amount
+			k := s.ProductID + "|" + unit
+			if _, seen := have[k]; !seen {
+				stockUnits[s.ProductID] = append(stockUnits[s.ProductID], unit)
+			}
+			have[k] += amount
+			if s.Product.ID != "" {
+				products[s.ProductID] = s.Product
+			}
 		}
 	}
 
@@ -114,14 +126,28 @@ func Build(entries []domain.PlanEntry, recipes map[string]domain.Recipe, product
 		if stockUnit == "" {
 			stockUnit = "szt" // a unit-less amount counts pieces
 		}
-		sk := a.productID + "|" + stockUnit
-		take := math.Min(have[sk], a.amount)
-		if take <= 0 {
-			continue
+		// Same unit first, then any other stock unit of the product that the amount converts to.
+		for _, su := range append([]string{stockUnit}, stockUnits[a.productID]...) {
+			if a.amount <= 0 {
+				break
+			}
+			sk := a.productID + "|" + su
+			if have[sk] <= 0 {
+				continue
+			}
+			need, ok := a.amount, true
+			if su != stockUnit {
+				need, ok = nutrition.Convert(a.amount, stockUnit, su, products[a.productID])
+			}
+			if !ok || need <= 0 {
+				continue
+			}
+			take := math.Min(have[sk], need)
+			have[sk] -= take
+			taken := take * a.amount / need // back in the row's unit
+			a.amount -= taken
+			a.have += taken
 		}
-		have[sk] -= take
-		a.amount -= take
-		a.have = take
 	}
 
 	out := make([]Line, 0, len(rows))

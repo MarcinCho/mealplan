@@ -212,3 +212,28 @@ func TestBuildSkipsPrepAndOutEntries(t *testing.T) {
 		t.Fatalf("%+v", lines)
 	}
 }
+
+func TestBuildConvertsKitchenMeasuresAgainstStock(t *testing.T) {
+	r := domain.Recipe{ID: "r", BaseServings: 1, Ingredients: []domain.Ingredient{ing("oliwa", q(4), "łyżka"), ing("mąka", q(2), "szklanka"), ing("cukier", q(1), "szklanka")}}
+	stock := []shopping.StockLine{
+		{ProductID: "p-oliwa", Quantity: q(30), Unit: "ml"},
+		{ProductID: "p-mąka", Quantity: q(1), Unit: "kg", Product: domain.Product{ID: "p-mąka", DensityGPerML: q(0.6)}},
+		{ProductID: "p-cukier", Quantity: q(1), Unit: "kg", Product: domain.Product{ID: "p-cukier"}},
+	}
+	got, err := shopping.Build([]domain.PlanEntry{entry("r", 1)}, recipes(r), byNorm, stock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 4 łyżki = 60 ml, 30 ml at home: 2 łyżki left to buy, 2 at home.
+	if l := find(got, "oliwa", "łyżka"); l == nil || *l.Quantity != 2 || l.Have == nil || *l.Have != 2 {
+		t.Fatalf("oliwa: %+v", l)
+	}
+	// 2 szklanki at 0.6 g/ml = 300 g, a 1 kg bag covers it.
+	if l := find(got, "mąka", "szklanka"); l == nil || *l.Quantity != 0 || l.Have == nil || *l.Have != 2 {
+		t.Fatalf("mąka: %+v", l)
+	}
+	// No density for sugar: nothing is assumed, the row stays as it was.
+	if l := find(got, "cukier", "szklanka"); l == nil || *l.Quantity != 1 || l.Have != nil {
+		t.Fatalf("cukier: %+v", l)
+	}
+}

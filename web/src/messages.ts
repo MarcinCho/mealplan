@@ -298,7 +298,7 @@ const errors: Record<string, string> = {
   login_taken: 'Ten login jest już zajęty.',
   password_length: 'Hasło musi mieć od 12 do 128 znaków.',
   invalid_input: 'Sprawdź poprawność wpisanych danych.',
-  pantry_failed: 'Zapisano posiłek, ale nie udało się zaktualizować spiżarni. Spróbuj ponownie.',
+  pantry_failed: 'Nie udało się zaktualizować spiżarni. Spróbuj ponownie.',
   forbidden: 'Brak uprawnień do tej operacji.',
   unauthenticated: 'Sesja wygasła. Zaloguj się ponownie.',
   csrf: 'Sesja jest nieaktualna. Odśwież stronę i spróbuj ponownie.',
