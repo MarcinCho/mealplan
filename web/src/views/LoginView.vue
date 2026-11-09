@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BrandLogo from '../components/BrandLogo.vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSession } from '../stores/session'
@@ -26,9 +27,9 @@ async function submit() {
 </script>
 
 <template>
-  <v-main class="d-flex align-center justify-center">
+  <v-main class="d-flex flex-column align-center justify-center">
+    <BrandLogo :height="50" class="mb-6" style="max-width: 70vw" />
     <v-card width="400" max-width="92vw" class="pa-4" elevation="2">
-      <v-card-title>{{ t.appName }}</v-card-title>
       <v-form @submit.prevent="submit">
         <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
         <v-text-field v-model="login" :label="t.login" autocomplete="username" autofocus />

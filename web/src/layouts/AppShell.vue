@@ -6,6 +6,7 @@ import { t } from '../messages'
 import { loadChoice, PALETTES, saveChoice, themeName, type Choice, type PaletteId } from '../theme'
 import { initial } from '../today'
 import { ref } from 'vue'
+import BrandLogo from '../components/BrandLogo.vue'
 
 const { mdAndUp } = useDisplay()
 const theme = useTheme()
@@ -50,7 +51,7 @@ async function logout() {
 
 <template>
   <v-app-bar flat color="transparent" class="shell-bar">
-    <v-app-bar-title class="font-weight-bold">{{ t.appName }}</v-app-bar-title>
+    <v-app-bar-title class="brand-title"><BrandLogo :icon="!mdAndUp" :height="28" /></v-app-bar-title>
     <span class="text-body-2 text-medium-emphasis mr-2 d-none d-sm-inline">{{ session.me?.household.name }}</span>
     <v-menu :close-on-content-click="false">
       <template #activator="{ props }">

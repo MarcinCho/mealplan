@@ -51,7 +51,7 @@ const itemValue = (v: Macros) => (v.kcal === null ? '—' : `${formatNumber(v.kc
         :model-value="r.percent"
         height="6"
         rounded
-        :color="r.partial ? 'warning' : 'primary'"
+        :color="r.partial ? 'warning' : 'accent'"
       />
     </div>
 

@@ -36,7 +36,7 @@ export const t = {
   revoke: 'Unieważnij',
   theme: 'Zmień motyw',
   palette: 'Kolory',
-  paletteNames: { classic: 'Klasyczny', plum: 'Śliwka', earth: 'Ziemia', navy: 'Granat' },
+  paletteNames: { mealplan: 'Mealplan', classic: 'Klasyczny', plum: 'Śliwka', earth: 'Ziemia', navy: 'Granat' },
   navRecipes: 'Przepisy',
   navShopping: 'Zakupy',
   recipes: 'Przepisy',

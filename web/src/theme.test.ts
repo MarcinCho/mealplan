@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { loadChoice, PALETTES, parseChoice, saveChoice, themeName, VUETIFY_THEMES } from './theme'
+import { DEFAULT_PALETTE, loadChoice, PALETTES, parseChoice, saveChoice, themeName, VUETIFY_THEMES } from './theme'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -32,17 +32,17 @@ describe('themeName', () => {
 
 describe('parseChoice', () => {
   it('falls back to the OS preference when nothing is stored', () => {
-    expect(parseChoice(null, true)).toEqual({ palette: 'earth', mode: 'dark' })
-    expect(parseChoice(null, false)).toEqual({ palette: 'earth', mode: 'light' })
+    expect(parseChoice(null, true)).toEqual({ palette: 'mealplan', mode: 'dark' })
+    expect(parseChoice(null, false)).toEqual({ palette: 'mealplan', mode: 'light' })
   })
   it('reads a stored choice', () => {
     expect(parseChoice('{"palette":"navy","mode":"dark"}', false)).toEqual({ palette: 'navy', mode: 'dark' })
   })
   it('ignores garbage, unknown palettes and wrong types', () => {
-    expect(parseChoice('not json', false)).toEqual({ palette: 'earth', mode: 'light' })
-    expect(parseChoice('{"palette":"neon","mode":"dark"}', false)).toEqual({ palette: 'earth', mode: 'dark' })
-    expect(parseChoice('{"palette":42,"mode":"sepia"}', true)).toEqual({ palette: 'earth', mode: 'dark' })
-    expect(parseChoice('null', false)).toEqual({ palette: 'earth', mode: 'light' })
+    expect(parseChoice('not json', false)).toEqual({ palette: 'mealplan', mode: 'light' })
+    expect(parseChoice('{"palette":"neon","mode":"dark"}', false)).toEqual({ palette: 'mealplan', mode: 'dark' })
+    expect(parseChoice('{"palette":42,"mode":"sepia"}', true)).toEqual({ palette: 'mealplan', mode: 'dark' })
+    expect(parseChoice('null', false)).toEqual({ palette: 'mealplan', mode: 'light' })
   })
 })
 
@@ -61,11 +61,28 @@ describe('storage', () => {
       },
     })
     expect(() => saveChoice({ palette: 'plum', mode: 'light' })).not.toThrow()
-    expect(loadChoice().palette).toBe('earth')
+    expect(loadChoice().palette).toBe('mealplan')
   })
 })
 
 describe('palettes', () => {
+  it('defines accent and on-accent in every registered theme', () => {
+    for (const [name, def] of Object.entries(VUETIFY_THEMES)) {
+      const c = def.colors as Record<string, string>
+      expect(c.accent, `${name}.accent`).toMatch(/^#[0-9A-Fa-f]{6}$/)
+      expect(c['on-accent'], `${name}.on-accent`).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    }
+  })
+
+  it('has the Mealplan brand palette first and as default', () => {
+    expect(PALETTES[0].id).toBe('mealplan')
+    expect(DEFAULT_PALETTE).toBe('mealplan')
+    const c = VUETIFY_THEMES['mealplan-light'].colors as Record<string, string>
+    expect(c.primary).toBe('#4F6B3F')
+    expect(c.accent).toBe('#7B9A68')
+    expect(c.background).toBe('#F8F9F7')
+  })
+
   it('registers a light and a dark theme per palette under the names themeName returns', () => {
     for (const p of PALETTES) {
       for (const mode of ['light', 'dark'] as const) {
@@ -85,11 +102,12 @@ describe('palettes', () => {
       expect(contrast(c.primary, c['on-primary']), `${name} primary`).toBeGreaterThanOrEqual(4.5)
       expect(contrast(c.secondary, c['on-secondary']), `${name} secondary`).toBeGreaterThanOrEqual(4.5)
       expect(contrast(c.bar, c['on-bar']), `${name} bar`).toBeGreaterThanOrEqual(4.5)
+      if (c['on-accent']) expect(contrast(c.accent, c['on-accent']), `${name} accent (decorative, WCAG 3:1)`).toBeGreaterThanOrEqual(3)
     }
   })
 
-  it('offers three palettes besides classic, each with swatches for the picker', () => {
-    expect(PALETTES.map((p) => p.id)).toEqual(['classic', 'plum', 'earth', 'navy'])
+  it('offers the Mealplan brand palette first and four others, each with swatches for the picker', () => {
+    expect(PALETTES.map((p) => p.id)).toEqual(['mealplan', 'classic', 'plum', 'earth', 'navy'])
     for (const p of PALETTES) expect(p.swatch).toHaveLength(4)
   })
 })
