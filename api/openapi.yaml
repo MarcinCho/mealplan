@@ -408,6 +408,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "413": { $ref: "#/components/responses/TooLarge" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+        "500": { $ref: "#/components/responses/PantryFailed" }
   /api/v1/plan/{week}/entries/{id}:
     parameters:
       - { name: week, in: path, required: true, schema: { type: string, format: date } }
@@ -432,6 +433,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "413": { $ref: "#/components/responses/TooLarge" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+        "500": { $ref: "#/components/responses/PantryFailed" }
     delete:
       summary: Remove a plan entry
       security: [{ session: [], csrf: [] }]
@@ -782,6 +784,240 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Csrf" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/prep/sessions:
+    get:
+      summary: List meal prep sessions with their dishes and portion accounting
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [sessions], properties: { sessions: { type: array, items: { $ref: "#/components/schemas/PrepSession" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Create a session; week defaults to the shopping week the date belongs to (weekend sessions shop for the coming week)
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PrepSessionCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PrepSession" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/prep/sessions/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    put:
+      summary: Replace a session; setting cooked adds the dishes to the pantry, clearing it takes them out again
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PrepSessionInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PrepSession" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "500": { $ref: "#/components/responses/PantryFailed" }
+    delete:
+      summary: Delete a session (refused with in_use while its dishes are used by plan entries or freezer items)
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/prep/sessions/{id}/dishes:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Add a recipe cooked in the session
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PrepDishCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PrepDish" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/prep/dishes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    put:
+      summary: Change a dish's portions and written-off portions
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PrepDishInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PrepDish" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Delete a dish (refused with in_use while plan entries or freezer items use it)
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/prep/dishes/{id}/freeze:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Freeze portions of a dish into the freezer
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PrepFreeze" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FreezerItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/freezer:
+    get:
+      summary: List freezer items
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/FreezerItem" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Add a freezer item, from a recipe or with a free label
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FreezerItemInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FreezerItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/freezer/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    put:
+      summary: Replace a freezer item
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FreezerItemInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FreezerItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Delete a freezer item (refused with in_use while plan entries use it)
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/household/settings:
+    get:
+      summary: Household settings
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HouseholdSettings" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      summary: Change household settings
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HouseholdSettings" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HouseholdSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
 components:
   securitySchemes:
     session: { type: apiKey, in: cookie, name: mealplan_session }
@@ -847,6 +1083,11 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
+    PantryFailed:
+      description: The change was saved but the pantry could not be updated (code pantry_failed); saving again repairs it
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
     Unprocessable:
       description: Validation failed (code invalid_input or password_length) or the import could not produce a draft (code import_blocked, import_unparsable or import_failed)
       content:
@@ -862,6 +1103,96 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
   schemas:
+    PrepAllocation:
+      type: object
+      required: [entryId, date, slot, servings]
+      properties:
+        entryId: { type: string }
+        date: { type: string, format: date }
+        slot: { type: string, enum: [breakfast, lunch, dinner, snack] }
+        servings: { type: integer }
+    PrepDish:
+      type: object
+      required: [id, recipeId, recipeTitle, portions, writtenOff, allocated, frozen, remaining, allocations]
+      properties:
+        id: { type: string }
+        recipeId: { type: string }
+        recipeTitle: { type: string }
+        portions: { type: integer }
+        writtenOff: { type: integer }
+        allocated: { type: integer, description: Portions used by plan entries }
+        frozen: { type: integer, description: Portions moved to the freezer }
+        remaining: { type: integer }
+        allocations: { type: array, items: { $ref: "#/components/schemas/PrepAllocation" } }
+    PrepSession:
+      type: object
+      required: [id, date, name, week, cooked, remaining, dishes]
+      properties:
+        id: { type: string }
+        date: { type: string, format: date }
+        name: { type: string }
+        week: { type: string, format: date, description: Monday of the shopping week the session belongs to }
+        cooked: { type: boolean }
+        remaining: { type: integer }
+        dishes: { type: array, items: { $ref: "#/components/schemas/PrepDish" } }
+    PrepSessionCreate:
+      type: object
+      required: [date, name]
+      properties:
+        date: { type: string, format: date }
+        name: { type: string }
+        week: { type: string, format: date, description: A Monday; defaults from the date }
+    PrepSessionInput:
+      type: object
+      required: [date, name, week, cooked]
+      properties:
+        date: { type: string, format: date }
+        name: { type: string }
+        week: { type: string, format: date }
+        cooked: { type: boolean }
+    PrepDishCreate:
+      type: object
+      required: [recipeId, portions]
+      properties:
+        recipeId: { type: string }
+        portions: { type: integer }
+    PrepDishInput:
+      type: object
+      required: [portions, writtenOff]
+      properties:
+        portions: { type: integer }
+        writtenOff: { type: integer }
+    PrepFreeze:
+      type: object
+      required: [portions]
+      properties:
+        portions: { type: integer }
+    FreezerItem:
+      type: object
+      required: [id, dishId, recipeId, title, portions, allocated, remaining, frozenOn, allocations]
+      properties:
+        id: { type: string }
+        dishId: { type: string, nullable: true }
+        recipeId: { type: string, nullable: true }
+        title: { type: string }
+        portions: { type: integer }
+        allocated: { type: integer }
+        remaining: { type: integer }
+        frozenOn: { type: string, format: date }
+        allocations: { type: array, items: { $ref: "#/components/schemas/PrepAllocation" } }
+    FreezerItemInput:
+      type: object
+      required: [portions]
+      properties:
+        recipeId: { type: string, nullable: true }
+        label: { type: string, description: Defaults to the recipe title }
+        portions: { type: integer }
+        frozenOn: { type: string, format: date, description: Defaults to today }
+    HouseholdSettings:
+      type: object
+      required: [portionsPerMeal]
+      properties:
+        portionsPerMeal: { type: integer, minimum: 1, maximum: 20 }
     NutritionSettings:
       type: object
       required: [enabled, goal]
@@ -897,11 +1228,12 @@ components:
           type: array
           items:
             type: object
-            required: [entryId, title, slot, values, sources, approximate, missing]
+            required: [entryId, title, slot, kind, values, sources, approximate, missing]
             properties:
               entryId: { type: string }
               title: { type: string }
               slot: { type: string, enum: [breakfast, lunch, dinner, snack] }
+              kind: { type: string, enum: [meal, prep, out] }
               values: { $ref: "#/components/schemas/Macros" }
               sources: { $ref: "#/components/schemas/ValueSources" }
               approximate: { type: boolean }
@@ -1153,9 +1485,13 @@ components:
         servings: { type: integer, description: Zero or omitted means the recipe base servings, or 1 for free-text entries }
         cookUserId: { type: string, nullable: true }
         done: { type: boolean, description: Whether the meal was cooked; defaults to false }
+        kind: { type: string, enum: [meal, prep, out], description: "Defaults to meal. prep takes portions from a dish or freezer item (exactly one of prepDishId and freezerItemId); out is a meal eaten out." }
+        prepDishId: { type: string, nullable: true }
+        freezerItemId: { type: string, nullable: true }
+        outValues: { allOf: [{ $ref: "#/components/schemas/Macros" }], nullable: true, description: Eaten-out values per portion; only for kind out }
     PlanEntry:
       type: object
-      required: [id, date, slot, recipeId, freeText, servings, cookUserId, done]
+      required: [id, date, slot, recipeId, freeText, servings, cookUserId, done, kind, prepDishId, freezerItemId, outValues]
       properties:
         id: { type: string }
         date: { type: string, format: date }
@@ -1165,6 +1501,10 @@ components:
         servings: { type: integer }
         cookUserId: { type: string, nullable: true }
         done: { type: boolean }
+        kind: { type: string, enum: [meal, prep, out] }
+        prepDishId: { type: string, nullable: true }
+        freezerItemId: { type: string, nullable: true }
+        outValues: { allOf: [{ $ref: "#/components/schemas/Macros" }], nullable: true, description: Null unless kind is out }
     Week:
       type: object
       required: [week, entries]

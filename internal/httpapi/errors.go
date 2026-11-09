@@ -10,6 +10,7 @@ import (
 	"mealplan/internal/auth"
 	"mealplan/internal/domain"
 	"mealplan/internal/importer"
+	"mealplan/internal/mealprep"
 	"mealplan/internal/plan"
 	"mealplan/internal/store"
 )
@@ -66,6 +67,9 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, plan.ErrPantry):
 		s.log.Error("pantry update failed", "method", r.Method, "path", r.URL.Path, "err", err)
 		writeError(w, http.StatusInternalServerError, "pantry_failed", "Zapisano posiłek, ale nie udało się zaktualizować spiżarni. Spróbuj ponownie.")
+	case errors.Is(err, mealprep.ErrPantry):
+		s.log.Error("pantry update failed", "method", r.Method, "path", r.URL.Path, "err", err)
+		writeError(w, http.StatusInternalServerError, "pantry_failed", "Zapisano sesję, ale nie udało się zaktualizować spiżarni. Spróbuj ponownie.")
 	case errors.Is(err, domain.ErrInvalid):
 		writeError(w, http.StatusUnprocessableEntity, "invalid_input", err.Error())
 	case errors.Is(err, store.ErrInUse):

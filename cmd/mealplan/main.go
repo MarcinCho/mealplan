@@ -68,12 +68,13 @@ func run(log *slog.Logger) error {
 	planSvc := plan.New(st, st)
 	pantrySvc := pantry.New(st, st, products, nil)
 	planSvc.SetDoneHook(pantrySvc)
-	planSvc.SetPortions(mealprep.New(st, st, pantrySvc, nil))
+	prepSvc := mealprep.New(st, st, pantrySvc, nil)
+	planSvc.SetPortions(prepSvc)
 	shoppingSvc := shopping.New(st, st, pantrySvc, products)
 	shoppingSvc.SetSessions(st)
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.New(svc, httpapi.Deps{Recipes: recipe.New(st, nil), Products: products, Plan: planSvc, Nutrition: nutrition.New(st, products, nil), Pantry: pantrySvc, Shopping: shoppingSvc, Importer: importer.New()}, cfg, spa.Handler(dist), log).Handler(),
+		Handler:           httpapi.New(svc, httpapi.Deps{Recipes: recipe.New(st, nil), Products: products, Plan: planSvc, Nutrition: nutrition.New(st, products, nil), Pantry: pantrySvc, MealPrep: prepSvc, Shopping: shoppingSvc, Importer: importer.New()}, cfg, spa.Handler(dist), log).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
