@@ -44,6 +44,10 @@ export const useMealPrepStore = defineStore('mealprep', {
       this.portionsPerMeal = settings.portionsPerMeal
       this.loaded = true
     },
+    async savePortionsPerMeal(n: number) {
+      const res = await api<{ portionsPerMeal: number }>('PUT', '/household/settings', { portionsPerMeal: n })
+      this.portionsPerMeal = res.portionsPerMeal
+    },
     async createSession(input: { date: string; name: string; week?: string }) {
       const s = await api<PrepSession>('POST', '/prep/sessions', input)
       await this.refresh()

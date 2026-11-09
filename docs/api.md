@@ -38,7 +38,7 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `GET /me/nutrition/days?from=&to=` | podsumowanie dni z zakresu (najwyżej 31 dni) względem celu; pusta lista `days`, gdy śledzenie jest wyłączone |
 | `POST /me/food-log`, `DELETE /me/food-log/{id}` | dziennik jedzenia konta: produkt i ilość w `g` lub `szt` (`szt` tylko dla produktu z wagą sztuki) |
 | `GET /plan/{week}` | wpisy planu tygodnia |
-| `POST /plan/{week}/entries` | dodanie wpisu: przepis albo tekst wolny, slot, porcje, opcjonalnie kucharz |
+| `POST /plan/{week}/entries` | dodanie wpisu: przepis albo tekst wolny, slot, porcje, opcjonalnie kucharz; `kind` (`meal`, domyślnie; `prep`; `out`), `prepDishId` albo `freezerItemId` (dokładnie jedno, dla `prep`) i `outValues` (`kcal`, `protein`, `carbs`, `fat` na osobę, każda opcjonalna, dla `out`); opis: [mealprep.md](mealprep.md) |
 | `PUT/DELETE /plan/{week}/entries/{id}` | zamiana i usunięcie wpisu |
 | `POST /plan/{week}/copy` | kopiowanie wpisów z `fromWeek`; tylko na pusty tydzień, inaczej `409 conflict`; ten sam tydzień jako źródło i cel daje `422 invalid_input` |
 | `GET /shopping?week=` | lista zakupów tygodnia: `{week, items, previousWeekUndone}`; `previousWeekUndone` to liczba posiłków z przepisem z poprzedniego tygodnia, które nie są oznaczone jako zrobione |
@@ -50,6 +50,14 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `GET /pantry`, `POST /pantry` | pozycje spiżarni i `reviewedAt` (`null`, gdy nie było przeglądu); dodanie: `productId` albo `name` (nazwa pasująca do produktu lub aliasu używa go, nieznana tworzy produkt), `quantity`, `unit`, `expiresOn` (`RRRR-MM-DD`), `staple`; dla pary produkt + jednostka dodanie do istniejącej zwiększa ilość |
 | `PUT/DELETE /pantry/{id}` | pełna zamiana ilości, jednostki, daty ważności i `staple` (produkt się nie zmienia); `409 conflict`, gdy produkt ma już pozycję w tej jednostce |
 | `POST /pantry/review` | zapisuje datę przeglądu spiżarni; zwraca `{"reviewedAt"}` |
+| `GET /prep/sessions`, `POST /prep/sessions` | sesje gotowania z daniami i rozliczeniem porcji (`portions`, `writtenOff`, `allocated`, `frozen`, `remaining`, `allocations`); dodanie: `date`, `name`, opcjonalnie `week` (poniedziałek; domyślnie tydzień wynikający z daty) |
+| `PUT/DELETE /prep/sessions/{id}` | zamiana (`date`, `name`, `week`, `cooked`); `cooked: true` zdejmuje składniki ze spiżarni, `false` je zwraca (`500 pantry_failed` przy błędzie spiżarni); usunięcie sesji z przydziałami daje `409 in_use` |
+| `POST /prep/sessions/{id}/dishes` | dodanie dania: `recipeId`, `portions` |
+| `PUT/DELETE /prep/dishes/{id}` | zmiana `portions` i `writtenOff`; usunięcie dania z przydziałami daje `409 in_use` |
+| `POST /prep/dishes/{id}/freeze` | `{"portions"}`: przenosi pozostałe porcje do zamrażalki; zwraca pozycję zamrażalki |
+| `GET /freezer`, `POST /freezer` | pozycje zamrażalki (`{"items"}`) i dodanie ręczne: `portions`, opcjonalnie `recipeId`, `label` (domyślnie tytuł przepisu), `frozenOn` (domyślnie dziś) |
+| `PUT/DELETE /freezer/{id}` | zamiana i usunięcie pozycji; usunięcie pozycji z przydziałami daje `409 in_use` |
+| `GET/PUT /household/settings` | ustawienia gospodarstwa: `{"portionsPerMeal"}` (1-20, domyślnie 2) |
 
 `{week}` to poniedziałek w formacie `YYYY-MM-DD`; inna data daje `422 invalid_input`.
 
@@ -60,6 +68,7 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 - Generowanie z zakresem dni (`from`, `to`) zastępuje wygenerowane pozycje całego tygodnia pozycjami z tego zakresu.
 - Przepis ma opcjonalne `nutrition` (`kcal`, `protein`, `carbs`, `fat` na porcję) i `ingredients[].productId` (zapamiętany produkt). Tylko w odpowiedziach `GET` są `nutritionPerPortion` (wartości wraz ze źródłem każdej) i `ingredients[].matchedProductId`; szkic importu też ma `nutrition`. Opis: [nutrition.md](nutrition.md).
 - Spiżarnia: ilości są zapisywane w jednostkach bazowych (`kg` jako `g`, `l` jako `ml`); `quantity` 0 jest dozwolone, pozycja ze `staple: true` nie ma ilości (`quantity: null`). Pozycja listy zakupów ma `haveQuantity` (zapas odjęty od wiersza, w jednostce pozycji; `null`, gdy brak) i `moved` (już przeniesiona do spiżarni); wiersz w pełni pokryty ma `quantity` 0. Zapis wpisu planu z `done: true` zdejmuje składniki ze spiżarni, a z `done: false` je zwraca; opis: [pantry.md](pantry.md).
+- Meal prep: wpis planu ma `kind` (`meal`, `prep`, `out`), `prepDishId`, `freezerItemId` i `outValues` (`null`, gdy nie dotyczy). Wpis `prep` bierze porcje z dania albo pozycji zamrażalki (nie więcej niż zostało; domyślnie `portionsPerMeal`), `out` ma opcjonalny opis w `freeText`, `servings` 1 i wartości na osobę. Zapis wpisu (`PUT`) zastępuje go w całości, więc trzeba odesłać także `kind` i powiązanie. „Zrobione" na wpisie `prep` nie rusza spiżarni, a kopiowanie tygodnia pomija wpisy `prep`. Opis: [mealprep.md](mealprep.md).
 - `sourceUrl` przepisu musi być adresem `http` lub `https` (albo pusty).
 
 Szczegóły formatu i ograniczeń importu: [import.md](import.md).
@@ -72,7 +81,7 @@ Szczegóły formatu i ograniczeń importu: [import.md](import.md).
 | `bad_request` | 400 | niepoprawny JSON w treści żądania |
 | `not_found` | 404 | zasób nie istnieje lub należy do innego gospodarstwa |
 | `conflict` | 409 | kopiowanie tygodnia na niepusty tydzień |
-| `in_use` | 409 | usunięcie przepisu użytego w planie |
+| `in_use` | 409 | usunięcie przepisu użytego w planie albo sesji, dania lub pozycji zamrażalki z przydziałami |
 | `last_admin` | 409 | zmiana roli lub usunięcie ostatniego administratora |
 | `forbidden` | 403 | brak uprawnień (np. członek zarządza rolami) |
 | `csrf` | 403 | brak lub błędny nagłówek `X-CSRF-Token` w żądaniu modyfikującym |

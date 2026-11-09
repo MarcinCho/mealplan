@@ -70,4 +70,12 @@ describe('useMealPrepStore', () => {
     await expect(s.removeSession('s1')).rejects.toBeInstanceOf(ApiError)
     expect(prepErrorText(await s.removeSession('s1').catch((e) => e))).toMatch(/przydzielone w planie/)
   })
+
+  it('savePortionsPerMeal puts the setting and keeps the answer', async () => {
+    const spy = stubRoutes({ 'PUT /api/v1/household/settings': { portionsPerMeal: 3 } })
+    const s = useMealPrepStore()
+    await s.savePortionsPerMeal(3)
+    expect(JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string)).toEqual({ portionsPerMeal: 3 })
+    expect(s.portionsPerMeal).toBe(3)
+  })
 })

@@ -12,6 +12,8 @@ import { errorText, t } from '../messages'
 import { useMembers } from '../stores/members'
 import { usePantry } from '../stores/pantry'
 import { reviewDue } from '../pantry'
+import { entryChip, entryTitle, staleSessions } from '../mealprep'
+import { useMealPrepStore } from '../stores/mealprep'
 import { useNutrition, type LogInput } from '../stores/nutrition'
 import { usePlan, type EntryInput } from '../stores/plan'
 import { useRecipes } from '../stores/recipes'
@@ -27,6 +29,8 @@ const members = useMembers()
 const session = useSession()
 const nutrition = useNutrition()
 const pantry = usePantry()
+const prep = useMealPrepStore()
+const staleCooking = computed(() => prep.loaded && staleSessions(prep.sessions, todayDate).length > 0)
 const needsReview = computed(() => pantry.loaded && reviewDue(pantry.reviewedAt, pantry.items.length, now))
 
 const now = new Date()
@@ -80,7 +84,7 @@ const cookCount = computed(() => {
 })
 
 function label(e: PlanEntry): string {
-  return e.recipeId ? (recipeTitle.value[e.recipeId] ?? '…') : e.freeText
+  return entryTitle(e, e.recipeId ? (recipeTitle.value[e.recipeId] ?? '…') : null)
 }
 const color = (id: string) => avatarColor(id, members.ids)
 
@@ -103,6 +107,7 @@ async function init() {
 onMounted(() => {
   void init()
   pantry.load().catch(() => {}) // the reminder is optional; stay silent on failure
+  prep.load().catch(() => {}) // so is this one
 })
 
 async function run(fn: () => Promise<unknown>) {
@@ -166,6 +171,8 @@ async function removeEntry() {
       <v-progress-linear v-if="!ready_ && !error" indeterminate class="mb-4" />
       <v-chip v-if="needsReview" :to="{ name: 'pantry' }" color="warning" variant="tonal" prepend-icon="mdi-fridge-outline" class="mb-4">{{ t.pantryReviewDue }}</v-chip>
 
+      <v-chip v-if="staleCooking" :to="{ name: 'prep' }" color="warning" variant="tonal" prepend-icon="mdi-pot-steam-outline" class="mb-4 ml-2" style="height: auto; white-space: normal">{{ t.prepStaleToday }}</v-chip>
+
       <template v-if="ready_">
         <section class="hero mb-5">
           <template v-if="hero.kind === 'next'">
@@ -177,6 +184,7 @@ async function removeEntry() {
                 {{ t.cooks }} {{ members.name(hero.entry.cookUserId) }}
               </span>
               <span class="hero-chip">{{ hero.entry.servings }} {{ t.servingsShort }}</span>
+              <span v-if="entryChip(hero.entry)" class="hero-chip">{{ entryChip(hero.entry) }}</span>
             </div>
             <div class="d-flex flex-wrap ga-2">
               <v-btn class="hero-btn" size="large" prepend-icon="mdi-check" @click="toggleDone(hero.entry)">{{ t.markDone }}</v-btn>
@@ -217,7 +225,7 @@ async function removeEntry() {
             <span class="tile"><v-icon :icon="SLOT_ICON[e.slot]" /></span>
             <div class="flex-grow-1" style="min-width: 0">
               <div class="font-weight-bold meal-title">{{ label(e) }}</div>
-              <div class="text-body-2 text-medium-emphasis">{{ slotTitle(e.slot) }} · {{ e.servings }} {{ t.servingsShort }}</div>
+              <div class="text-body-2 text-medium-emphasis">{{ slotTitle(e.slot) }} · {{ e.servings }} {{ t.servingsShort }}<template v-if="entryChip(e)"> · {{ entryChip(e) }}</template></div>
             </div>
             <v-chip v-if="tracking && mealOf(e)" size="small" variant="tonal" :title="t.mealNutritionTitle" @click.stop="openMeal(e)">{{ chipText(e) }}</v-chip>
             <span v-if="e.cookUserId" class="avatar" :style="{ background: color(e.cookUserId) }" :title="members.name(e.cookUserId)">

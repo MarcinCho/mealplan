@@ -102,6 +102,7 @@ export interface MealNutrition {
   entryId: string
   title: string
   slot: Slot
+  kind?: 'meal' | 'prep' | 'out'
   values: Macros
   sources: Record<keyof Macros, Source>
   approximate: boolean

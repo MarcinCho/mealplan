@@ -37,3 +37,18 @@ describe('allocationLabel', () => {
     expect(allocationLabel({ date: '2026-11-15', slot: 'dinner', servings: 1 })).toBe('Nd kolacja ×1')
   })
 })
+
+describe('entryChip and entryTitle', () => {
+  it('labels prep, freezer and out entries', async () => {
+    const { entryChip, entryTitle } = await import('./mealprep')
+    expect(entryChip({ kind: 'prep', prepDishId: 'd', freezerItemId: null })).toBe('z meal prepu')
+    expect(entryChip({ kind: 'prep', prepDishId: null, freezerItemId: 'f' })).toBe('z zamrażalki')
+    expect(entryChip({ kind: 'out', prepDishId: null, freezerItemId: null })).toBe('na mieście')
+    expect(entryChip({ kind: 'meal', prepDishId: null, freezerItemId: null })).toBe('')
+    expect(entryChip({ prepDishId: null, freezerItemId: null })).toBe('')
+    expect(entryTitle({ kind: 'out', freeText: '' }, null)).toBe('Na mieście')
+    expect(entryTitle({ kind: 'out', freeText: 'Pizzeria' }, null)).toBe('Pizzeria')
+    expect(entryTitle({ kind: 'meal', freeText: 'Zupa' }, null)).toBe('Zupa')
+    expect(entryTitle({ kind: 'prep', freeText: '' }, 'Curry')).toBe('Curry')
+  })
+})

@@ -1,4 +1,5 @@
-import type { PrepAllocation, PrepSession } from './api/types'
+import type { PlanEntry, PrepAllocation, PrepSession } from './api/types'
+import { t } from './messages'
 import { SLOTS } from './weeks'
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -40,4 +41,17 @@ const DAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So']
 export function allocationLabel(a: Pick<PrepAllocation, 'date' | 'slot' | 'servings'>): string {
   const slot = (SLOTS.find((s) => s.value === a.slot)?.title ?? a.slot).toLocaleLowerCase('pl-PL')
   return `${DAYS[parse(a.date).getDay()]} ${slot} ×${a.servings}`
+}
+
+// Small badge for entries that do not come from a recipe or free text.
+export function entryChip(e: Pick<PlanEntry, 'kind' | 'prepDishId' | 'freezerItemId'>): string {
+  if (e.kind === 'out') return t.chipOut
+  if (e.kind === 'prep') return e.freezerItemId ? t.chipFreezer : t.chipPrep
+  return ''
+}
+
+// What the plan shows as the entry's name: an eaten-out entry without a description is just "Na mieście".
+export function entryTitle(e: Pick<PlanEntry, 'kind' | 'freeText'>, recipeTitle: string | null): string {
+  if (e.kind === 'out' && !e.freeText.trim()) return t.entryOut
+  return recipeTitle ?? e.freeText
 }
