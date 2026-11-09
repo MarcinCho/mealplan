@@ -1,6 +1,6 @@
 import type { ThemeDefinition } from 'vuetify'
 
-export type PaletteId = 'classic' | 'plum' | 'earth' | 'navy'
+export type PaletteId = 'mealplan' | 'classic' | 'plum' | 'earth' | 'navy'
 export type Mode = 'light' | 'dark'
 export interface Choice {
   palette: PaletteId
@@ -20,13 +20,38 @@ const statusLight = { error: '#B3261E', info: '#1565C0', success: '#2E7D32', war
 const statusDark = { error: '#F2B8B5', info: '#90CAF9', success: '#A5D6A7', warning: '#FFCC80' }
 
 function define(dark: boolean, colors: Record<string, string>): ThemeDefinition {
-  return { dark, colors: { ...(dark ? statusDark : statusLight), ...colors } }
+  // accent defaults to the primary pair so every palette defines it (progress bars, highlights).
+  return {
+    dark,
+    colors: { ...(dark ? statusDark : statusLight), accent: colors.primary, 'on-accent': colors['on-primary'], ...colors },
+  }
 }
 
 // `bar` is the app bar color (own theme color so each palette can brand it).
-export const DEFAULT_PALETTE: PaletteId = 'earth'
+export const DEFAULT_PALETTE: PaletteId = 'mealplan'
 
+// `accent` is for decorative highlights (icons, progress bars), never for text.
 export const PALETTES: Palette[] = [
+  {
+    id: 'mealplan',
+    swatch: ['#233831', '#7B9A68', '#9EBA8D', '#EEF4EC'],
+    light: define(false, {
+      background: '#F8F9F7', surface: '#FFFFFF', 'surface-variant': '#EEF4EC',
+      primary: '#4F6B3F', 'on-primary': '#FFFFFF',
+      secondary: '#233831', 'on-secondary': '#EEF4EC',
+      bar: '#233831', 'on-bar': '#EEF4EC',
+      accent: '#7B9A68', 'on-accent': '#233831',
+      'on-background': '#233831', 'on-surface': '#233831',
+    }),
+    dark: define(true, {
+      background: '#141A17', surface: '#1E2622', 'surface-variant': '#2A3530',
+      primary: '#9DC289', 'on-primary': '#141A17',
+      secondary: '#EAEFE9', 'on-secondary': '#141A17',
+      bar: '#1E2622', 'on-bar': '#EAEFE9',
+      accent: '#9DC289', 'on-accent': '#141A17',
+      'on-background': '#EAEFE9', 'on-surface': '#EAEFE9',
+    }),
+  },
   {
     id: 'classic',
     swatch: ['#2E7D32', '#546E7A', '#81C784', '#FFFFFF'],
