@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Wydajność
+
+- Serwer wysyła pliki aplikacji skompresowane (gzip, jeśli przeglądarka go przyjmuje) i z `ETag`, więc `index.html` i pliki bez skrótu w nazwie są tylko sprawdzane, a nie pobierane od nowa.
+- Ikony są rysowane jako SVG tylko z 39 używanych (`web/src/icons.ts`, pilnowane testem) zamiast całej czcionki Material Design Icons: znikają czcionka (~400 KB woff2, ~3 MB innych formatów w binarce) i ~300 KB CSS.
+- Widoki poza „Dziś” i logowaniem ładują się przy pierwszym wejściu. Karta otwarta przed wdrożeniem przeładowuje się raz, gdy nie znajdzie starego pliku widoku.
+
 ### Meal prep
 
 - Zakładka „Meal prep": sesje gotowania z daniami (przepis i liczba porcji), przydział porcji do wpisów planu („z meal prepu"), wspólna zamrażalka gospodarstwa („z zamrażalki", „❄ Zamroź", ręczne dodawanie) i odpis porcji zjedzonych lub wyrzuconych (`/prep/*`, `/freezer*`). Sesja należy do tygodnia, na który się gotuje: weekendowa do następnego, inne dni do bieżącego (do zmiany przy sesji).
