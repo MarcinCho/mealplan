@@ -5,7 +5,7 @@ import AllocateDialog, { type AllocateSource } from '../components/AllocateDialo
 import EmptyState from '../components/EmptyState.vue'
 import PrepDishCard from '../components/PrepDishCard.vue'
 import { defaultWeek, sessionTitle, staleSessions } from '../mealprep'
-import { errorText, t } from '../messages'
+import { prepErrorText, t } from '../messages'
 import { useMealPrepStore } from '../stores/mealprep'
 import { useRecipes } from '../stores/recipes'
 import { isoDate, mondayOf, shiftWeek } from '../weeks'
@@ -22,7 +22,7 @@ async function run(fn: () => Promise<unknown>): Promise<boolean> {
     await fn()
     return true
   } catch (e) {
-    error.value = errorText(e)
+    error.value = prepErrorText(e)
     return false
   }
 }
@@ -42,10 +42,13 @@ type Dlg =
   | { k: 'freeze'; dish: PrepDish; portions: number }
   | { k: 'freezer'; id: string | null; recipeId: string | null; label: string; portions: number; frozenOn: string }
   | { k: 'confirm'; text: string; fn: () => Promise<unknown> }
-const dlg = ref<Dlg | null>(null)
-const open = computed({ get: () => dlg.value !== null, set: (v) => { if (!v) dlg.value = null } })
+const dlgState = ref<Dlg | null>(null)
+// Opening a dialog starts it with a clean error slate.
+const dlg = computed<Dlg | null>({ get: () => dlgState.value, set: (v) => { if (v) error.value = ''; dlgState.value = v } })
+const open = computed({ get: () => dlgState.value !== null, set: (v) => { if (!v) dlgState.value = null } })
 const alloc = ref<AllocateSource | null>(null)
 const allocOpen = computed({ get: () => alloc.value !== null, set: (v) => { if (!v) alloc.value = null } })
+const shownError = computed(() => error.value || prep.reloadError)
 
 function newSession() {
   dlg.value = { k: 'session', date: today, name: sessionTitle(today), week: defaultWeek(today), touchedName: false, touchedWeek: false }
@@ -103,8 +106,8 @@ async function submit() {
 const setCooked = (s: PrepSession, cooked: boolean | null) =>
   run(() => prep.updateSession(s.id, { date: s.date, name: s.name, week: s.week, cooked: Boolean(cooked) }))
 const confirm = (text: string, fn: () => Promise<unknown>) => (dlg.value = { k: 'confirm', text, fn })
-const allocDish = (d: PrepDish) => (alloc.value = { dishId: d.id, title: d.recipeTitle, remaining: d.remaining })
-const allocFreezer = (f: FreezerItem) => (alloc.value = { freezerItemId: f.id, title: f.title, remaining: f.remaining })
+const allocDish = (d: PrepDish) => ((error.value = ''), (alloc.value = { dishId: d.id, title: d.recipeTitle, remaining: d.remaining }))
+const allocFreezer = (f: FreezerItem) => ((error.value = ''), (alloc.value = { freezerItemId: f.id, title: f.title, remaining: f.remaining }))
 const addFreezer = () => (dlg.value = { k: 'freezer', id: null, recipeId: null, label: '', portions: 1, frozenOn: today })
 const editFreezer = (f: FreezerItem) =>
   (dlg.value = { k: 'freezer', id: f.id, recipeId: f.recipeId, label: f.title, portions: f.portions, frozenOn: f.frozenOn })
@@ -122,8 +125,8 @@ const editFreezer = (f: FreezerItem) =>
     <v-tab value="freezer">{{ t.prepTabFreezer }}</v-tab>
   </v-tabs>
 
-  <v-alert v-if="error" type="error" variant="tonal" class="mb-4">
-    {{ error }}
+  <v-alert v-if="shownError && !open" type="error" variant="tonal" class="mb-4">
+    {{ shownError }}
     <template v-if="!prep.loaded" #append><v-btn variant="text" @click="load">{{ t.retry }}</v-btn></template>
   </v-alert>
   <v-progress-linear v-if="!prep.loaded && !error" indeterminate class="mb-4" />
@@ -163,12 +166,11 @@ const editFreezer = (f: FreezerItem) =>
       <v-btn color="primary" @click="addFreezer">{{ t.freezerAdd }}</v-btn>
     </EmptyState>
     <v-card v-for="f in prep.freezer" :key="f.id" class="pa-3 mb-2">
-      <div class="d-flex align-center flex-wrap ga-2">
-        <div class="flex-grow-1">
-          <div class="font-weight-bold">{{ f.title }}</div>
-          <div class="text-body-2 text-medium-emphasis">{{ f.remaining }} {{ t.freezerLeft }} · {{ t.freezerFrozenOn }} {{ nl(f.frozenOn) }}</div>
-        </div>
+      <div class="font-weight-bold">{{ f.title }}</div>
+      <div class="text-body-2 text-medium-emphasis">{{ f.remaining }} {{ t.freezerLeft }} · {{ t.freezerFrozenOn }} {{ nl(f.frozenOn) }}</div>
+      <div class="d-flex align-center ga-2 mt-2">
         <v-btn size="small" color="primary" variant="tonal" :disabled="f.remaining < 1" @click="allocFreezer(f)">{{ t.prepAllocate }}</v-btn>
+        <v-spacer />
         <v-btn icon="mdi-pencil-outline" size="small" variant="text" :title="t.prepEditDish" @click="editFreezer(f)" />
         <v-btn icon="mdi-delete-outline" size="small" variant="text" :title="t.delete" @click="confirm(`${t.delete}: ${f.title}?`, () => prep.removeFreezer(f.id))" />
       </div>

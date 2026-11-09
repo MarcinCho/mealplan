@@ -334,3 +334,11 @@ export function errorText(e: unknown): string {
   }
   return 'Coś poszło nie tak. Spróbuj ponownie.'
 }
+
+// Like errorText, but with wording that fits meal prep deletes.
+export function prepErrorText(e: unknown): string {
+  if (e instanceof ApiError && e.code === 'in_use') {
+    return 'Nie można usunąć — porcje są już przydzielone w planie. Najpierw usuń te posiłki z planu.'
+  }
+  return errorText(e)
+}

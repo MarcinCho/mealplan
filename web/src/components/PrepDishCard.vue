@@ -18,9 +18,9 @@ const pct = (n: number) => `${Math.max(0, Math.min(100, (n / total.value) * 100)
 </script>
 
 <template>
-  <v-card variant="tonal" color="surface-variant" class="pa-3 mb-2">
+  <v-card variant="outlined" class="pa-3 mb-2">
     <div class="d-flex align-center ga-2">
-      <div class="font-weight-bold flex-grow-1">{{ dish.recipeTitle }}</div>
+      <div class="text-subtitle-1 flex-grow-1">{{ dish.recipeTitle }}</div>
       <span class="text-body-2">{{ dish.portions }} {{ t.prepPortions.toLowerCase() }}</span>
       <v-btn icon="mdi-pencil-outline" size="small" variant="text" :title="t.prepEditDish" @click="emit('edit')" />
       <v-btn icon="mdi-delete-outline" size="small" variant="text" :title="t.prepDishDelete" @click="emit('remove')" />
@@ -40,7 +40,7 @@ const pct = (n: number) => `${Math.max(0, Math.min(100, (n / total.value) * 100)
     </div>
     <div class="d-flex flex-wrap ga-2">
       <v-btn size="small" color="primary" variant="tonal" :disabled="dish.remaining < 1" @click="emit('allocate')">{{ t.prepAllocate }}</v-btn>
-      <v-btn size="small" variant="tonal" :disabled="dish.remaining < 1" @click="emit('freeze')">{{ t.prepFreeze }}</v-btn>
+      <v-btn size="small" color="secondary" variant="tonal" :disabled="dish.remaining < 1" @click="emit('freeze')">{{ t.prepFreeze }}</v-btn>
       <v-btn size="small" variant="text" @click="emit('writeoff')">{{ t.prepWriteOff }}</v-btn>
     </div>
   </v-card>

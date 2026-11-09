@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { ApiError } from '../api/client'
+import { prepErrorText } from '../messages'
 import { useMealPrepStore } from './mealprep'
 
 function stubRoutes(extra: Record<string, unknown> = {}) {
@@ -49,5 +51,23 @@ describe('useMealPrepStore', () => {
     expect(c).toContain('PUT /api/v1/prep/dishes/d1')
     expect(c).toContain('DELETE /api/v1/freezer/f1')
     expect(c.filter((x) => x === 'GET /api/v1/freezer')).toHaveLength(2)
+  })
+
+  it('a failed reload after a successful write is recorded, not thrown', async () => {
+    const spy = vi.fn(async (url: string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'GET') return new Response(JSON.stringify({ code: 'internal', message: 'boom' }), { status: 500 })
+      return new Response('{}', { status: 201 })
+    })
+    vi.stubGlobal('fetch', spy)
+    const s = useMealPrepStore()
+    await expect(s.addDish('s1', 'r1', 2)).resolves.toBeUndefined()
+    expect(s.reloadError).not.toBe('')
+  })
+
+  it('maps in_use deletes to the meal prep message', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ code: 'in_use', message: 'x' }), { status: 409 })))
+    const s = useMealPrepStore()
+    await expect(s.removeSession('s1')).rejects.toBeInstanceOf(ApiError)
+    expect(prepErrorText(await s.removeSession('s1').catch((e) => e))).toMatch(/przydzielone w planie/)
   })
 })
