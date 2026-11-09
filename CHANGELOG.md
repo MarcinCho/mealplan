@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Meal prep
+
+- Zakładka „Meal prep": sesje gotowania z daniami (przepis i liczba porcji), przydział porcji do wpisów planu („z meal prepu"), wspólna zamrażalka gospodarstwa („z zamrażalki", „❄ Zamroź", ręczne dodawanie) i odpis porcji zjedzonych lub wyrzuconych (`/prep/*`, `/freezer*`). Sesja należy do tygodnia, na który się gotuje: weekendowa do następnego, inne dni do bieżącego (do zmiany przy sesji).
+- „Ugotowane" na sesji zdejmuje ze spiżarni składniki wszystkich porcji dań naraz; późniejsza zmiana dań nie odejmuje drugi raz (poprawka w przeglądzie spiżarni). „Zrobione" na wpisach z meal prepu nigdy nie rusza spiżarni. Usunięcie sesji, dania lub pozycji zamrażalki z przydziałami jest odrzucane (`in_use`); kopiowanie tygodnia pomija wpisy z meal prepu. Lista zakupów liczy składniki na wszystkie porcje dań sesji.
+- Wpisy planu mają `kind` (`meal`, `prep`, `out`), `prepDishId`, `freezerItemId` i `outValues`; nowy rodzaj „Na mieście" z opcjonalnym opisem i wartościami na osobę, bez kucharza i bez zakupów.
+- Ustawienie gospodarstwa „Porcji na posiłek" (`/household/settings`, 1-20, domyślnie 2) na ekranie Domownicy; ekran „Dziś" przypomina o nieprzydzielonych porcjach sesji starszej niż 4 dni. Opis: `docs/mealprep.md`.
+
+### Spiżarnia
+
+- Spiżarnia gospodarstwa (`/pantry`, `/pantry/review`): pozycje wskazują produkty (nazwa może rozwiązać się przez alias, nieznana tworzy produkt), ilości w jednostkach bazowych (kg jako g, l jako ml), ilość 0, stały zapas bez ilości, data ważności, przyciski +/- z opóźnionym, szeregowanym zapisem i miesięczny przegląd z przypomnieniem na ekranie „Dziś" po ponad 30 dniach.
+- „Zrobione" na posiłku z przepisu zdejmuje składniki przeskalowane do porcji, tylko w tej samej jednostce bazowej i nie poniżej 0; zapisuje, ile zdjęto, a cofnięcie zwraca dokładnie to. Ponowny zapis nie odejmuje drugi raz, a usunięcie zrobionego wpisu nie zwraca zapasu. Błąd `pantry_failed` oznacza zapisany posiłek bez aktualizacji spiżarni (ponowny zapis naprawia).
+- Lista zakupów pomija zrobione posiłki i odejmuje zapas per produkt i jednostka bazowa: pozycje `haveQuantity` („masz w domu", „kup X (masz Y)"), stałe zapasy są pomijane. „Przenieś kupione do spiżarni" (`POST /shopping/move-to-pantry`, pole `moved`) dodaje odhaczone pozycje raz. Opis: `docs/pantry.md`.
+- Ograniczenia: brak przeliczania łyżek i szklanek na g/ml, brak rezerwacji zapasu między tygodniami, dwie nazwy jednego produktu to dwa wiersze listy, dowolne jednostki nigdy nie są dopasowywane.
+- Import: linia `Wartości na porcję` z „(w tym nasycone …)", „z czego" lub „of which" przy tłuszczu nie gubi już wartości tłuszczu (segment jest ucinany zamiast pomijany).
+
 ### Wygląd
 
 - Nowa domyślna paleta „Mealplan" (zieleń szałwiowa i ciemna zieleń, jasny i ciemny motyw) oraz logo: napis w nagłówku i na ekranach logowania, konfiguracji i zaproszenia (wariant dobierany do tła), ikona na telefonie i favicon zależny od motywu systemu. Przyciski mają ciemniejszą zieleń (#4F6B3F) niż zieleń marki (#7B9A68), żeby biały tekst spełniał kontrast WCAG AA; zieleń marki jest kolorem akcentu (paski postępu, ikony). Zapisany wybór palety użytkownika nie zmienia się.

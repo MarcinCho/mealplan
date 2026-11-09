@@ -57,6 +57,10 @@ export interface PlanEntry {
   servings: number
   cookUserId: string | null
   done: boolean
+  kind?: 'meal' | 'prep' | 'out'
+  prepDishId?: string | null
+  freezerItemId?: string | null
+  outValues?: Macros | null
 }
 
 export interface ShoppingItem {
@@ -67,6 +71,8 @@ export interface ShoppingItem {
   unit: string
   checked: boolean
   manual: boolean
+  haveQuantity?: number | null
+  moved?: boolean
 }
 
 export interface Macros {
@@ -96,6 +102,7 @@ export interface MealNutrition {
   entryId: string
   title: string
   slot: Slot
+  kind?: 'meal' | 'prep' | 'out'
   values: Macros
   sources: Record<keyof Macros, Source>
   approximate: boolean
@@ -130,4 +137,60 @@ export interface RecipeNutrition {
   sources: Record<keyof Macros, Source>
   approximate: boolean
   unmatched: string[]
+}
+
+export interface PantryItem {
+  id: string
+  productId: string
+  name: string
+  quantity: number | null
+  unit: string
+  expiresOn: string // YYYY-MM-DD or empty
+  staple: boolean
+}
+
+export interface PantryList {
+  items: PantryItem[]
+  reviewedAt: string | null
+}
+
+export interface PrepAllocation {
+  entryId: string
+  date: string
+  slot: Slot
+  servings: number
+}
+
+export interface PrepDish {
+  id: string
+  recipeId: string
+  recipeTitle: string
+  portions: number
+  writtenOff: number
+  allocated: number
+  frozen: number
+  remaining: number
+  allocations: PrepAllocation[]
+}
+
+export interface PrepSession {
+  id: string
+  date: string
+  name: string
+  week: string
+  cooked: boolean
+  remaining: number
+  dishes: PrepDish[]
+}
+
+export interface FreezerItem {
+  id: string
+  dishId: string | null
+  recipeId: string | null
+  title: string
+  portions: number
+  allocated: number
+  remaining: number
+  frozenOn: string
+  allocations: PrepAllocation[]
 }

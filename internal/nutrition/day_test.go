@@ -142,3 +142,26 @@ func TestEmptyDayIsKnownZero(t *testing.T) {
 		t.Fatalf("%+v", d)
 	}
 }
+
+func TestDayOutEntryValues(t *testing.T) {
+	entries := []domain.PlanEntry{{ID: "o1", Slot: domain.SlotDinner, Kind: domain.EntryOut, FreeText: "Pizza", Servings: 1, OutValues: domain.Macros{Kcal: f(800)}}}
+	d := BuildDay("2026-11-03", domain.Macros{}, entries, nil, nil, nil, NewMatcher(nil))
+	m := d.Meals[0]
+	if m.Kind != domain.EntryOut || m.Title != "Pizza" || m.Missing || d.MissingMeals != 0 {
+		t.Fatalf("%+v", m)
+	}
+	if m.Sources.Kcal != SourceRecipe || m.Sources.Protein != SourceMissing {
+		t.Fatalf("sources %+v", m.Sources)
+	}
+	if d.Total.Kcal == nil || *d.Total.Kcal != 800 || !d.Incomplete.Protein || d.Incomplete.Kcal {
+		t.Fatalf("total %+v inc %+v", d.Total, d.Incomplete)
+	}
+}
+
+func TestDayOutEntryNoValuesMissing(t *testing.T) {
+	entries := []domain.PlanEntry{{ID: "o1", Slot: domain.SlotDinner, Kind: domain.EntryOut, Servings: 1}}
+	d := BuildDay("2026-11-03", domain.Macros{}, entries, nil, nil, nil, NewMatcher(nil))
+	if !d.Meals[0].Missing || d.MissingMeals != 1 || d.Total.Kcal != nil {
+		t.Fatalf("%+v %+v", d.Meals[0], d)
+	}
+}

@@ -1,4 +1,5 @@
 import { ApiError } from './api/client'
+import { plural } from './nutrition'
 
 export const t = {
   appName: 'Mealplan',
@@ -71,6 +72,21 @@ export const t = {
   entryRecipe: 'Przepis',
   entryFreeText: 'Wolny tekst',
   entryType: 'Rodzaj wpisu',
+  entryPrep: 'Z meal prepu',
+  entryOut: 'Na mieście',
+  entryPrepSource: 'Danie lub porcje z zamrażalki',
+  entryPrepLeft: 'zostało',
+  entryPrepNone: 'Brak porcji do przydzielenia. Dodaj sesję w zakładce Meal prep.',
+  entryOutDescription: 'Opis (opcjonalnie)',
+  entryOutValues: 'Wartości na osobę (opcjonalnie)',
+  chipPrep: 'z meal prepu',
+  chipFreezer: 'z zamrażalki',
+  chipOut: 'na mieście',
+  prepStaleToday: 'Masz nieprzydzielone porcje z gotowania — zamroź je albo rozdysponuj',
+  portionsPerMeal: 'Porcji na posiłek',
+  portionsPerMealHint: 'Tyle porcji z meal prepu zapisuje się domyślnie w jednym posiłku (1–20).',
+  settingSaved: 'Zapisano',
+  nutritionGiven: 'wpisane',
   entryCook: 'Kto gotuje',
   entryNoCook: 'Nikt',
   entryServings: 'Porcje',
@@ -187,8 +203,92 @@ export const t = {
   macroProtein: 'Białko',
   macroCarbs: 'Węglowodany',
   macroFat: 'Tłuszcz',
+  navPantry: 'Spiżarnia',
+  navPrep: 'Meal prep',
+  prepTitle: 'Meal prep',
+  prepTabSessions: 'Sesje',
+  prepTabFreezer: 'Zamrażalka',
+  prepNewSession: 'Nowa sesja',
+  prepSessionDate: 'Data',
+  prepSessionName: 'Nazwa',
+  prepSessionWeek: 'Tydzień zakupów',
+  prepWeekFrom: 'tydzień od',
+  prepCooked: 'Ugotowane',
+  prepEmpty: 'Brak sesji gotowania',
+  prepEmptyHint: 'Dodaj sesję, aby zaplanować porcje na kilka dni.',
+  prepStale: 'Masz porcje z dawnych sesji, które nie trafiły do planu ani zamrażalki.',
+  prepAddDish: 'Dodaj danie',
+  prepRecipe: 'Przepis',
+  prepPortions: 'Porcje',
+  prepAllocate: 'Przydziel',
+  prepFreeze: '❄ Zamroź',
+  prepFreezePortions: 'Ile porcji zamrozić',
+  prepWriteOff: 'Zjedzone/wyrzucone',
+  prepWrittenOff: 'Zjedzone/wyrzucone (porcje)',
+  prepEditDish: 'Edytuj porcje',
+  prepInPlan: 'w planie',
+  prepInFreezer: 'w zamrażalce',
+  prepLeft: 'pozostałe',
+  prepSessionDelete: 'Usuń sesję',
+  prepDishDelete: 'Usuń danie',
+  freezerEmpty: 'Zamrażalka jest pusta',
+  freezerEmptyHint: 'Zamroź porcje z sesji gotowania albo dodaj coś ręcznie.',
+  freezerAdd: 'Dodaj do zamrażalki',
+  freezerLabel: 'Nazwa (gdy bez przepisu)',
+  freezerFrozenOn: 'Zamrożone',
+  freezerLeft: 'zostało',
+  allocateTitle: 'Przydziel do planu',
+  allocateDate: 'Dzień',
+  allocateServings: 'Porcje',
+  allocateAvailable: 'Dostępne porcje',
+  add: 'Dodaj',
+  pantry: 'Spiżarnia',
+  pantrySearch: 'Szukaj w spiżarni',
+  pantryEmpty: 'Spiżarnia jest pusta',
+  pantryEmptyHint: 'Dodaj produkty, które masz w domu, a lista zakupów je uwzględni.',
+  pantryAdd: 'Dodaj',
+  pantryAddTitle: 'Dodaj do spiżarni',
+  pantryStaple: 'stały zapas',
+  pantryStapleSwitch: 'Stały zapas',
+  pantryExpires: 'Ważne do',
+  pantryExpired: 'Przeterminowane',
+  pantryExpiresShort: 'do',
+  pantryQuantityRequired: 'Podaj ilość (od 0 do 1 000 000) albo zaznacz „Stały zapas”.',
+  pantryDecrease: 'Zmniejsz ilość',
+  pantryIncrease: 'Zwiększ ilość',
+  pantryZeroTitle: 'Skończyło się?',
+  pantryDeleteAtZero: 'Usuń ze spiżarni',
+  pantryKeepZero: 'Zostaw',
+  pantryNoMatches: 'Brak pasujących pozycji.',
+  pantryReview: 'Przegląd',
+  pantryReviewTitle: 'Przegląd spiżarni',
+  pantryReviewDue: 'Czas na przegląd spiżarni',
+  pantryReviewQuantity: 'Ilość',
+  pantryReviewSame: 'Bez zmian',
+  pantryReviewSave: 'Zapisz ilość',
+  pantryReviewNone: 'Nie mamy',
+  pantryReviewAddMissing: 'Dodaj brakujący',
+  pantryReviewFinish: 'Zakończ przegląd',
+  pantryReviewAllSeen: 'To już wszystkie pozycje.',
+  pantryReviewEmpty: 'Nie ma nic do przeglądu.',
+  pantryReviewDone: 'Przegląd zakończony',
+  pantryLastReview: 'Ostatni przegląd',
+  pantryNeverReviewed: 'Jeszcze nie było przeglądu',
+  haveAtHome: 'masz w domu',
+  buyPartial: 'kup',
+  haveShort: 'masz',
+  inPantryBadge: 'w spiżarni',
+  moveToPantry: 'Przenieś kupione do spiżarni',
   skillDownload: 'Pobierz SKILL.md',
   skillInstall: 'Zapisz plik w folderze mealplan-recipe-format w katalogu umiejętności Claude, np. ~/.claude/skills/mealplan-recipe-format/SKILL.md.',
+}
+
+export function movedText(n: number): string {
+  return `Przeniesiono ${n} ${plural(n, 'pozycję', 'pozycje', 'pozycji')}`
+}
+
+export function undonePreviousText(n: number): string {
+  return `W poprzednim tygodniu ${n} ${plural(n, 'posiłek', 'posiłki', 'posiłków')} nie oznaczono jako zrobione — część zapasów może być już na nie potrzebna.`
 }
 
 const errors: Record<string, string> = {
@@ -198,6 +298,7 @@ const errors: Record<string, string> = {
   login_taken: 'Ten login jest już zajęty.',
   password_length: 'Hasło musi mieć od 12 do 128 znaków.',
   invalid_input: 'Sprawdź poprawność wpisanych danych.',
+  pantry_failed: 'Zapisano posiłek, ale nie udało się zaktualizować spiżarni. Spróbuj ponownie.',
   forbidden: 'Brak uprawnień do tej operacji.',
   unauthenticated: 'Sesja wygasła. Zaloguj się ponownie.',
   csrf: 'Sesja jest nieaktualna. Odśwież stronę i spróbuj ponownie.',
@@ -222,6 +323,15 @@ const productErrors: Record<string, string> = {
   conflict: 'Produkt o takiej nazwie lub aliasie już istnieje.',
 }
 
+const pantryErrors: Record<string, string> = {
+  conflict: 'W spiżarni jest już pozycja z tą jednostką. Zmień ilość tamtej pozycji albo usuń jedną z nich.',
+}
+
+export function pantryErrorText(e: unknown): string {
+  if (e instanceof ApiError && pantryErrors[e.code]) return pantryErrors[e.code]
+  return errorText(e)
+}
+
 // Like errorText, but with wording that fits the product database.
 export function productErrorText(e: unknown): string {
   if (e instanceof ApiError && productErrors[e.code]) return productErrors[e.code]
@@ -238,4 +348,12 @@ export function errorText(e: unknown): string {
     return errors[e.code] ?? e.message
   }
   return 'Coś poszło nie tak. Spróbuj ponownie.'
+}
+
+// Like errorText, but with wording that fits meal prep deletes.
+export function prepErrorText(e: unknown): string {
+  if (e instanceof ApiError && e.code === 'in_use') {
+    return 'Nie można usunąć — porcje są już przydzielone w planie. Najpierw usuń te posiłki z planu.'
+  }
+  return errorText(e)
 }

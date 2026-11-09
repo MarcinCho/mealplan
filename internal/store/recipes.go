@@ -184,6 +184,12 @@ func (s *Store) DeleteRecipe(ctx context.Context, householdID, id string) error 
 		if n > 0 {
 			return ErrInUse
 		}
+		if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COUNT(*) FROM prep_dish WHERE recipe_id = ? AND household_id = ?`), id, householdID).Scan(&n); err != nil {
+			return err
+		}
+		if n > 0 {
+			return ErrInUse
+		}
 		return s.exec(ctx, tx, `DELETE FROM recipe WHERE id = ? AND household_id = ?`, id, householdID)
 	})
 }

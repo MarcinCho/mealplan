@@ -5,16 +5,20 @@ import type { ShoppingItem } from '../api/types'
 interface ListResponse {
   week: string
   items: ShoppingItem[]
+  previousWeekUndone?: number
 }
+
+export const isCovered = (i: ShoppingItem) => i.quantity === 0 && (i.haveQuantity ?? 0) > 0
 
 // Week most recently requested by load/generate; results for any other week are stale and dropped.
 let requested = ''
 
 export const useShopping = defineStore('shopping', {
-  state: () => ({ week: '', items: [] as ShoppingItem[] }),
+  state: () => ({ week: '', items: [] as ShoppingItem[], previousWeekUndone: 0 }),
   getters: {
-    open: (s) => s.items.filter((i) => !i.checked),
-    done: (s) => s.items.filter((i) => i.checked),
+    open: (s) => s.items.filter((i) => !i.checked && !isCovered(i)),
+    done: (s) => s.items.filter((i) => i.checked && !isCovered(i)),
+    covered: (s) => s.items.filter(isCovered),
   },
   actions: {
     async load(week: string) {
@@ -23,6 +27,7 @@ export const useShopping = defineStore('shopping', {
       if (requested !== week) return
       this.week = res.week
       this.items = res.items
+      this.previousWeekUndone = res.previousWeekUndone ?? 0
     },
     async generate(week: string, range?: { from: string; to: string }) {
       requested = week
@@ -30,6 +35,7 @@ export const useShopping = defineStore('shopping', {
       if (requested !== week) return
       this.week = res.week
       this.items = res.items
+      this.previousWeekUndone = res.previousWeekUndone ?? 0
     },
     async addManual(name: string, quantity: number | null, unit: string) {
       const week = this.week
@@ -53,6 +59,12 @@ export const useShopping = defineStore('shopping', {
       const body = { ...input, quantity: (input.quantity as unknown) === '' ? null : input.quantity }
       await api('PATCH', `/shopping/items/${encodeURIComponent(id)}`, body)
       this.items = this.items.map((i) => (i.id === id ? { ...i, ...body } : i))
+    },
+    async moveToPantry(week: string): Promise<number> {
+      const res = await api<{ moved: number }>('POST', '/shopping/move-to-pantry', { week })
+      // Reload only if the user is still on the moved week; otherwise a late load would clobber the visible one.
+      if (requested === week) await this.load(week)
+      return res.moved
     },
     async remove(id: string) {
       await api('DELETE', `/shopping/items/${encodeURIComponent(id)}`)

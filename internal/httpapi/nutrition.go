@@ -16,6 +16,7 @@ type mealJSON struct {
 	EntryID     string     `json:"entryId"`
 	Title       string     `json:"title"`
 	Slot        string     `json:"slot"`
+	Kind        string     `json:"kind"`
 	Values      macrosJSON `json:"values"`
 	Sources     sourcesOut `json:"sources"`
 	Approximate bool       `json:"approximate"`
@@ -64,7 +65,7 @@ func toDayJSON(d nutrition.DaySummary) dayJSON {
 		Meals: make([]mealJSON, 0, len(d.Meals)), Log: make([]logJSON, 0, len(d.Log)),
 		MissingMeals: d.MissingMeals, MissingLog: d.MissingLog, Incomplete: incompleteJSON(d.Incomplete), Approximate: d.Approximate}
 	for _, m := range d.Meals {
-		out.Meals = append(out.Meals, mealJSON{EntryID: m.EntryID, Title: m.Title, Slot: string(m.Slot), Values: macrosJSON(m.Values),
+		out.Meals = append(out.Meals, mealJSON{EntryID: m.EntryID, Title: m.Title, Slot: string(m.Slot), Kind: string(kindOrMeal(m.Kind)), Values: macrosJSON(m.Values),
 			Sources:     sourcesOut{string(m.Sources.Kcal), string(m.Sources.Protein), string(m.Sources.Carbs), string(m.Sources.Fat)},
 			Approximate: m.Approximate, Missing: m.Missing})
 	}

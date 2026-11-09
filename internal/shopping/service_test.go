@@ -3,11 +3,18 @@ package shopping_test
 import (
 	"context"
 	"errors"
+	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"mealplan/internal/domain"
+	"mealplan/internal/mealprep"
+	"mealplan/internal/pantry"
 	"mealplan/internal/plan"
+	"mealplan/internal/product"
 	"mealplan/internal/recipe"
 	"mealplan/internal/shopping"
 	"mealplan/internal/store"
@@ -19,6 +26,8 @@ type fx struct {
 	plans *plan.Service
 	rec   *recipe.Service
 	st    *store.Store
+	pan   *pantry.Service
+	mp    *mealprep.Service
 }
 
 const hid = "h1"
@@ -35,7 +44,14 @@ func newFx(t *testing.T) *fx {
 		t.Fatal(err)
 	}
 	now := func() time.Time { return time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC) }
-	return &fx{svc: shopping.New(st, st), plans: plan.New(st, st), rec: recipe.New(st, now), st: st}
+	prods := product.New(st, now)
+	pan := pantry.New(st, st, prods, now)
+	svc := shopping.New(st, st, pan, prods)
+	svc.SetSessions(st)
+	mp := mealprep.New(st, st, nil, now)
+	ps := plan.New(st, st)
+	ps.SetPortions(mp)
+	return &fx{svc: svc, plans: ps, rec: recipe.New(st, now), st: st, pan: pan, mp: mp}
 }
 
 func (f *fx) cook(t *testing.T, title string, servings int, ings ...recipe.IngredientInput) string {
@@ -204,5 +220,322 @@ func TestGenerateIgnoresForeignHouseholdData(t *testing.T) {
 	items, err := f.svc.Generate(ctx, "h2", wk, "", "")
 	if err != nil || len(items) != 0 {
 		t.Fatalf("other household must get an empty list: %v %+v", err, items)
+	}
+}
+
+func TestGenerateKeepsCoveredRowsAndCheckedState(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	r := f.cook(t, "Naleśniki", 1, recipe.IngredientInput{Name: "Mąka", Quantity: q(500), Unit: "g"}, recipe.IngredientInput{Name: "Mleko", Quantity: q(300), Unit: "ml"})
+	f.plan(t, "2026-11-03", r, 1)
+	if _, err := f.pan.Add(ctx, hid, pantry.Input{Name: "Mąka", Quantity: q(2), Unit: "kg"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pan.Add(ctx, hid, pantry.Input{Name: "Mleko", Quantity: q(100), Unit: "ml"}); err != nil {
+		t.Fatal(err)
+	}
+	items, err := f.svc.Generate(ctx, hid, wk, "", "")
+	if err != nil || len(items) != 2 {
+		t.Fatalf("generate: %v %+v", err, items)
+	}
+	flour := byName(items, "mąka")
+	if flour == nil || flour.Quantity == nil || *flour.Quantity != 0 || flour.HaveQuantity == nil || *flour.HaveQuantity != 500 || flour.Unit != "g" {
+		t.Fatalf("covered flour must stay with have: %+v", flour)
+	}
+	milk := byName(items, "mleko")
+	if milk == nil || *milk.Quantity != 200 || milk.HaveQuantity == nil || *milk.HaveQuantity != 100 {
+		t.Fatalf("partial milk: %+v", milk)
+	}
+	if err := f.svc.SetChecked(ctx, hid, flour.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	again, _ := f.svc.Generate(ctx, hid, wk, "", "")
+	if c := byName(again, "mąka"); c == nil || c.ID != flour.ID || !c.Checked {
+		t.Fatalf("covered row must keep id and checked: %+v", c)
+	}
+}
+
+func TestGenerateSkipsDoneAndStaple(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	r := f.cook(t, "Zupa", 1, recipe.IngredientInput{Name: "Sól"}, recipe.IngredientInput{Name: "Marchew", Quantity: q(2), Unit: "szt"})
+	f.plan(t, "2026-11-03", r, 1)
+	if _, err := f.pan.Add(ctx, hid, pantry.Input{Name: "Sól", Staple: true, Unit: "szt"}); err != nil {
+		t.Fatal(err)
+	}
+	items, err := f.svc.Generate(ctx, hid, wk, "", "")
+	if err != nil || len(items) != 1 || items[0].NormalizedName != "marchew" {
+		t.Fatalf("staple must be skipped: %v %+v", err, items)
+	}
+}
+
+func TestMoveCheckedToPantryOnce(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	r := f.cook(t, "Zupa", 1, recipe.IngredientInput{Name: "Marchew", Quantity: q(2), Unit: "szt"}, recipe.IngredientInput{Name: "Pory", Quantity: q(1), Unit: "szt"})
+	f.plan(t, "2026-11-03", r, 1)
+	items, _ := f.svc.Generate(ctx, hid, wk, "", "")
+	man, err := f.svc.AddManual(ctx, hid, wk, shopping.ItemInput{Name: "Kasza bulgur", Quantity: q(0.5), Unit: "kg"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{man.ID, byName(items, "marchew").ID} {
+		if err := f.svc.SetChecked(ctx, hid, id, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	n, err := f.svc.MoveCheckedToPantry(ctx, hid, wk)
+	if err != nil || n != 2 {
+		t.Fatalf("move: %d %v", n, err)
+	}
+	stock := func() map[string]float64 {
+		list, _, err := f.pan.List(ctx, hid)
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := map[string]float64{}
+		for _, it := range list {
+			m[it.Name+"|"+it.Unit] = *it.Quantity
+		}
+		return m
+	}
+	before := stock()
+	if len(before) != 2 {
+		t.Fatalf("pantry: %+v", before)
+	}
+	var bulgur float64
+	for k, v := range before {
+		if strings.Contains(strings.ToLower(k), "bulgur") && strings.HasSuffix(k, "|g") {
+			bulgur = v
+		}
+	}
+	if bulgur != 500 {
+		t.Fatalf("bulgur must be 500 g: %+v", before)
+	}
+	n, err = f.svc.MoveCheckedToPantry(ctx, hid, wk)
+	if err != nil || n != 0 {
+		t.Fatalf("second move: %d %v", n, err)
+	}
+	after := stock()
+	for k, v := range before {
+		if after[k] != v {
+			t.Fatalf("stock changed: %+v -> %+v", before, after)
+		}
+	}
+}
+
+func TestMoveCheckedSkipsCoveredAndNoQuantity(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	r := f.cook(t, "Zupa", 1, recipe.IngredientInput{Name: "Mąka", Quantity: q(100), Unit: "g"}, recipe.IngredientInput{Name: "Pieprz"})
+	f.plan(t, "2026-11-03", r, 1)
+	if _, err := f.pan.Add(ctx, hid, pantry.Input{Name: "Mąka", Quantity: q(1), Unit: "kg"}); err != nil {
+		t.Fatal(err)
+	}
+	items, _ := f.svc.Generate(ctx, hid, wk, "", "")
+	for _, it := range items {
+		if err := f.svc.SetChecked(ctx, hid, it.ID, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n, err := f.svc.MoveCheckedToPantry(ctx, hid, wk); err != nil || n != 0 {
+		t.Fatalf("covered/no-quantity must not move: %d %v", n, err)
+	}
+}
+
+type failingPantry struct {
+	shopping.Pantry
+	failName string
+	fail     bool
+}
+
+func (p *failingPantry) Add(ctx context.Context, hid string, in pantry.Input) (domain.PantryItem, error) {
+	if p.fail && in.Name == p.failName {
+		return domain.PantryItem{}, errors.New("boom")
+	}
+	return p.Pantry.Add(ctx, hid, in)
+}
+
+func TestMoveCheckedFailureReleasesOnlyFailedItem(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	fp := &failingPantry{Pantry: f.pan, failName: "Pory", fail: true}
+	prods := product.New(f.st, nil)
+	svc := shopping.New(f.st, f.st, fp, prods)
+	var ids []string
+	for _, n := range []string{"Marchew", "Pory", "Seler"} {
+		it, err := svc.AddManual(ctx, hid, wk, shopping.ItemInput{Name: n, Quantity: q(1), Unit: "szt"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, it.ID)
+		if err := svc.SetChecked(ctx, hid, it.ID, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	n, err := svc.MoveCheckedToPantry(ctx, hid, wk)
+	if err == nil || n != 2 {
+		t.Fatalf("partial failure: %d %v", n, err)
+	}
+	items, _ := svc.List(ctx, hid, wk)
+	for _, it := range items {
+		if it.Moved != (it.NormalizedName != "pory") {
+			t.Fatalf("moved flags: %+v", items)
+		}
+	}
+	fp.fail = false
+	if n, err := svc.MoveCheckedToPantry(ctx, hid, wk); err != nil || n != 1 {
+		t.Fatalf("retry: %d %v", n, err)
+	}
+	list, _, _ := f.pan.List(ctx, hid)
+	if len(list) != 3 {
+		t.Fatalf("each item once: %+v", list)
+	}
+	for _, it := range list {
+		if *it.Quantity != 1 {
+			t.Fatalf("doubled: %+v", list)
+		}
+	}
+}
+
+func TestMoveCheckedParallelAddsOnce(t *testing.T) {
+	if os.Getenv("MEALPLAN_TEST_DRIVER") != "postgres" {
+		t.Skip("parallel claim test needs Postgres")
+	}
+	f := newFx(t)
+	ctx := context.Background()
+	for _, n := range []string{"Marchew", "Pory", "Seler"} {
+		it, _ := f.svc.AddManual(ctx, hid, wk, shopping.ItemInput{Name: n, Quantity: q(1), Unit: "szt"})
+		_ = f.svc.SetChecked(ctx, hid, it.ID, true)
+	}
+	var wg sync.WaitGroup
+	var total atomic.Int64
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			n, _ := f.svc.MoveCheckedToPantry(ctx, hid, wk)
+			total.Add(int64(n))
+		}()
+	}
+	wg.Wait()
+	list, _, _ := f.pan.List(ctx, hid)
+	if total.Load() != 3 || len(list) != 3 {
+		t.Fatalf("total %d, pantry %+v", total.Load(), list)
+	}
+	for _, it := range list {
+		if *it.Quantity != 1 {
+			t.Fatalf("doubled: %+v", list)
+		}
+	}
+}
+
+func (f *fx) planIn(t *testing.T, week, date string, in plan.EntryInput) {
+	t.Helper()
+	in.Date, in.Slot = date, domain.SlotDinner
+	if _, err := f.plans.Add(context.Background(), hid, week, in); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPreviousWeekUndoneCountsOnlyNotDoneRecipeEntries(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	r := f.cook(t, "Zupa", 1, recipe.IngredientInput{Name: "Marchew", Quantity: q(2), Unit: "szt"})
+	prev := "2026-10-26"
+	if n, err := f.svc.PreviousWeekUndone(ctx, hid, wk); err != nil || n != 0 {
+		t.Fatalf("empty: %d %v", n, err)
+	}
+	f.planIn(t, prev, "2026-10-26", plan.EntryInput{RecipeID: r})
+	f.planIn(t, prev, "2026-11-01", plan.EntryInput{RecipeID: r})
+	f.planIn(t, prev, "2026-10-28", plan.EntryInput{RecipeID: r, Done: true})
+	f.planIn(t, prev, "2026-10-29", plan.EntryInput{FreeText: "pizza"})
+	f.planIn(t, wk, "2026-11-03", plan.EntryInput{RecipeID: r}) // current week does not count
+	n, err := f.svc.PreviousWeekUndone(ctx, hid, wk)
+	if err != nil || n != 2 {
+		t.Fatalf("want 2, got %d %v", n, err)
+	}
+	if _, err := f.svc.PreviousWeekUndone(ctx, hid, "bad"); err == nil {
+		t.Fatal("invalid week must fail")
+	}
+}
+
+func TestMoveCheckedUsesLinkedProduct(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	now := func() time.Time { return time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC) }
+	prods := product.New(f.st, now)
+	p, err := prods.Create(ctx, hid, product.Input{Name: "mąka amarantusowa"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := f.cook(t, "Placek", 1, recipe.IngredientInput{Name: "mąki", Quantity: q(500), Unit: "g", ProductID: p.ID})
+	f.plan(t, "2026-11-03", r, 1)
+	items, err := f.svc.Generate(ctx, hid, wk, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	it := byName(items, "mąki")
+	if it == nil {
+		t.Fatalf("items: %+v", items)
+	}
+	if err := f.svc.SetChecked(ctx, hid, it.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := f.svc.MoveCheckedToPantry(ctx, hid, wk); err != nil || n != 1 {
+		t.Fatalf("move: %d %v", n, err)
+	}
+	list, _, err := f.pan.List(ctx, hid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ProductID != p.ID || *list[0].Quantity != 500 {
+		t.Fatalf("pantry: %+v", list)
+	}
+	all, _ := prods.All(ctx, hid)
+	for _, pr := range all {
+		if pr.NormalizedName == "mąki" {
+			t.Fatalf("stray product created: %+v", pr)
+		}
+	}
+}
+
+func TestGenerateIncludesSessionOfWeek(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	r := f.cook(t, "Ryż z warzywami", 4, recipe.IngredientInput{Name: "Ryż", Quantity: q(200), Unit: "g"})
+	sess, err := f.mp.CreateSession(ctx, hid, mealprep.SessionInput{Date: "2026-11-08", Name: "Niedziela"})
+	if err != nil || sess.Week != "2026-11-09" {
+		t.Fatalf("%v %+v", err, sess)
+	}
+	dish, err := f.mp.AddDish(ctx, hid, sess.ID, r, 12)
+	if err != nil {
+		t.Fatal(err)
+	}
+	next := "2026-11-09"
+	items, err := f.svc.Generate(ctx, hid, next, "2026-11-11", "2026-11-13")
+	rice := byName(items, "ryż")
+	if err != nil || rice == nil || *rice.Quantity != 600 {
+		t.Fatalf("%v %+v", err, items)
+	}
+	if items, err = f.svc.Generate(ctx, hid, wk, "", ""); err != nil || len(items) != 0 {
+		t.Fatalf("other week: %v %+v", err, items)
+	}
+	// an allocated prep entry adds nothing
+	if _, err := f.plans.Add(ctx, hid, next, plan.EntryInput{Date: "2026-11-10", Slot: domain.SlotDinner, Kind: domain.EntryPrep, PrepDishID: dish.ID, Servings: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if items, _ = f.svc.Generate(ctx, hid, next, "", ""); byName(items, "ryż") == nil || *byName(items, "ryż").Quantity != 600 {
+		t.Fatalf("prep entry changed list: %+v", items)
+	}
+	if n, err := f.svc.PreviousWeekUndone(ctx, hid, "2026-11-16"); err != nil || n != 0 {
+		t.Fatalf("prep entry counted: %d %v", n, err)
+	}
+	// cooked session: ingredients were already used
+	if _, err := f.mp.UpdateSession(ctx, hid, sess.ID, mealprep.SessionInput{Date: "2026-11-08", Name: "Niedziela", Cooked: true}); err != nil {
+		t.Fatal(err)
+	}
+	if items, _ = f.svc.Generate(ctx, hid, next, "", ""); byName(items, "ryż") != nil {
+		t.Fatalf("cooked session still listed: %+v", items)
 	}
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useShopping } from './shopping'
+import { isCovered, useShopping } from './shopping'
 
 function stub(status: number, body: unknown) {
   const spy = vi.fn(async (_url: string, _init?: RequestInit) => new Response(status === 204 ? null : JSON.stringify(body), { status }))
@@ -22,6 +22,16 @@ describe('useShopping', () => {
     expect(spy.mock.calls[0][0]).toBe('/api/v1/shopping?week=2026-11-02')
     expect(s.open.map((i) => i.id)).toEqual(['a'])
     expect(s.done.map((i) => i.id)).toEqual(['b'])
+  })
+
+  it('keeps the previous-week undone count from load and generate', async () => {
+    const s = useShopping()
+    stub(200, { week: '2026-11-02', items: [], previousWeekUndone: 3 })
+    await s.load('2026-11-02')
+    expect(s.previousWeekUndone).toBe(3)
+    stub(200, { week: '2026-11-02', items: [], previousWeekUndone: 0 })
+    await s.generate('2026-11-02')
+    expect(s.previousWeekUndone).toBe(0)
   })
 
   it('generate replaces the list with the server result', async () => {
@@ -94,5 +104,58 @@ describe('useShopping', () => {
     await first
     expect(s.week).toBe('2026-11-09')
     expect(s.items).toEqual([])
+  })
+
+  it('moveToPantry posts the week, reloads the list and returns the count', async () => {
+    const s = useShopping()
+    stub(200, { week: '2026-11-02', items: [] })
+    await s.load('2026-11-02')
+    const spy = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ moved: 2 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ week: '2026-11-02', items: [{ ...item('a', 'Mąka', true), moved: true }] }), { status: 200 }))
+    vi.stubGlobal('fetch', spy)
+    const n = await s.moveToPantry('2026-11-02')
+    expect(n).toBe(2)
+    expect(spy.mock.calls[0][0]).toBe('/api/v1/shopping/move-to-pantry')
+    expect(JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string)).toEqual({ week: '2026-11-02' })
+    expect(spy.mock.calls[1][0]).toBe('/api/v1/shopping?week=2026-11-02')
+    expect(s.items[0].moved).toBe(true)
+  })
+
+  it('moveToPantry does not reload over another week the user switched to', async () => {
+    const s = useShopping()
+    let finishMove!: (r: Response) => void
+    const spy = vi.fn((url: string) => {
+      if (url.includes('move-to-pantry')) return new Promise<Response>((r) => { finishMove = r })
+      const week = url.split('week=')[1]
+      return Promise.resolve(new Response(JSON.stringify({ week, items: [{ ...item('x-' + week, 'Pozycja'), week }] }), { status: 200 }))
+    })
+    vi.stubGlobal('fetch', spy)
+    await s.load('2026-11-02')
+    const moving = s.moveToPantry('2026-11-02')
+    await s.load('2026-11-09')
+    finishMove(new Response(JSON.stringify({ moved: 1 }), { status: 200 }))
+    expect(await moving).toBe(1)
+    expect(s.week).toBe('2026-11-09')
+    expect(s.items.map((i) => i.id)).toEqual(['x-2026-11-09'])
+    expect(spy.mock.calls.filter((c) => !String(c[0]).includes('move')).length).toBe(2)
+  })
+
+  it('splits covered, open and done rows', async () => {
+    const mk = (id: string, o: object) => ({ ...item(id, id), ...o })
+    stub(200, { week: '2026-11-02', items: [
+      mk('covered', { quantity: 0, haveQuantity: 500 }),
+      mk('coveredChecked', { quantity: 0, haveQuantity: 500, checked: true }),
+      mk('zeroHave', { quantity: 0, haveQuantity: 0 }),
+      mk('manualZero', { quantity: 0, manual: true }),
+      mk('partial', { quantity: 300, haveQuantity: 200 }),
+      mk('bought', { quantity: 1, checked: true }),
+    ] })
+    const s = useShopping()
+    await s.load('2026-11-02')
+    expect(s.covered.map((i) => i.id)).toEqual(['covered', 'coveredChecked'])
+    expect(s.open.map((i) => i.id)).toEqual(['zeroHave', 'manualZero', 'partial'])
+    expect(s.done.map((i) => i.id)).toEqual(['bought'])
+    expect(isCovered(mk('m', { quantity: 0, haveQuantity: null }))).toBe(false)
   })
 })

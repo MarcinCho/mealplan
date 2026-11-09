@@ -80,3 +80,67 @@ func TestRecipesByIDsOnlyReturnsOwnRecipes(t *testing.T) {
 		t.Fatalf("empty: %v %+v", err, empty)
 	}
 }
+
+func TestShoppingItemHaveAndMovedRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedTwoHouseholds(t, s)
+	a := item("i1", "hA", "2026-11-02", "mąka", false)
+	a.HaveQuantity = f(200)
+	b := item("i2", "hA", "2026-11-02", "sól", false)
+	c := item("i3", "hB", "2026-11-02", "obce", false)
+	for _, it := range []domain.ShoppingItem{a, b, c} {
+		if err := s.InsertShoppingItem(ctx, it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, _ := s.ShoppingItemByID(ctx, "hA", "i1")
+	if got.HaveQuantity == nil || *got.HaveQuantity != 200 || got.Moved {
+		t.Fatalf("round trip: %+v", got)
+	}
+	if err := s.SetShoppingItemsMoved(ctx, "hA", []string{"i1", "i3"}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = s.ShoppingItemByID(ctx, "hA", "i1")
+	other, _ := s.ShoppingItemByID(ctx, "hA", "i2")
+	foreign, _ := s.ShoppingItemByID(ctx, "hB", "i3")
+	if !got.Moved || other.Moved || foreign.Moved || other.HaveQuantity != nil {
+		t.Fatalf("moved: %+v %+v %+v", got, other, foreign)
+	}
+	if err := s.ReplaceGeneratedItems(ctx, "hA", "2026-11-02", []domain.ShoppingItem{a}); err != nil {
+		t.Fatal(err)
+	}
+	list, _ := s.ShoppingItems(ctx, "hA", "2026-11-02")
+	if len(list) != 1 || list[0].HaveQuantity == nil || *list[0].HaveQuantity != 200 {
+		t.Fatalf("replace: %+v", list)
+	}
+}
+
+func TestClaimShoppingItemsForMove(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedTwoHouseholds(t, s)
+	mk := func(id, hid string, checked bool, q *float64) domain.ShoppingItem {
+		it := item(id, hid, "2026-11-02", id, false)
+		it.Checked, it.Quantity = checked, q
+		return it
+	}
+	for _, it := range []domain.ShoppingItem{mk("a", "hA", true, f(1)), mk("b", "hA", false, f(1)), mk("c", "hA", true, f(0)), mk("d", "hA", true, nil), mk("e", "hB", true, f(1))} {
+		if err := s.InsertShoppingItem(ctx, it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := s.ClaimShoppingItemsForMove(ctx, "hA", "2026-11-02")
+	if err != nil || len(got) != 1 || got[0].ID != "a" || !got[0].Moved {
+		t.Fatalf("claim: %v %+v", err, got)
+	}
+	if again, _ := s.ClaimShoppingItemsForMove(ctx, "hA", "2026-11-02"); len(again) != 0 {
+		t.Fatalf("second claim: %+v", again)
+	}
+	if err := s.UnclaimShoppingItems(ctx, "hA", []string{"a"}); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := s.ClaimShoppingItemsForMove(ctx, "hA", "2026-11-02"); len(again) != 1 {
+		t.Fatalf("after unclaim: %+v", again)
+	}
+}

@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,7 +19,9 @@ import (
 	"mealplan/internal/config"
 	"mealplan/internal/domain"
 	"mealplan/internal/httpapi"
+	"mealplan/internal/mealprep"
 	"mealplan/internal/nutrition"
+	"mealplan/internal/pantry"
 	"mealplan/internal/plan"
 	"mealplan/internal/product"
 	"mealplan/internal/recipe"
@@ -36,6 +40,28 @@ type env struct {
 	svc   *auth.Service
 	clock *fakeClock
 	imp   *fakeImporter
+	// cookFail makes the pantry hook of meal prep sessions fail while set.
+	cookFail *atomic.Bool
+}
+
+// flakyHook delegates to the pantry unless fail is set.
+type flakyHook struct {
+	inner mealprep.CookHook
+	fail  *atomic.Bool
+}
+
+func (h flakyHook) SessionCooked(ctx context.Context, hh string, s domain.PrepSession, d []domain.PrepDish) error {
+	if h.fail.Load() {
+		return errors.New("pantry down")
+	}
+	return h.inner.SessionCooked(ctx, hh, s, d)
+}
+
+func (h flakyHook) SessionUncooked(ctx context.Context, hh, id string) error {
+	if h.fail.Load() {
+		return errors.New("pantry down")
+	}
+	return h.inner.SessionUncooked(ctx, hh, id)
 }
 
 type fakeClock struct {
@@ -66,9 +92,16 @@ func newEnv(t *testing.T) *env {
 	cfg := config.Config{Mode: config.ModeSelfhost, CookieSecure: false}
 	recipes := recipe.New(st, clock.Now)
 	imp := &fakeImporter{}
-	deps := httpapi.Deps{Recipes: recipes, Products: product.New(st, clock.Now), Plan: plan.New(st, st), Nutrition: nutrition.New(st, product.New(st, clock.Now), clock.Now), Shopping: shopping.New(st, st), Importer: imp}
+	products := product.New(st, clock.Now)
+	planSvc := plan.New(st, st)
+	pantrySvc := pantry.New(st, st, products, clock.Now)
+	planSvc.SetDoneHook(pantrySvc)
+	fail := &atomic.Bool{}
+	prep := mealprep.New(st, st, flakyHook{inner: pantrySvc, fail: fail}, clock.Now)
+	planSvc.SetPortions(prep)
+	deps := httpapi.Deps{Recipes: recipes, Products: products, Plan: planSvc, Nutrition: nutrition.New(st, products, clock.Now), Pantry: pantrySvc, MealPrep: prep, Shopping: shopping.New(st, st, pantrySvc, products), Importer: imp}
 	srv := httpapi.New(svc, deps, cfg, http.NotFoundHandler(), slog.New(slog.NewTextHandler(io.Discard, nil)))
-	return &env{srv: srv, st: st, svc: svc, clock: clock, imp: imp}
+	return &env{srv: srv, st: st, svc: svc, clock: clock, imp: imp, cookFail: fail}
 }
 
 // secondHouseholdClient creates an independent household with its own admin and logs in.

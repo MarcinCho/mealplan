@@ -7,7 +7,7 @@ import (
 	"mealplan/internal/domain"
 )
 
-const itemCols = `id, household_id, week, name, normalized_name, quantity, unit, checked, manual`
+const itemCols = `id, household_id, week, name, normalized_name, quantity, unit, checked, manual, have_quantity, moved, product_id`
 
 func b2i(b bool) int {
 	if b {
@@ -25,22 +25,25 @@ func qty(p *float64) any {
 
 func scanItem(r scanner) (domain.ShoppingItem, error) {
 	var it domain.ShoppingItem
-	var q sql.NullFloat64
-	var checked, manual int
-	if err := r.Scan(&it.ID, &it.HouseholdID, &it.Week, &it.Name, &it.NormalizedName, &q, &it.Unit, &checked, &manual); err != nil {
+	var q, have sql.NullFloat64
+	var product sql.NullString
+	var checked, manual, moved int
+	if err := r.Scan(&it.ID, &it.HouseholdID, &it.Week, &it.Name, &it.NormalizedName, &q, &it.Unit, &checked, &manual, &have, &moved, &product); err != nil {
 		return domain.ShoppingItem{}, mapErr(err)
 	}
 	if q.Valid {
 		v := q.Float64
 		it.Quantity = &v
 	}
-	it.Checked, it.Manual = checked != 0, manual != 0
+	it.Checked, it.Manual, it.Moved = checked != 0, manual != 0, moved != 0
+	it.HaveQuantity = pf(have)
+	it.ProductID = product.String
 	return it, nil
 }
 
 func (s *Store) insertItem(ctx context.Context, e execer, it domain.ShoppingItem) error {
-	return s.exec(ctx, e, `INSERT INTO shopping_item (`+itemCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		it.ID, it.HouseholdID, it.Week, it.Name, it.NormalizedName, qty(it.Quantity), it.Unit, b2i(it.Checked), b2i(it.Manual))
+	return s.exec(ctx, e, `INSERT INTO shopping_item (`+itemCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		it.ID, it.HouseholdID, it.Week, it.Name, it.NormalizedName, qty(it.Quantity), it.Unit, b2i(it.Checked), b2i(it.Manual), nf(it.HaveQuantity), b2i(it.Moved), nstr(it.ProductID))
 }
 
 func (s *Store) InsertShoppingItem(ctx context.Context, it domain.ShoppingItem) error {
@@ -123,4 +126,11 @@ func (s *Store) RecipesByIDs(ctx context.Context, householdID string, ids []stri
 		out[id] = r
 	}
 	return out, nil
+}
+
+func nstr(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }

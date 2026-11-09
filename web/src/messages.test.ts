@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from './api/client'
-import { errorText, productErrorText } from './messages'
+import { errorText, movedText, productErrorText } from './messages'
 
 describe('errorText', () => {
   it.each([
@@ -49,5 +49,24 @@ describe('productErrorText', () => {
   })
   it('falls back to the generic texts', () => {
     expect(productErrorText(new ApiError(422, 'invalid_input', 'x'))).toBe(errorText(new ApiError(422, 'invalid_input', 'x')))
+  })
+})
+
+describe('movedText', () => {
+  it('uses Polish plural forms', () => {
+    expect(movedText(1)).toBe('Przeniesiono 1 pozycję')
+    expect(movedText(2)).toBe('Przeniesiono 2 pozycje')
+    expect(movedText(5)).toBe('Przeniesiono 5 pozycji')
+    expect(movedText(12)).toBe('Przeniesiono 12 pozycji')
+    expect(movedText(22)).toBe('Przeniesiono 22 pozycje')
+  })
+})
+
+describe('undonePreviousText', () => {
+  it('uses Polish plural forms', async () => {
+    const { undonePreviousText } = await import('./messages')
+    expect(undonePreviousText(1)).toBe('W poprzednim tygodniu 1 posiłek nie oznaczono jako zrobione — część zapasów może być już na nie potrzebna.')
+    expect(undonePreviousText(3)).toContain('3 posiłki')
+    expect(undonePreviousText(5)).toContain('5 posiłków')
   })
 })

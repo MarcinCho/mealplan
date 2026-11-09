@@ -1,6 +1,9 @@
 package httpapi_test
 
-import "testing"
+import (
+	"net/http/httptest"
+	"testing"
+)
 
 type itemJSON struct {
 	ID       string   `json:"id"`
@@ -12,8 +15,9 @@ type itemJSON struct {
 }
 
 type listJSON struct {
-	Week  string     `json:"week"`
-	Items []itemJSON `json:"items"`
+	Week               string     `json:"week"`
+	Items              []itemJSON `json:"items"`
+	PreviousWeekUndone *int       `json:"previousWeekUndone"`
 }
 
 func TestShoppingFlowOverHTTP(t *testing.T) {
@@ -112,5 +116,27 @@ func TestShoppingIsolation(t *testing.T) {
 	decode(t, a.do("GET", "/api/v1/shopping?week=2026-11-02", nil), &list)
 	if len(list.Items) != 1 || list.Items[0].Checked {
 		t.Fatalf("victim changed: %+v", list)
+	}
+}
+
+func TestShoppingListReportsPreviousWeekUndone(t *testing.T) {
+	e := newEnv(t)
+	c := e.client(t)
+	setup(t, c)
+	r := createRecipe(t, c, "Naleśniki")
+	c.do("POST", "/api/v1/plan/2026-10-26/entries", map[string]any{"date": "2026-10-27", "slot": "dinner", "recipeId": r.ID})
+	c.do("POST", "/api/v1/plan/2026-10-26/entries", map[string]any{"date": "2026-10-28", "slot": "dinner", "freeText": "pizza"})
+	for _, call := range []func() *httptest.ResponseRecorder{
+		func() *httptest.ResponseRecorder { return c.do("GET", "/api/v1/shopping?week=2026-11-02", nil) },
+		func() *httptest.ResponseRecorder {
+			return c.do("POST", "/api/v1/shopping/generate", map[string]any{"week": "2026-11-02"})
+		},
+	} {
+		rec := call()
+		var l listJSON
+		decode(t, rec, &l)
+		if rec.Code != 200 || l.PreviousWeekUndone == nil || *l.PreviousWeekUndone != 1 {
+			t.Fatalf("%d %s", rec.Code, rec.Body)
+		}
 	}
 }

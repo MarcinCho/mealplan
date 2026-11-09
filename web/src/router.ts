@@ -7,6 +7,8 @@ import ImportView from './views/ImportView.vue'
 import InviteAcceptView from './views/InviteAcceptView.vue'
 import LoginView from './views/LoginView.vue'
 import MembersView from './views/MembersView.vue'
+import MealPrepView from './views/MealPrepView.vue'
+import PantryView from './views/PantryView.vue'
 import PlanView from './views/PlanView.vue'
 import ProductsView from './views/ProductsView.vue'
 import RecipeEditView from './views/RecipeEditView.vue'
@@ -27,11 +29,13 @@ export const router = createRouter({
       children: [
         { path: '', name: 'home', component: TodayView },
         { path: 'plan', name: 'plan', component: PlanView },
+        { path: 'prep', name: 'prep', component: MealPrepView },
         { path: 'recipes', name: 'recipes', component: RecipesView },
         { path: 'recipes/import', name: 'recipe-import', component: ImportView },
         { path: 'recipes/new', name: 'recipe-new', component: RecipeEditView },
         { path: 'recipes/:id', name: 'recipe-edit', component: RecipeEditView },
         { path: 'shopping', name: 'shopping', component: ShoppingView },
+        { path: 'pantry', name: 'pantry', component: PantryView },
         { path: 'account', name: 'account', component: AccountView },
         { path: 'products', name: 'products', component: ProductsView },
         { path: 'members', name: 'members', component: MembersView },
