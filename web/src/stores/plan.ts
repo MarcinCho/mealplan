@@ -10,6 +10,9 @@ export interface EntryInput {
   servings?: number
   cookUserId?: string | null
   done?: boolean
+  kind?: 'meal' | 'prep' | 'out'
+  prepDishId?: string | null
+  freezerItemId?: string | null
 }
 
 // Monotonic request counter: only the latest load may touch the state.
@@ -36,8 +39,9 @@ export const usePlan = defineStore('plan', {
         if (mine === seq) this.loading = false
       }
     },
-    async add(input: EntryInput) {
-      const week = this.week
+    // `forWeek` adds to a week other than the loaded one (the meal prep dialog picks any date).
+    async add(input: EntryInput, forWeek?: string) {
+      const week = forWeek ?? this.week
       const e = await api<PlanEntry>('POST', `/plan/${week}/entries`, input)
       if (week === this.week) this.entries.push(e)
     },
