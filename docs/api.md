@@ -51,9 +51,9 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `PUT/DELETE /pantry/{id}` | pełna zamiana ilości, jednostki, daty ważności i `staple` (produkt się nie zmienia); `409 conflict`, gdy produkt ma już pozycję w tej jednostce |
 | `POST /pantry/review` | zapisuje datę przeglądu spiżarni; zwraca `{"reviewedAt"}` |
 | `GET /prep/sessions`, `POST /prep/sessions` | sesje gotowania z daniami i rozliczeniem porcji (`portions`, `writtenOff`, `allocated`, `frozen`, `remaining`, `allocations`); dodanie: `date`, `name`, opcjonalnie `week` (poniedziałek; domyślnie tydzień wynikający z daty) |
-| `PUT/DELETE /prep/sessions/{id}` | zamiana (`date`, `name`, `week`, `cooked`); `cooked: true` zdejmuje składniki ze spiżarni, `false` je zwraca (`500 pantry_failed` przy błędzie spiżarni); usunięcie sesji z przydziałami daje `409 in_use` |
+| `PUT/DELETE /prep/sessions/{id}` | zamiana (`date`, `name`, `week`, `cooked`); `cooked: true` zdejmuje składniki ze spiżarni, `false` je zwraca (`500 pantry_failed` przy błędzie spiżarni); usunięcie sesji z przydziałami daje `409 in_use`; usunięcie ugotowanej sesji najpierw oddaje zapasy |
 | `POST /prep/sessions/{id}/dishes` | dodanie dania: `recipeId`, `portions` |
-| `PUT/DELETE /prep/dishes/{id}` | zmiana `portions` i `writtenOff`; usunięcie dania z przydziałami daje `409 in_use` |
+| `PUT/DELETE /prep/dishes/{id}` | zmiana `portions` i `writtenOff`; usunięcie dania z przydziałami daje `409 in_use`. W ugotowanej sesji dodanie, usunięcie lub zmiana porcji dania przelicza spiżarnię (`500 pantry_failed` przy błędzie) |
 | `POST /prep/dishes/{id}/freeze` | `{"portions", "frozenOn"}` (`frozenOn` opcjonalne, `RRRR-MM-DD`, domyślnie dziś na serwerze; aplikacja wysyła lokalną datę przeglądarki): przenosi pozostałe porcje do zamrażalki; zwraca pozycję zamrażalki |
 | `GET /freezer`, `POST /freezer` | pozycje zamrażalki (`{"items"}`) i dodanie ręczne: `portions`, opcjonalnie `recipeId`, `label` (domyślnie tytuł przepisu), `frozenOn` (domyślnie dziś) |
 | `PUT/DELETE /freezer/{id}` | zamiana i usunięcie pozycji; usunięcie pozycji z przydziałami daje `409 in_use` |
@@ -91,7 +91,7 @@ Szczegóły formatu i ograniczeń importu: [import.md](import.md).
 | `import_unparsable` | 422 | w źródle importu nie znaleziono przepisu |
 | `import_failed` | 422 | nie udało się pobrać strony (status inny niż 2xx, zły typ treści, za duży plik, zbyt wiele przekierowań, błąd sieci) |
 | `import_timeout` | 504 | strona nie odpowiedziała w 10 s |
-| `pantry_failed` | 500 | wpis planu zapisano, ale aktualizacja spiżarni (zdjęcie lub zwrot składników) się nie udała; ponowny zapis wpisu naprawia stan |
+| `pantry_failed` | 500 | zmiana wpisu planu, sesji lub dania ugotowanej sesji została zapisana, ale aktualizacja spiżarni (zdjęcie lub zwrot składników) się nie udała; ponowny zapis naprawia stan. Przy usuwaniu ugotowanej sesji nic nie zostało usunięte |
 | `internal` | 500 | nieoczekiwany błąd serwera (szczegóły tylko w dzienniku) |
 
 Pozostałe kody (`unauthenticated`, `invalid_credentials`, `rate_limited` (też przy imporcie z linku, z nagłówkiem `Retry-After`), `login_taken`, `invite_invalid`, `setup_done`, `password_length`) dotyczą kont i sesji z Etapu 1.

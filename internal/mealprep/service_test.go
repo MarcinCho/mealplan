@@ -347,3 +347,60 @@ func TestFreezeFrozenOn(t *testing.T) {
 		t.Fatalf("default: %+v %v", fz, err)
 	}
 }
+
+func TestCookedSessionFollowsDishChanges(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	if _, err := f.st.AddToPantry(ctx, f.hid, f.prod.ID, "g", 3000); err != nil {
+		t.Fatal(err)
+	}
+	s := f.session(t)
+	first := f.dish(t, s.ID, 4) // 500 g of flour per 4 portions
+	if _, err := f.svc.UpdateSession(ctx, f.hid, s.ID, mealprep.SessionInput{Date: s.Date, Name: s.Name, Week: s.Week, Cooked: true}); err != nil {
+		t.Fatal(err)
+	}
+	check := func(name string, want float64) {
+		t.Helper()
+		if got := f.flour(t); got != want {
+			t.Fatalf("%s: %v g, want %v", name, got, want)
+		}
+	}
+	check("cooked", 2500)
+	second := f.dish(t, s.ID, 4)
+	check("dish added", 2000)
+	if _, err := f.svc.UpdateDish(ctx, f.hid, first.ID, 8, 0); err != nil {
+		t.Fatal(err)
+	}
+	check("dish resized", 1500)
+	if _, err := f.svc.UpdateDish(ctx, f.hid, first.ID, 8, 2); err != nil {
+		t.Fatal(err)
+	}
+	check("written off does not touch stock", 1500)
+	if err := f.svc.DeleteDish(ctx, f.hid, second.ID); err != nil {
+		t.Fatal(err)
+	}
+	check("dish removed", 2000)
+	if err := f.svc.DeleteSession(ctx, f.hid, s.ID); err != nil {
+		t.Fatal(err)
+	}
+	check("session deleted", 3000)
+}
+
+func TestUncookedSessionDishChangesLeaveStock(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	if _, err := f.st.AddToPantry(ctx, f.hid, f.prod.ID, "g", 3000); err != nil {
+		t.Fatal(err)
+	}
+	s := f.session(t)
+	d := f.dish(t, s.ID, 4)
+	if _, err := f.svc.UpdateDish(ctx, f.hid, d.ID, 8, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.DeleteSession(ctx, f.hid, s.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.flour(t); got != 3000 {
+		t.Fatalf("stock changed: %v", got)
+	}
+}

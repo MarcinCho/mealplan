@@ -5,7 +5,7 @@
 ### Meal prep
 
 - Zakładka „Meal prep": sesje gotowania z daniami (przepis i liczba porcji), przydział porcji do wpisów planu („z meal prepu"), wspólna zamrażalka gospodarstwa („z zamrażalki", „❄ Zamroź", ręczne dodawanie) i odpis porcji zjedzonych lub wyrzuconych (`/prep/*`, `/freezer*`). Sesja należy do tygodnia, na który się gotuje: weekendowa do następnego, inne dni do bieżącego (do zmiany przy sesji).
-- „Ugotowane" na sesji zdejmuje ze spiżarni składniki wszystkich porcji dań naraz; późniejsza zmiana dań nie odejmuje drugi raz (poprawka w przeglądzie spiżarni). „Zrobione" na wpisach z meal prepu nigdy nie rusza spiżarni. Usunięcie sesji, dania lub pozycji zamrażalki z przydziałami jest odrzucane (`in_use`); kopiowanie tygodnia pomija wpisy z meal prepu. Lista zakupów liczy składniki na wszystkie porcje dań sesji.
+- „Ugotowane" na sesji zdejmuje ze spiżarni składniki wszystkich porcji dań naraz; późniejsze dodanie, usunięcie lub zmiana porcji dania przelicza spiżarnię, a usunięcie ugotowanej sesji oddaje zapasy. „Zrobione" na wpisach z meal prepu nigdy nie rusza spiżarni. Usunięcie sesji, dania lub pozycji zamrażalki z przydziałami jest odrzucane (`in_use`); kopiowanie tygodnia pomija wpisy z meal prepu. Lista zakupów liczy składniki na wszystkie porcje dań sesji.
 - Wpisy planu mają `kind` (`meal`, `prep`, `out`), `prepDishId`, `freezerItemId` i `outValues`; nowy rodzaj „Na mieście" z opcjonalnym opisem i wartościami na osobę, bez kucharza i bez zakupów.
 - Ustawienie gospodarstwa „Porcji na posiłek" (`/household/settings`, 1-20, domyślnie 2) na ekranie Domownicy; ekran „Dziś" przypomina o nieprzydzielonych porcjach sesji starszej niż 4 dni. Opis: `docs/mealprep.md`.
 

@@ -69,7 +69,7 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, http.StatusInternalServerError, "pantry_failed", "Zapisano posiłek, ale nie udało się zaktualizować spiżarni. Spróbuj ponownie.")
 	case errors.Is(err, mealprep.ErrPantry):
 		s.log.Error("pantry update failed", "method", r.Method, "path", r.URL.Path, "err", err)
-		writeError(w, http.StatusInternalServerError, "pantry_failed", "Zapisano sesję, ale nie udało się zaktualizować spiżarni. Spróbuj ponownie.")
+		writeError(w, http.StatusInternalServerError, "pantry_failed", "Nie udało się zaktualizować spiżarni dla sesji gotowania. Zapisz sesję ponownie.")
 	case errors.Is(err, domain.ErrInvalid):
 		writeError(w, http.StatusUnprocessableEntity, "invalid_input", err.Error())
 	case errors.Is(err, store.ErrInUse):
