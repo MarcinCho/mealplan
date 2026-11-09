@@ -4,6 +4,7 @@ import { useDisplay } from 'vuetify'
 import { VBottomSheet, VDialog } from 'vuetify/components'
 import type { Macros, PlanEntry, Recipe, Slot } from '../api/types'
 import { formatDay, SLOTS } from '../weeks'
+import { prepSources } from '../mealprep'
 import { t } from '../messages'
 import { useMealPrepStore } from '../stores/mealprep'
 import type { EntryInput } from '../stores/plan'
@@ -69,24 +70,9 @@ watch(
   { immediate: true },
 )
 
-interface Source { value: string; title: string; remaining: number }
-// While editing, the entry's own portions count as available again.
-const own = computed(() => (props.entry?.kind === 'prep' ? props.entry.servings : 0))
-const sources = computed<Source[]>(() => {
-  const list: Source[] = []
-  for (const s of prep.sessions)
-    for (const d of s.dishes) {
-      const value = `d:${d.id}`
-      const remaining = d.remaining + (value === source.value ? own.value : 0)
-      if (remaining > 0) list.push({ value, title: `${d.recipeTitle} · ${t.entryPrepLeft} ${remaining}`, remaining })
-    }
-  for (const f of prep.freezer) {
-    const value = `f:${f.id}`
-    const remaining = f.remaining + (value === source.value ? own.value : 0)
-    if (remaining > 0) list.push({ value, title: `❄ ${f.title} · ${t.entryPrepLeft} ${remaining}`, remaining })
-  }
-  return list
-})
+const sources = computed(() =>
+  prepSources(prep.sessions, prep.freezer, props.entry, props.recipes.find((r) => r.id === props.entry?.recipeId)?.title ?? null),
+)
 const maxServings = computed(() => sources.value.find((x) => x.value === source.value)?.remaining ?? 0)
 
 // Choosing a new source suggests the household's usual portions, capped by what is left.

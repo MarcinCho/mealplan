@@ -31,12 +31,15 @@ describe('useMealPrepStore', () => {
   })
 
   it('freeze posts and reloads sessions and freezer', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 10, 9, 0, 30))
     const spy = stubRoutes()
     const s = useMealPrepStore()
     await s.freeze('d1', 2)
+    vi.useRealTimers()
     const c = calls(spy)
     expect(c[0]).toBe('POST /api/v1/prep/dishes/d1/freeze')
-    expect(JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string)).toEqual({ portions: 2 })
+    expect(JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string)).toEqual({ portions: 2, frozenOn: '2026-11-09' })
     expect(c).toContain('GET /api/v1/prep/sessions')
     expect(c).toContain('GET /api/v1/freezer')
     expect(s.sessions).toHaveLength(1)

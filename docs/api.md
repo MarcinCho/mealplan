@@ -54,7 +54,7 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `PUT/DELETE /prep/sessions/{id}` | zamiana (`date`, `name`, `week`, `cooked`); `cooked: true` zdejmuje składniki ze spiżarni, `false` je zwraca (`500 pantry_failed` przy błędzie spiżarni); usunięcie sesji z przydziałami daje `409 in_use` |
 | `POST /prep/sessions/{id}/dishes` | dodanie dania: `recipeId`, `portions` |
 | `PUT/DELETE /prep/dishes/{id}` | zmiana `portions` i `writtenOff`; usunięcie dania z przydziałami daje `409 in_use` |
-| `POST /prep/dishes/{id}/freeze` | `{"portions"}`: przenosi pozostałe porcje do zamrażalki; zwraca pozycję zamrażalki |
+| `POST /prep/dishes/{id}/freeze` | `{"portions", "frozenOn"}` (`frozenOn` opcjonalne, `RRRR-MM-DD`, domyślnie dziś na serwerze; aplikacja wysyła lokalną datę przeglądarki): przenosi pozostałe porcje do zamrażalki; zwraca pozycję zamrażalki |
 | `GET /freezer`, `POST /freezer` | pozycje zamrażalki (`{"items"}`) i dodanie ręczne: `portions`, opcjonalnie `recipeId`, `label` (domyślnie tytuł przepisu), `frozenOn` (domyślnie dziś) |
 | `PUT/DELETE /freezer/{id}` | zamiana i usunięcie pozycji; usunięcie pozycji z przydziałami daje `409 in_use` |
 | `GET/PUT /household/settings` | ustawienia gospodarstwa: `{"portionsPerMeal"}` (1-20, domyślnie 2) |

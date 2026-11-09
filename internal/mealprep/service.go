@@ -453,7 +453,13 @@ func (s *Service) oneFreezer(ctx context.Context, hh, id string) (FreezerView, e
 }
 
 // Freeze moves portions of a dish into the freezer, labelled with the recipe title and dated today.
-func (s *Service) Freeze(ctx context.Context, hh, dishID string, portions int) (FreezerView, error) {
+// frozenOn is optional (YYYY-MM-DD); empty means today by the server clock.
+func (s *Service) Freeze(ctx context.Context, hh, dishID string, portions int, frozenOn string) (FreezerView, error) {
+	if frozenOn == "" {
+		frozenOn = s.now().Format(dateLayout)
+	} else if err := validDate(frozenOn); err != nil {
+		return FreezerView{}, err
+	}
 	d, err := s.repo.PrepDishByID(ctx, hh, dishID)
 	if err != nil {
 		return FreezerView{}, err
@@ -474,7 +480,7 @@ func (s *Service) Freeze(ctx context.Context, hh, dishID string, portions int) (
 		return FreezerView{}, err
 	}
 	f := domain.FreezerItem{ID: auth.NewID(), HouseholdID: hh, DishID: d.ID, RecipeID: d.RecipeID,
-		Label: r.Title, Portions: portions, FrozenOn: s.now().Format(dateLayout)}
+		Label: r.Title, Portions: portions, FrozenOn: frozenOn}
 	if err := s.repo.InsertFreezerItem(ctx, f); err != nil {
 		return FreezerView{}, err
 	}

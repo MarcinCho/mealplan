@@ -168,6 +168,7 @@ func (s *Service) entry(ctx context.Context, householdID, week string, in EntryI
 		}
 		base.RecipeID, base.FreeText, base.Servings = in.RecipeID, text, servings
 	case domain.EntryPrep:
+		base.CookUserID = "" // portions are already cooked: no cook
 		if s.portions == nil {
 			return domain.PlanEntry{}, invalid("meal prep is not available")
 		}
@@ -194,6 +195,7 @@ func (s *Service) entry(ctx context.Context, householdID, week string, in EntryI
 			base.FreeText = label
 		}
 	case domain.EntryOut:
+		base.CookUserID = "" // eaten out: no cook
 		if in.RecipeID != "" || dishID != "" || freezerID != "" {
 			return domain.PlanEntry{}, invalid("an eaten-out entry has no recipe or prep source")
 		}

@@ -174,12 +174,13 @@ func (s *Server) handleDeleteDish(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleFreezeDish(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Portions int `json:"portions"`
+		Portions int    `json:"portions"`
+		FrozenOn string `json:"frozenOn"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	v, err := s.deps.MealPrep.Freeze(r.Context(), principalFrom(r).HouseholdID, r.PathValue("id"), in.Portions)
+	v, err := s.deps.MealPrep.Freeze(r.Context(), principalFrom(r).HouseholdID, r.PathValue("id"), in.Portions, in.FrozenOn)
 	if err != nil {
 		s.fail(w, r, err)
 		return

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { allocationLabel, defaultWeek, sessionTitle, staleSessions } from './mealprep'
-import type { PrepSession } from './api/types'
+import { allocationLabel, defaultWeek, prepSources, sessionTitle, staleSessions } from './mealprep'
+import type { FreezerItem, PrepSession } from './api/types'
 
 const sess = (date: string, remaining: number): PrepSession => ({
   id: date, date, name: 'x', week: '2026-11-02', cooked: false, remaining, dishes: [],
@@ -50,5 +50,33 @@ describe('entryChip and entryTitle', () => {
     expect(entryTitle({ kind: 'out', freeText: 'Pizzeria' }, null)).toBe('Pizzeria')
     expect(entryTitle({ kind: 'meal', freeText: 'Zupa' }, null)).toBe('Zupa')
     expect(entryTitle({ kind: 'prep', freeText: '' }, 'Curry')).toBe('Curry')
+  })
+})
+
+describe('prepSources', () => {
+  const fz = (id: string, remaining: number): FreezerItem => ({
+    id, dishId: null, recipeId: null, title: 'Zupa', portions: 4, allocated: 4 - remaining, remaining, frozenOn: '2026-11-08', allocations: [],
+  })
+  const own = { kind: 'prep' as const, servings: 2, freeText: 'Zupa', prepDishId: null, freezerItemId: 'f1' }
+
+  it('adds a synthetic option for a fully planned freezer item being edited', () => {
+    const list = prepSources([], [], own)
+    expect(list).toEqual([{ value: 'f:f1', title: '❄ Zupa · zostało 2', remaining: 2 }])
+  })
+
+  it('adds one for a dish with nothing left, titled by the recipe', () => {
+    const list = prepSources([], [], { ...own, freezerItemId: null, prepDishId: 'd1' }, 'Gulasz')
+    expect(list).toEqual([{ value: 'd:d1', title: 'Gulasz · zostało 2', remaining: 2 }])
+  })
+
+  it('adds own servings to a listed source and does not duplicate it', () => {
+    const list = prepSources([], [fz('f1', 1)], own)
+    expect(list).toHaveLength(1)
+    expect(list[0].remaining).toBe(3)
+  })
+
+  it('adds nothing when creating or editing a plain meal', () => {
+    expect(prepSources([], [], null)).toEqual([])
+    expect(prepSources([], [], { ...own, kind: 'meal' })).toEqual([])
   })
 })

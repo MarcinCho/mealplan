@@ -84,13 +84,13 @@ func TestPrepSessionFlow(t *testing.T) {
 		t.Fatalf("dish: %+v", d)
 	}
 
-	rec = c.do("POST", "/api/v1/prep/dishes/"+d.ID+"/freeze", map[string]any{"portions": 4})
+	rec = c.do("POST", "/api/v1/prep/dishes/"+d.ID+"/freeze", map[string]any{"portions": 4, "frozenOn": "2026-11-09"})
 	if rec.Code != 201 {
 		t.Fatalf("freeze: %d %s", rec.Code, rec.Body)
 	}
 	var fz freezerOut
 	decode(t, rec, &fz)
-	if fz.DishID == nil || *fz.DishID != d.ID || fz.Portions != 4 || fz.Title != "Gulasz" || fz.Remaining != 4 {
+	if fz.DishID == nil || *fz.DishID != d.ID || fz.Portions != 4 || fz.Title != "Gulasz" || fz.Remaining != 4 || fz.FrozenOn != "2026-11-09" {
 		t.Fatalf("freezer: %+v", fz)
 	}
 

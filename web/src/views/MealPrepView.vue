@@ -92,7 +92,7 @@ async function submit() {
       case 'session': return prep.createSession({ date: x.date, name: x.name.trim(), week: x.week })
       case 'dish': return prep.addDish(x.sessionId, x.recipeId!, x.portions)
       case 'editDish': return prep.updateDish(x.dish.id, x.portions, x.writtenOff)
-      case 'freeze': return prep.freeze(x.dish.id, x.portions)
+      case 'freeze': return prep.freeze(x.dish.id, x.portions, isoDate(new Date()))
       case 'freezer': {
         const input = { recipeId: x.recipeId, label: x.label.trim(), portions: x.portions, frozenOn: x.frozenOn }
         return x.id ? prep.updateFreezer(x.id, input) : prep.addFreezer(input)

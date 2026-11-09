@@ -839,7 +839,7 @@ paths:
         "422": { $ref: "#/components/responses/Unprocessable" }
         "500": { $ref: "#/components/responses/PantryFailed" }
     delete:
-      summary: Delete a session (refused with in_use while its dishes are used by plan entries or freezer items)
+      summary: Delete a session (refused with in_use while its dishes are used by plan entries; frozen portions stay in the freezer)
       security: [{ session: [], csrf: [] }]
       responses:
         "204": { description: Deleted }
@@ -894,7 +894,7 @@ paths:
         "413": { $ref: "#/components/responses/TooLarge" }
         "422": { $ref: "#/components/responses/Unprocessable" }
     delete:
-      summary: Delete a dish (refused with in_use while plan entries or freezer items use it)
+      summary: Delete a dish (refused with in_use while plan entries use it; frozen portions stay in the freezer)
       security: [{ session: [], csrf: [] }]
       responses:
         "204": { description: Deleted }
@@ -1167,6 +1167,7 @@ components:
       required: [portions]
       properties:
         portions: { type: integer }
+        frozenOn: { type: string, format: date, description: "YYYY-MM-DD, optional; defaults to the server's today" }
     FreezerItem:
       type: object
       required: [id, dishId, recipeId, title, portions, allocated, remaining, frozenOn, allocations]

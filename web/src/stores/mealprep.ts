@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { api } from '../api/client'
 import { prepErrorText } from '../messages'
+import { isoDate } from '../weeks'
 import type { FreezerItem, PrepDish, PrepSession } from '../api/types'
 
 export interface FreezerInput {
@@ -73,8 +74,8 @@ export const useMealPrepStore = defineStore('mealprep', {
       await api('DELETE', `/prep/dishes/${enc(id)}`)
       await this.refresh()
     },
-    async freeze(dishId: string, portions: number) {
-      await api<FreezerItem>('POST', `/prep/dishes/${enc(dishId)}/freeze`, { portions })
+    async freeze(dishId: string, portions: number, frozenOn: string = isoDate(new Date())) {
+      await api<FreezerItem>('POST', `/prep/dishes/${enc(dishId)}/freeze`, { portions, frozenOn })
       await this.refresh()
     },
     async addFreezer(input: FreezerInput) {

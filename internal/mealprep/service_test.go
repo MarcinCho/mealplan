@@ -116,13 +116,13 @@ func TestFreezeBeyondRemainingInvalid(t *testing.T) {
 	ctx := context.Background()
 	d := f.dish(t, f.session(t).ID, 6)
 	f.allocate(t, "e1", d.ID, "", 2)
-	if _, err := f.svc.Freeze(ctx, f.hid, d.ID, 5); !errors.Is(err, domain.ErrInvalid) {
+	if _, err := f.svc.Freeze(ctx, f.hid, d.ID, 5, ""); !errors.Is(err, domain.ErrInvalid) {
 		t.Fatalf("want ErrInvalid, got %v", err)
 	}
-	if _, err := f.svc.Freeze(ctx, f.hid, d.ID, 0); !errors.Is(err, domain.ErrInvalid) {
+	if _, err := f.svc.Freeze(ctx, f.hid, d.ID, 0, ""); !errors.Is(err, domain.ErrInvalid) {
 		t.Fatalf("want ErrInvalid, got %v", err)
 	}
-	fz, err := f.svc.Freeze(ctx, f.hid, d.ID, 4)
+	fz, err := f.svc.Freeze(ctx, f.hid, d.ID, 4, "")
 	if err != nil || fz.Label != "Chleb" || fz.FrozenOn != "2026-11-08" || fz.Remaining != 4 {
 		t.Fatalf("%+v %v", fz, err)
 	}
@@ -137,7 +137,7 @@ func TestUpdateDishBelowUsedInvalid(t *testing.T) {
 	ctx := context.Background()
 	d := f.dish(t, f.session(t).ID, 6)
 	f.allocate(t, "e1", d.ID, "", 2)
-	if _, err := f.svc.Freeze(ctx, f.hid, d.ID, 2); err != nil {
+	if _, err := f.svc.Freeze(ctx, f.hid, d.ID, 2, ""); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := f.svc.UpdateDish(ctx, f.hid, d.ID, 3, 0); !errors.Is(err, domain.ErrInvalid) {
@@ -170,7 +170,7 @@ func TestDeleteSessionWithAllocationInUse(t *testing.T) {
 	if err := f.st.DeletePlanEntry(ctx, f.hid, "e1"); err != nil {
 		t.Fatal(err)
 	}
-	fz, err := f.svc.Freeze(ctx, f.hid, d.ID, 2)
+	fz, err := f.svc.Freeze(ctx, f.hid, d.ID, 2, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +310,7 @@ func TestUpdateFreezerRespectsDishAndKeepsRecipe(t *testing.T) {
 	ctx := context.Background()
 	s := f.session(t)
 	d := f.dish(t, s.ID, 6)
-	fz, err := f.svc.Freeze(ctx, f.hid, d.ID, 4)
+	fz, err := f.svc.Freeze(ctx, f.hid, d.ID, 4, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,5 +328,22 @@ func TestUpdateFreezerRespectsDishAndKeepsRecipe(t *testing.T) {
 	got, err = f.svc.UpdateFreezer(ctx, f.hid, fz.ID, mealprep.FreezerInput{Label: "Inna", Portions: 5})
 	if err != nil || got.RecipeID != f.recipe.ID || got.Label != "Inna" {
 		t.Fatalf("%+v %v", got, err)
+	}
+}
+
+func TestFreezeFrozenOn(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	d := f.dish(t, f.session(t).ID, 6)
+	if _, err := f.svc.Freeze(ctx, f.hid, d.ID, 1, "08.11.2026"); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("bad date: %v", err)
+	}
+	fz, err := f.svc.Freeze(ctx, f.hid, d.ID, 1, "2026-11-09")
+	if err != nil || fz.FrozenOn != "2026-11-09" {
+		t.Fatalf("%+v %v", fz, err)
+	}
+	fz, err = f.svc.Freeze(ctx, f.hid, d.ID, 1, "")
+	if err != nil || fz.FrozenOn != "2026-11-08" {
+		t.Fatalf("default: %+v %v", fz, err)
 	}
 }

@@ -374,3 +374,29 @@ func TestPrepEntryDoneLeavesPantry(t *testing.T) {
 		t.Fatalf("%v %+v done=%d", err, e, h.done)
 	}
 }
+
+func TestPrepAndOutEntriesDropCook(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	d := f.dish(t, 4)
+	in := prepIn(d, 1)
+	in.CookUserID = "u1"
+	e, err := f.svc.Add(ctx, f.hid, wk, in)
+	if err != nil || e.CookUserID != "" {
+		t.Fatalf("prep: %v %+v", err, e)
+	}
+	e, err = f.svc.Edit(ctx, f.hid, wk, e.ID, plan.EntryInput{Date: "2026-11-05", Slot: domain.SlotLunch, Servings: 1, CookUserID: "u1"})
+	if err != nil || e.CookUserID != "" {
+		t.Fatalf("prep edit: %v %+v", err, e)
+	}
+	o, err := f.svc.Add(ctx, f.hid, wk, plan.EntryInput{Date: "2026-11-04", Slot: domain.SlotDinner, Kind: domain.EntryOut, CookUserID: "u1"})
+	if err != nil || o.CookUserID != "" {
+		t.Fatalf("out: %v %+v", err, o)
+	}
+	week, _ := f.svc.Week(ctx, f.hid, wk)
+	for _, w := range week {
+		if w.CookUserID != "" {
+			t.Fatalf("stored cook: %+v", w)
+		}
+	}
+}
