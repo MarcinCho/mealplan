@@ -9,4 +9,10 @@ describe('claude skill download', () => {
     expect(text).toContain('Przygotowanie:')
     expect(text).toContain('Wartości na porcję:')
   })
+
+  it('tells Claude to calculate nutrition when the source has none', () => {
+    expect(text).toContain('## Calculating nutrition')
+    expect(text).toContain('Wartości wyliczone (przybliżone):')
+    expect(text).not.toContain('Never guess or estimate')
+  })
 })

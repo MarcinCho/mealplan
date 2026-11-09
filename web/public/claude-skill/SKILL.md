@@ -1,6 +1,6 @@
 ---
 name: mealplan-recipe-format
-description: Rewrite any recipe (pasted text, a link to a recipe web page, photo transcription, a recipe in another language, a messy blog dump) into the exact plain-text format that Mealplan's "Importuj → Tekst" parser reads cleanly. Fetches the page itself when given a link. Use when the user wants to add, import, format or clean up a recipe for Mealplan / the meal plan.
+description: Rewrite any recipe (pasted text, a link to a recipe web page, photo transcription, a recipe in another language, a messy blog dump) into the exact plain-text format that Mealplan's "Importuj → Tekst" parser reads cleanly, with calories and macros per portion (taken from the source, or calculated from the ingredients). Fetches the page itself when given a link. Use when the user wants to add, import, format or clean up a recipe for Mealplan / the meal plan.
 ---
 
 # Format a recipe for Mealplan
@@ -14,6 +14,7 @@ The user pastes your result into **Przepisy → Importuj → Tekst → Analizuj*
 1. Reply with **one fenced code block** (```` ``` ````, no language tag) that contains only the recipe in the format below. Nothing else goes inside the block: no commentary, no markdown emphasis, no emoji.
 2. After the block, add at most a few short lines in the user's language:
    - assumptions you had to make (estimated servings, converted units, translated names, dropped text);
+   - where the nutrition values come from: "ze źródła", or "wyliczone" with the short calculation described in [Calculating nutrition](#calculating-nutrition);
    - suggested tags (the app does not read tags from text, so the user adds them in the editor);
    - the source link, if the user gave one (also not read from text).
 3. If the user gave several recipes, give one block per recipe: the app imports one recipe at a time.
@@ -41,10 +42,11 @@ Rules the parser relies on (the headings and shapes are literal):
 
 - **Line 1 is the title.** Plain text, only the dish name, at most 200 characters. No "Przepis na", no site or author name, no quotes, no `#`.
 - **`Porcje: N`** on its own line: a whole number from 1 to 100, the number of servings the ingredient amounts make. If the source gives no number, estimate from the amounts and say so in the notes. Never write 0, a range or text.
-- **`Wartości na porcję: 520 kcal, białko 32 g, węglowodany 60 g, tłuszcz 14 g`** is an **optional** line right after `Porcje:`. Write it only when the source states nutrition values (JSON-LD `nutrition`, or a nutrition line or table in the text):
-  - Values are always for **one portion**. If the source gives them per 100 g or for the whole dish, convert only when the portion weight or the number of servings is known; otherwise omit the line.
-  - Use **kcal**, never kJ (`2184 kJ / 520 kcal` means write `520 kcal`). Grams for protein, carbs and fat; a decimal comma is fine. Any subset of the four values is allowed, in any order.
-  - **Never guess or estimate** values. When the source gives none, omit the whole line: the app computes the values itself from the ingredients.
+- **`Wartości na porcję: 520 kcal, białko 32 g, węglowodany 60 g, tłuszcz 14 g`** goes right after `Porcje:`. **Always write it**, with all four values:
+  - If the source states nutrition values (JSON-LD `nutrition`, a nutrition line or table in the text), use those. If it gives them per 100 g or for the whole dish, convert to one portion when the portion weight or the number of servings is known; otherwise calculate them yourself instead.
+  - If the source gives none, **calculate them from the ingredients** as described in [Calculating nutrition](#calculating-nutrition).
+  - Values are always for **one portion**. Use **kcal**, never kJ (`2184 kJ / 520 kcal` means write `520 kcal`). Whole kcal; whole grams for protein, carbs and fat (a decimal comma is fine below 10 g, e.g. `tłuszcz 4,5 g`).
+  - Omit the line only when you cannot give a value you would stand behind: most of the dish weight is in ingredients without an amount, or an ingredient is unknown to you.
 - **`Składniki:`** on its own line, exactly this word. One ingredient per line until the next heading.
 - **`Przygotowanie:`** on its own line, exactly this word. One step per line, numbered `1.`, `2.`, …
 - A blank line between the three parts. No other headings, no bold, no tables.
@@ -73,6 +75,23 @@ Shape: `ilość jednostka nazwa`, optionally followed by `, notatka` or `(notatk
 - Fold tips ("Porada:") into the relevant step or drop them. Remove ads, comments, ratings, nutrition tables (their per-portion values go into the `Wartości na porcję:` line instead), author stories, "Smacznego!", "Subscribe", and "Krok 1:"-style labels.
 - At most 100 steps, each under 2000 characters; at most 200 ingredients; the whole text under 100 KB.
 
+## Calculating nutrition
+
+Do this when the source gives no values, before writing the block.
+
+1. **Weigh every ingredient in grams**, as it goes into the dish (raw, uncooked, before peeling unless the source says peeled):
+   - metric amounts as written (`1 l` mleko ≈ 1030 g, oil ≈ 0.92 g/ml, water-like liquids 1 g/ml);
+   - kitchen measures: `łyżka` 15 ml, `łyżeczka` 5 ml, `szklanka` 250 ml, converted with the product's density (`1 łyżka` mąka ≈ 10 g, cukier ≈ 13 g, masło/olej ≈ 14 g, miód ≈ 21 g; `1 szklanka` mąka ≈ 150 g, ryż ≈ 200 g, cukier ≈ 220 g);
+   - pieces by typical edible weight (jajko M ≈ 50 g, cebula ≈ 110 g, ząbek czosnku ≈ 5 g, ziemniak ≈ 150 g, marchew ≈ 80 g, pomidor ≈ 120 g, pierś z kurczaka ≈ 200 g, kromka chleba ≈ 35 g, puszka pomidorów 400 g, kostka masła 200 g).
+2. **Use standard reference values per 100 g of the raw product** (USDA FoodData Central or the Polish IŻŻ tables), the form the recipe uses (dry pasta, raw meat, uncooked rice).
+3. **Leave out** salt, pepper, dried spices, herbs, water, baking powder and anything else "do smaku" or without an amount whose share is negligible.
+   - Frying fat without an amount: count what stays in the dish, about **10 g of oil per portion** for shallow frying (placki, kotlety), 0 when the fat is only for greasing the pan. Say so in the notes.
+   - Ingredients only "do podania" or "opcjonalnie" are not counted; mention it.
+4. **Add up the whole dish and divide by `Porcje`.** Round kcal to whole numbers and macros to whole grams (one decimal below 10 g).
+5. **Check:** `4 × białko + 4 × węglowodany + 9 × tłuszcz` should be within about 10% of kcal (fibre and alcohol explain small gaps). If not, find the mistake before answering.
+
+In the notes after the block, write `Wartości wyliczone (przybliżone):` and one short line per ingredient that counts: `1000 g ziemniaki ≈ 770 kcal`, then the dish total and the per-portion result. Keep it compact: ingredients under about 2% of the total can go together as `reszta ≈ 40 kcal`. Add one line saying the app treats these numbers as typed in, and that clearing them in the editor makes the app calculate them from its own product base instead.
+
 ## Language
 
 Write the finished recipe in **Polish**, the language of the app, translating titles, ingredient names and steps from other languages. If the user asks to keep the original language, keep it, but still use the Polish unit words and the `Porcje:` / `Składniki:` / `Przygotowanie:` headings (the parser also accepts `Serves`, `Ingredients`, `Method`, but its unit words are Polish).
@@ -89,15 +108,15 @@ The app can also do this itself: **Importuj → Link** fetches the page on the s
 
 ## What the app does not take from text
 
-Tags, the source link, preparation times and photos. (Nutrition values **are** read, from the optional `Wartości na porcję:` line.) Say so briefly in the notes and offer the tags you would add; the user sets the source link in the editor.
+Tags, the source link, preparation times and photos. (Nutrition values **are** read, from the `Wartości na porcję:` line.) Say so briefly in the notes and offer the tags you would add; the user sets the source link in the editor.
 
 ## Before you answer, check
 
-- The block starts with the title line, then `Porcje: N`, optionally `Wartości na porcję: …` (only when the source states values, per one portion, in kcal), a blank line, `Składniki:`, the ingredient lines, a blank line, `Przygotowanie:`, the numbered steps.
+- The block starts with the title line, then `Porcje: N`, `Wartości na porcję: …` (per one portion, in kcal, all four values), a blank line, `Składniki:`, the ingredient lines, a blank line, `Przygotowanie:`, the numbered steps.
 - Every ingredient line is `ilość jednostka nazwa` (or a bare name for "to taste" items), at most 10 words per line (up to 30 when the line starts with an amount), no ranges, no bullets needed.
 - Names are in the nominative; metric units used where the source had them.
 - Every step is one numbered line; nothing from the page chrome remains.
-- Nutrition values were not guessed: the line is present only if the source gave them.
+- Nutrition values come from the source, or were calculated per [Calculating nutrition](#calculating-nutrition): the macro check fits kcal within about 10%, and the notes say which it was and show the calculation.
 - Nothing was invented; every assumption is listed after the block.
 
 ## Example
@@ -128,4 +147,42 @@ Przygotowanie:
 3. Smaż małe placki na gorącym oleju po 3-4 minuty z każdej strony, aż się zrumienią.
 ```
 
-Notes after the block: "Liczba jajek: w źródle 2-3, wpisałem 3. Zaproponowane tagi: obiad, ziemniaki, szybkie."
+Notes after the block: "Wartości ze źródła. Liczba jajek: w źródle 2-3, wpisałem 3. Zaproponowane tagi: obiad, ziemniaki, szybkie."
+
+## Example: values calculated
+
+Input:
+
+> Owsianka z bananem dla 2 osób: 100 g płatków owsianych, 400 ml mleka 2%, 1 banan, 1 łyżka miodu, szczypta cynamonu. Płatki zalej mlekiem, gotuj 5 minut, dodaj pokrojonego banana i miód, posyp cynamonem.
+
+Output:
+
+```
+Owsianka z bananem
+Porcje: 2
+Wartości na porcję: 378 kcal, białko 14 g, węglowodany 66 g, tłuszcz 7,6 g
+
+Składniki:
+100 g płatki owsiane
+400 ml mleko 2%
+1 banan, pokrojony
+1 łyżka miód
+1 szczypta cynamon
+
+Przygotowanie:
+1. Zalej płatki mlekiem i gotuj 5 minut, mieszając.
+2. Dodaj pokrojonego banana i miód, posyp cynamonem.
+```
+
+Notes after the block:
+
+> Wartości wyliczone (przybliżone):
+> - 100 g płatki owsiane ≈ 379 kcal
+> - 400 ml mleko 2% (412 g) ≈ 206 kcal
+> - 1 banan (120 g) ≈ 107 kcal
+> - 1 łyżka miód (21 g) ≈ 64 kcal
+> - cynamon pominięty
+>
+> Razem ≈ 756 kcal (białko 28 g, węglowodany 132 g, tłuszcz 15 g), na porcję ≈ 378 kcal. Aplikacja traktuje te liczby jak wpisane ręcznie; jeśli je wyczyścisz w edytorze, wyliczy je z własnej bazy produktów.
+>
+> Zaproponowane tagi: śniadanie, na słodko, szybkie.

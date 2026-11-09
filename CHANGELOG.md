@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Umiejętność Claude
+
+- `mealplan-recipe-format` zawsze podaje wartości na porcję: ze źródła albo wyliczone ze składników (wagi łyżek, szklanek i sztuk, wartości referencyjne na 100 g, kontrola kcal z makroskładnikami), z krótkim wyliczeniem pod przepisem. Nowy przykład z wyliczonymi wartościami; przykłady sprawdza test importu.
+
 ### Poprawki
 
 - „Nowy przepis" otwiera się znowu: pusty formularz nie miał pól wartości odżywczych i ekran wywracał się przy pierwszym renderze. Całkiem puste wiersze składników i puste kroki są przy zapisie pomijane zamiast blokować go błędem walidacji.
