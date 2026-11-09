@@ -43,7 +43,7 @@ func key(norm, unit string, hasAmount bool) string {
 }
 
 // Build scales every recipe entry's ingredients by servings, sums matching rows, subtracts stock and
-// returns the rows sorted by name. Free-text entries, done entries and unknown recipes contribute
+// returns the rows sorted by name. Prep and eaten-out entries, free-text entries, done entries and unknown recipes contribute
 // nothing; ingredients of a staple product are left out. A row fully covered by stock stays with
 // Quantity 0 and Have set.
 func Build(entries []domain.PlanEntry, recipes map[string]domain.Recipe, productOf func(domain.Ingredient) string, stock []StockLine) ([]Line, error) {
@@ -65,7 +65,7 @@ func Build(entries []domain.PlanEntry, recipes map[string]domain.Recipe, product
 
 	rows := map[string]*acc{}
 	for _, e := range entries {
-		if e.RecipeID == "" || e.Done {
+		if (e.Kind != "" && e.Kind != domain.EntryMeal) || e.RecipeID == "" || e.Done {
 			continue
 		}
 		r, ok := recipes[e.RecipeID]

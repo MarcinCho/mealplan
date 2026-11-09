@@ -20,7 +20,7 @@ const rows = computed(() =>
     ? ROWS.map((r) => ({
         ...r,
         value: formatNumber(props.meal!.values[r.key], r.unit) + (props.meal!.values[r.key] === null ? '' : r.unit === 'kcal' ? ' kcal' : ' g'),
-        source: SOURCE[props.meal!.sources[r.key]],
+        source: props.meal!.kind === 'out' ? t.nutritionGiven : SOURCE[props.meal!.sources[r.key]],
       }))
     : [],
 )

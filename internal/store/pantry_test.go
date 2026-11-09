@@ -259,3 +259,61 @@ func TestApplyMovementsConcurrent(t *testing.T) {
 		t.Fatalf("qty %v sum %v", *got.Quantity, sum)
 	}
 }
+
+func TestConsumeRestoreForSession(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedPantry(t, s)
+	if _, err := s.DB().ExecContext(ctx, `INSERT INTO prep_session (id, household_id, date, name, week, cooked, created_at) VALUES ('s1', 'hA', '2026-11-08', 'N', '2026-11-09', 0, 1)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.InsertPlanEntry(ctx, entry("e1", "hA", "2026-11-02", domain.SlotDinner)); err != nil {
+		t.Fatal(err)
+	}
+	it, _ := s.AddToPantry(ctx, "hA", "p1", "g", 300)
+	qty := func() float64 {
+		g, _ := s.PantryItemByID(ctx, "hA", it.ID)
+		return *g.Quantity
+	}
+	// An entry movement for the same product must not interfere with the session's.
+	if ok, err := s.ConsumeForEntry(ctx, "hA", "e1", []domain.PantryMovement{{EntryID: "e1", ProductID: "p1", Unit: "g", Amount: -50}}); err != nil || !ok {
+		t.Fatalf("entry consume: %v %v", ok, err)
+	}
+	ms := []domain.PantryMovement{{SessionID: "s1", ProductID: "p1", Unit: "g", Amount: -500}}
+	if ok, err := s.ConsumeForSession(ctx, "hA", "s1", ms); err != nil || !ok {
+		t.Fatalf("consume: %v %v", ok, err)
+	}
+	if q := qty(); q != 0 {
+		t.Fatalf("clamped at zero: %v", q)
+	}
+	// Second consume is a no-op.
+	if ok, err := s.ConsumeForSession(ctx, "hA", "s1", ms); err != nil || ok {
+		t.Fatalf("second consume: %v %v", ok, err)
+	}
+	if q := qty(); q != 0 {
+		t.Fatalf("after second consume: %v", q)
+	}
+	// Restore returns exactly what was applied (250), leaving the entry's -50 alone.
+	if err := s.RestoreForSession(ctx, "hA", "s1"); err != nil {
+		t.Fatal(err)
+	}
+	if q := qty(); q != 250 {
+		t.Fatalf("after restore: %v", q)
+	}
+	if ms, _ := s.MovementsForEntry(ctx, "hA", "e1"); len(ms) != 1 {
+		t.Fatalf("entry movement disturbed: %+v", ms)
+	}
+	if err := s.RestoreForSession(ctx, "hA", "s1"); err != nil {
+		t.Fatal(err)
+	}
+	if q := qty(); q != 250 {
+		t.Fatalf("restore twice: %v", q)
+	}
+	// Foreign household / wrong session id.
+	if _, err := s.ConsumeForSession(ctx, "hB", "s1", ms); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("foreign session: %v", err)
+	}
+	if _, err := s.ConsumeForSession(ctx, "hA", "s1", []domain.PantryMovement{{SessionID: "other", ProductID: "p1", Unit: "g", Amount: -1}}); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("mismatched session id: %v", err)
+	}
+}

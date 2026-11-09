@@ -14,7 +14,18 @@ import (
 	"mealplan/internal/store"
 )
 
+// Open returns a fresh, fully migrated database.
 func Open(t *testing.T) *store.DB {
+	t.Helper()
+	db := OpenRaw(t)
+	if err := db.Migrate(context.Background()); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	return db
+}
+
+// OpenRaw returns a fresh database with no migrations applied.
+func OpenRaw(t *testing.T) *store.DB {
 	t.Helper()
 	var db *store.DB
 	var err error
@@ -28,9 +39,6 @@ func Open(t *testing.T) *store.DB {
 		t.Fatalf("open test db: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if err := db.Migrate(context.Background()); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
 	return db
 }
 

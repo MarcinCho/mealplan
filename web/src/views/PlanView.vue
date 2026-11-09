@@ -5,6 +5,7 @@ import { api } from '../api/client'
 import type { PlanEntry, Slot } from '../api/types'
 import EntryDialog from '../components/EntryDialog.vue'
 import { errorText, t } from '../messages'
+import { entryChip, entryTitle } from '../mealprep'
 import { dayLine, dayWarnings } from '../nutrition'
 import { useNutrition } from '../stores/nutrition'
 import { usePlan, type EntryInput } from '../stores/plan'
@@ -92,7 +93,7 @@ function retry() {
 const editable = computed(() => ready.value && plan.loaded && plan.week === week.value)
 
 function label(e: PlanEntry): string {
-  return e.recipeId ? (recipeTitle.value[e.recipeId] ?? '…') : e.freeText
+  return entryTitle(e, e.recipeId ? (recipeTitle.value[e.recipeId] ?? '…') : null)
 }
 
 function openNew(date: string, slot: Slot) {
@@ -187,7 +188,10 @@ async function copyPrev() {
             style="height: auto; white-space: normal"
             @click="openEdit(e)"
           >
-            <span>{{ label(e) }}<template v-if="e.cookUserId"> · {{ memberName[e.cookUserId] }}</template></span>
+            <span>
+              {{ label(e) }}<template v-if="e.cookUserId"> · {{ memberName[e.cookUserId] }}</template>
+              <span v-if="entryChip(e)" class="d-block text-caption text-medium-emphasis">{{ entryChip(e) }}</span>
+            </span>
           </v-chip>
           <v-btn icon="mdi-plus" size="x-small" variant="text" color="primary" :title="t.addEntry" @click="openNew(d, s.value)" />
         </td>
@@ -209,7 +213,7 @@ async function copyPrev() {
             v-for="e in plan.entriesFor(d, s.value)"
             :key="e.id"
             :title="label(e)"
-            :subtitle="`${s.title} · ${e.servings} ${t.servingsShort}${e.cookUserId ? ' · ' + memberName[e.cookUserId] : ''}`"
+            :subtitle="`${s.title} · ${e.servings} ${t.servingsShort}${e.cookUserId ? ' · ' + memberName[e.cookUserId] : ''}${entryChip(e) ? ' · ' + entryChip(e) : ''}`"
             @click="openEdit(e)"
           />
         </template>

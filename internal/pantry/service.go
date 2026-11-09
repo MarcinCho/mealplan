@@ -31,6 +31,8 @@ type Repo interface {
 	DeletePantryItem(ctx context.Context, householdID, id string) error
 	ConsumeForEntry(ctx context.Context, householdID, entryID string, ms []domain.PantryMovement) (bool, error)
 	RestoreForEntry(ctx context.Context, householdID, entryID string) error
+	ConsumeForSession(ctx context.Context, householdID, sessionID string, ms []domain.PantryMovement) (bool, error)
+	RestoreForSession(ctx context.Context, householdID, sessionID string) error
 	PantryReviewedAt(ctx context.Context, householdID string) (*time.Time, error)
 	MarkPantryReviewed(ctx context.Context, householdID string, at time.Time) error
 }

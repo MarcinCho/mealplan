@@ -49,6 +49,13 @@ type PlanSource interface {
 	RecipesByIDs(ctx context.Context, householdID string, ids []string) (map[string]domain.Recipe, error)
 }
 
+// Sessions is the part of the meal prep store the list needs: sessions are shopped for by the week
+// they belong to, whatever day range is generated.
+type Sessions interface {
+	PrepSessionsForWeek(ctx context.Context, householdID, week string) ([]domain.PrepSession, error)
+	PrepDishes(ctx context.Context, householdID string, sessionIDs []string) ([]domain.PrepDish, error)
+}
+
 type ItemInput struct {
 	Name     string
 	Quantity *float64
@@ -60,7 +67,11 @@ type Service struct {
 	plans    PlanSource
 	pantry   Pantry
 	products Products
+	sessions Sessions
 }
+
+// SetSessions makes the list include the dishes of the week's prep sessions.
+func (s *Service) SetSessions(x Sessions) { s.sessions = x }
 
 func New(repo Repo, plans PlanSource, pan Pantry, products Products) *Service {
 	return &Service{repo: repo, plans: plans, pantry: pan, products: products}
@@ -126,7 +137,7 @@ func (s *Service) PreviousWeekUndone(ctx context.Context, householdID, week stri
 	}
 	n := 0
 	for _, e := range entries {
-		if e.RecipeID != "" && !e.Done {
+		if (e.Kind == "" || e.Kind == domain.EntryMeal) && e.RecipeID != "" && !e.Done {
 			n++
 		}
 	}
@@ -153,6 +164,27 @@ func (s *Service) Generate(ctx context.Context, householdID, week, from, to stri
 	entries, err := s.plans.PlanEntries(ctx, householdID, lo, hi)
 	if err != nil {
 		return nil, err
+	}
+	if s.sessions != nil {
+		sessions, err := s.sessions.PrepSessionsForWeek(ctx, householdID, week)
+		if err != nil {
+			return nil, err
+		}
+		sids := make([]string, 0, len(sessions))
+		cooked := map[string]bool{}
+		for _, ps := range sessions {
+			sids = append(sids, ps.ID)
+			cooked[ps.ID] = ps.Cooked
+		}
+		if len(sids) > 0 {
+			dishes, err := s.sessions.PrepDishes(ctx, householdID, sids)
+			if err != nil {
+				return nil, err
+			}
+			for _, d := range dishes {
+				entries = append(entries, domain.PlanEntry{Kind: domain.EntryMeal, RecipeID: d.RecipeID, Servings: d.Portions, Done: cooked[d.SessionID]})
+			}
+		}
 	}
 	ids := make([]string, 0, len(entries))
 	seen := map[string]bool{}

@@ -8,6 +8,7 @@ import (
 
 	"mealplan/internal/auth"
 	"mealplan/internal/config"
+	"mealplan/internal/mealprep"
 	"mealplan/internal/nutrition"
 	"mealplan/internal/pantry"
 	"mealplan/internal/plan"
@@ -24,6 +25,7 @@ type Deps struct {
 	Shopping  *shopping.Service
 	Nutrition *nutrition.Service
 	Pantry    *pantry.Service
+	MealPrep  *mealprep.Service
 	Importer  Importer
 }
 
@@ -93,6 +95,20 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/pantry/review", s.private(s.handleReviewPantry)},
 		{"PUT /api/v1/pantry/{id}", s.private(s.handleUpdatePantry)},
 		{"DELETE /api/v1/pantry/{id}", s.private(s.handleDeletePantry)},
+		{"GET /api/v1/prep/sessions", s.private(s.handleListSessions)},
+		{"POST /api/v1/prep/sessions", s.private(s.handleCreateSession)},
+		{"PUT /api/v1/prep/sessions/{id}", s.private(s.handleUpdateSession)},
+		{"DELETE /api/v1/prep/sessions/{id}", s.private(s.handleDeleteSession)},
+		{"POST /api/v1/prep/sessions/{id}/dishes", s.private(s.handleAddDish)},
+		{"PUT /api/v1/prep/dishes/{id}", s.private(s.handleUpdateDish)},
+		{"DELETE /api/v1/prep/dishes/{id}", s.private(s.handleDeleteDish)},
+		{"POST /api/v1/prep/dishes/{id}/freeze", s.private(s.handleFreezeDish)},
+		{"GET /api/v1/freezer", s.private(s.handleListFreezer)},
+		{"POST /api/v1/freezer", s.private(s.handleAddFreezer)},
+		{"PUT /api/v1/freezer/{id}", s.private(s.handleUpdateFreezer)},
+		{"DELETE /api/v1/freezer/{id}", s.private(s.handleDeleteFreezer)},
+		{"GET /api/v1/household/settings", s.private(s.handleGetHouseholdSettings)},
+		{"PUT /api/v1/household/settings", s.private(s.handlePutHouseholdSettings)},
 	}
 }
 

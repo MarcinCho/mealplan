@@ -53,10 +53,11 @@ func Deductions(r domain.Recipe, servings int, m *nutrition.Matcher, stock []dom
 	return out
 }
 
-// EntryDone takes the recipe's ingredients out of stock. It does nothing for free-text entries; the
+// EntryDone takes the recipe's ingredients out of stock. It does nothing for free-text, prep and out
+// entries (the zero Kind is a meal, as in the store); the
 // store applies the deductions atomically and only if the entry has no recorded movements yet.
 func (s *Service) EntryDone(ctx context.Context, householdID string, e domain.PlanEntry) error {
-	if e.RecipeID == "" {
+	if (e.Kind != "" && e.Kind != domain.EntryMeal) || e.RecipeID == "" {
 		return nil
 	}
 	r, err := s.recipes.RecipeByID(ctx, householdID, e.RecipeID)
@@ -83,4 +84,50 @@ func (s *Service) EntryDone(ctx context.Context, householdID string, e domain.Pl
 // atomically; a repeated call finds nothing to do.
 func (s *Service) EntryUndone(ctx context.Context, householdID, entryID string) error {
 	return s.repo.RestoreForEntry(ctx, householdID, entryID)
+}
+
+// SessionCooked takes the ingredients of every dish in the session out of stock, scaled to the
+// dish's portions. Like EntryDone it applies once: movements already recorded make it a no-op.
+func (s *Service) SessionCooked(ctx context.Context, householdID string, sess domain.PrepSession, dishes []domain.PrepDish) error {
+	if len(dishes) == 0 {
+		return nil
+	}
+	stock, err := s.repo.PantryItems(ctx, householdID)
+	if err != nil {
+		return err
+	}
+	all, err := s.products.All(ctx, householdID)
+	if err != nil {
+		return err
+	}
+	m := nutrition.NewMatcher(all)
+	totals := map[[2]string]float64{}
+	var order [][2]string
+	for _, d := range dishes {
+		r, err := s.recipes.RecipeByID(ctx, householdID, d.RecipeID)
+		if err != nil {
+			return err
+		}
+		for _, mv := range Deductions(r, d.Portions, m, stock, "") {
+			k := [2]string{mv.ProductID, mv.Unit}
+			if _, ok := totals[k]; !ok {
+				order = append(order, k)
+			}
+			totals[k] += mv.Amount
+		}
+	}
+	var ms []domain.PantryMovement
+	for _, k := range order {
+		ms = append(ms, domain.PantryMovement{SessionID: sess.ID, ProductID: k[0], Unit: k[1], Amount: units.Round(totals[k])})
+	}
+	if len(ms) == 0 {
+		return nil
+	}
+	_, err = s.repo.ConsumeForSession(ctx, householdID, sess.ID, ms)
+	return err
+}
+
+// SessionUncooked puts back what SessionCooked took; a repeated call finds nothing to do.
+func (s *Service) SessionUncooked(ctx context.Context, householdID, sessionID string) error {
+	return s.repo.RestoreForSession(ctx, householdID, sessionID)
 }

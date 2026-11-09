@@ -156,22 +156,35 @@ func (s *Store) ApplyMovements(ctx context.Context, householdID string, ms []dom
 	return s.inTx(ctx, func(tx *sql.Tx) error { return s.applyMovements(ctx, tx, householdID, ms) })
 }
 
-// lockEntry locks the household's plan entry row for the transaction (ErrNotFound if absent).
+// movementOwner names who a movement belongs to: a plan entry or a prep session.
+type movementOwner struct{ table, col, id string }
+
+func entryOwner(id string) movementOwner   { return movementOwner{"plan_entry", "entry_id", id} }
+func sessionOwner(id string) movementOwner { return movementOwner{"prep_session", "session_id", id} }
+
+func ownerOf(m domain.PantryMovement) movementOwner {
+	if m.SessionID != "" {
+		return sessionOwner(m.SessionID)
+	}
+	return entryOwner(m.EntryID)
+}
+
+// lockOwner locks the household's owner row for the transaction (ErrNotFound if absent).
 // SQLite needs no lock: the pool has a single connection, so transactions are serialized.
-func (s *Store) lockEntry(ctx context.Context, tx *sql.Tx, householdID, entryID string) error {
-	q := `SELECT id FROM plan_entry WHERE id = ? AND household_id = ?`
+func (s *Store) lockOwner(ctx context.Context, tx *sql.Tx, householdID string, o movementOwner) error {
+	q := `SELECT id FROM ` + o.table + ` WHERE id = ? AND household_id = ?`
 	if s.db.Driver == "postgres" {
 		q += ` FOR UPDATE`
 	}
 	var id string
-	if err := tx.QueryRowContext(ctx, s.db.Rebind(q), entryID, householdID).Scan(&id); err != nil {
+	if err := tx.QueryRowContext(ctx, s.db.Rebind(q), o.id, householdID).Scan(&id); err != nil {
 		return mapErr(err)
 	}
 	return nil
 }
 
-func (s *Store) movementsTx(ctx context.Context, tx *sql.Tx, householdID, entryID string) (int, []domain.PantryMovement, error) {
-	rows, err := tx.QueryContext(ctx, s.db.Rebind(`SELECT entry_id, product_id, unit, amount FROM pantry_movement WHERE household_id = ? AND entry_id = ? ORDER BY product_id, unit, amount`), householdID, entryID)
+func (s *Store) movementsTx(ctx context.Context, tx *sql.Tx, householdID string, o movementOwner) (int, []domain.PantryMovement, error) {
+	rows, err := tx.QueryContext(ctx, s.db.Rebind(`SELECT product_id, unit, amount FROM pantry_movement WHERE household_id = ? AND `+o.col+` = ? ORDER BY product_id, unit, amount`), householdID, o.id)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -179,7 +192,12 @@ func (s *Store) movementsTx(ctx context.Context, tx *sql.Tx, householdID, entryI
 	var out []domain.PantryMovement
 	for rows.Next() {
 		var m domain.PantryMovement
-		if err := rows.Scan(&m.EntryID, &m.ProductID, &m.Unit, &m.Amount); err != nil {
+		if o.col == "session_id" {
+			m.SessionID = o.id
+		} else {
+			m.EntryID = o.id
+		}
+		if err := rows.Scan(&m.ProductID, &m.Unit, &m.Amount); err != nil {
 			return 0, nil, err
 		}
 		out = append(out, m)
@@ -187,20 +205,20 @@ func (s *Store) movementsTx(ctx context.Context, tx *sql.Tx, householdID, entryI
 	return len(out), out, rows.Err()
 }
 
-// ConsumeForEntry applies ms in one transaction unless the entry already has recorded movements.
-// The entry row is locked first, so concurrent calls for one entry deduct exactly once.
-func (s *Store) ConsumeForEntry(ctx context.Context, householdID, entryID string, ms []domain.PantryMovement) (bool, error) {
+// consumeFor applies ms in one transaction unless the owner already has recorded movements.
+// The owner row is locked first, so concurrent calls deduct exactly once.
+func (s *Store) consumeFor(ctx context.Context, householdID string, o movementOwner, ms []domain.PantryMovement) (bool, error) {
 	applied := false
 	err := s.inTx(ctx, func(tx *sql.Tx) error {
-		if err := s.lockEntry(ctx, tx, householdID, entryID); err != nil {
+		if err := s.lockOwner(ctx, tx, householdID, o); err != nil {
 			return err
 		}
-		n, _, err := s.movementsTx(ctx, tx, householdID, entryID)
+		n, _, err := s.movementsTx(ctx, tx, householdID, o)
 		if err != nil || n > 0 {
 			return err
 		}
 		for _, m := range ms {
-			if m.EntryID != entryID {
+			if ownerOf(m) != o {
 				return ErrNotFound
 			}
 		}
@@ -210,14 +228,14 @@ func (s *Store) ConsumeForEntry(ctx context.Context, householdID, entryID string
 	return applied && err == nil, err
 }
 
-// RestoreForEntry gives back the recorded (actually applied) movements of the entry with the opposite
-// sign and forgets them, all in one transaction under the entry lock. No movements means no-op.
-func (s *Store) RestoreForEntry(ctx context.Context, householdID, entryID string) error {
+// restoreFor gives back the recorded (actually applied) movements of the owner with the opposite
+// sign and forgets them, all in one transaction under the owner lock. No movements means no-op.
+func (s *Store) restoreFor(ctx context.Context, householdID string, o movementOwner) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
-		if err := s.lockEntry(ctx, tx, householdID, entryID); err != nil {
+		if err := s.lockOwner(ctx, tx, householdID, o); err != nil {
 			return err
 		}
-		n, ms, err := s.movementsTx(ctx, tx, householdID, entryID)
+		n, ms, err := s.movementsTx(ctx, tx, householdID, o)
 		if err != nil || n == 0 {
 			return err
 		}
@@ -227,8 +245,28 @@ func (s *Store) RestoreForEntry(ctx context.Context, householdID, entryID string
 		if err := s.applyMovements(ctx, tx, householdID, ms); err != nil {
 			return err
 		}
-		return s.exec(ctx, tx, `DELETE FROM pantry_movement WHERE household_id = ? AND entry_id = ?`, householdID, entryID)
+		return s.exec(ctx, tx, `DELETE FROM pantry_movement WHERE household_id = ? AND `+o.col+` = ?`, householdID, o.id)
 	})
+}
+
+// ConsumeForEntry applies ms unless the entry already has recorded movements.
+func (s *Store) ConsumeForEntry(ctx context.Context, householdID, entryID string, ms []domain.PantryMovement) (bool, error) {
+	return s.consumeFor(ctx, householdID, entryOwner(entryID), ms)
+}
+
+// RestoreForEntry gives back what ConsumeForEntry applied and forgets it.
+func (s *Store) RestoreForEntry(ctx context.Context, householdID, entryID string) error {
+	return s.restoreFor(ctx, householdID, entryOwner(entryID))
+}
+
+// ConsumeForSession is ConsumeForEntry for a prep session's movements.
+func (s *Store) ConsumeForSession(ctx context.Context, householdID, sessionID string, ms []domain.PantryMovement) (bool, error) {
+	return s.consumeFor(ctx, householdID, sessionOwner(sessionID), ms)
+}
+
+// RestoreForSession gives back what ConsumeForSession applied and forgets it.
+func (s *Store) RestoreForSession(ctx context.Context, householdID, sessionID string) error {
+	return s.restoreFor(ctx, householdID, sessionOwner(sessionID))
 }
 
 func (s *Store) applyMovements(ctx context.Context, tx *sql.Tx, householdID string, ms []domain.PantryMovement) error {
@@ -242,8 +280,9 @@ func (s *Store) applyMovements(ctx context.Context, tx *sql.Tx, householdID stri
 	})
 	{
 		for _, m := range ms {
+			o := ownerOf(m)
 			var n int
-			if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COUNT(*) FROM plan_entry WHERE id = ? AND household_id = ?`), m.EntryID, householdID).Scan(&n); err != nil {
+			if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COUNT(*) FROM `+o.table+` WHERE id = ? AND household_id = ?`), o.id, householdID).Scan(&n); err != nil {
 				return err
 			}
 			if n == 0 {
@@ -277,8 +316,8 @@ func (s *Store) applyMovements(ctx context.Context, tx *sql.Tx, householdID stri
 					return err
 				}
 			}
-			if err := s.exec(ctx, tx, `INSERT INTO pantry_movement (household_id, entry_id, product_id, unit, amount) VALUES (?, ?, ?, ?, ?)`,
-				householdID, m.EntryID, m.ProductID, m.Unit, applied); err != nil {
+			if err := s.exec(ctx, tx, `INSERT INTO pantry_movement (household_id, `+o.col+`, product_id, unit, amount) VALUES (?, ?, ?, ?, ?)`,
+				householdID, o.id, m.ProductID, m.Unit, applied); err != nil {
 				return err
 			}
 		}

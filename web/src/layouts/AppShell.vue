@@ -15,6 +15,7 @@ const router = useRouter()
 const items = [
   { title: t.navToday, icon: 'mdi-home-variant-outline', active: 'mdi-home-variant', to: { name: 'home' } },
   { title: t.navPlan, icon: 'mdi-calendar-week-outline', active: 'mdi-calendar-week', to: { name: 'plan' } },
+  { title: t.navPrep, icon: 'mdi-pot-steam-outline', active: 'mdi-pot-steam', to: { name: 'prep' } },
   { title: t.navRecipes, icon: 'mdi-book-open-variant-outline', active: 'mdi-book-open-variant', to: { name: 'recipes' } },
   { title: t.navPantry, icon: 'mdi-fridge-outline', active: 'mdi-fridge', to: { name: 'pantry' } },
   { title: t.navShopping, icon: 'mdi-cart-outline', active: 'mdi-cart', to: { name: 'shopping' } },

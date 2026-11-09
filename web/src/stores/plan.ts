@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { api } from '../api/client'
-import type { PlanEntry, Slot } from '../api/types'
+import type { Macros, PlanEntry, Slot } from '../api/types'
+import { useMealPrepStore } from './mealprep'
 
 export interface EntryInput {
   date: string
@@ -10,6 +11,10 @@ export interface EntryInput {
   servings?: number
   cookUserId?: string | null
   done?: boolean
+  kind?: 'meal' | 'prep' | 'out'
+  prepDishId?: string | null
+  freezerItemId?: string | null
+  outValues?: Macros | null
 }
 
 // Monotonic request counter: only the latest load may touch the state.
@@ -36,15 +41,18 @@ export const usePlan = defineStore('plan', {
         if (mine === seq) this.loading = false
       }
     },
-    async add(input: EntryInput) {
-      const week = this.week
+    // `forWeek` adds to a week other than the loaded one (the meal prep dialog picks any date).
+    async add(input: EntryInput, forWeek?: string) {
+      const week = forWeek ?? this.week
       const e = await api<PlanEntry>('POST', `/plan/${week}/entries`, input)
       if (week === this.week) this.entries.push(e)
+      if (input.kind === 'prep') await useMealPrepStore().refresh()
     },
     async edit(id: string, input: EntryInput) {
       const week = this.week
       const e = await api<PlanEntry>('PUT', `/plan/${week}/entries/${encodeURIComponent(id)}`, input)
       if (week === this.week) this.entries = this.entries.map((x) => (x.id === id ? e : x))
+      if (input.kind === 'prep') await useMealPrepStore().refresh()
     },
     // PUT replaces the entry, so the toggle sends the whole entry back with only `done` changed.
     async setDone(entry: PlanEntry, done: boolean) {
@@ -56,12 +64,18 @@ export const usePlan = defineStore('plan', {
         servings: entry.servings,
         cookUserId: entry.cookUserId,
         done,
+        kind: entry.kind ?? 'meal',
+        prepDishId: entry.prepDishId ?? null,
+        freezerItemId: entry.freezerItemId ?? null,
+        outValues: entry.outValues ?? null,
       })
     },
     async remove(id: string) {
       const week = this.week
+      const wasPrep = this.entries.find((x) => x.id === id)?.kind === 'prep'
       await api('DELETE', `/plan/${week}/entries/${encodeURIComponent(id)}`)
       if (week === this.week) this.entries = this.entries.filter((x) => x.id !== id)
+      if (wasPrep) await useMealPrepStore().refresh()
     },
     async copyFrom(fromWeek: string) {
       const week = this.week

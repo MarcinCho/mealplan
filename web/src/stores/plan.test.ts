@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlan } from './plan'
+import { useMealPrepStore } from './mealprep'
 
 function stub(status: number, body: unknown) {
   const spy = vi.fn(async (..._args: unknown[]) => new Response(status === 204 ? null : JSON.stringify(body), { status }))
@@ -134,7 +135,83 @@ describe('usePlan.setDone', () => {
     expect(init.method).toBe('PUT')
     expect(JSON.parse(init.body as string)).toEqual({
       date: '2026-11-03', slot: 'dinner', recipeId: null, freeText: 'Pizza', servings: 2, cookUserId: null, done: true,
+      kind: 'meal', prepDishId: null, freezerItemId: null, outValues: null,
     })
     expect(p.entries[0].done).toBe(true)
+  })
+})
+
+describe('usePlan and meal prep', () => {
+  const prepEntry = { ...e1, id: 'p1', freeText: '', kind: 'prep', prepDishId: 'd1', freezerItemId: null, outValues: null }
+
+  function routes() {
+    const spy = vi.fn(async (url: string, init?: RequestInit) => {
+      const m = init?.method ?? 'GET'
+      if (url.startsWith('/api/v1/plan/') && m === 'GET') return new Response(JSON.stringify({ week: '2026-11-02', entries: [] }), { status: 200 })
+      if (m === 'POST' || m === 'PUT') return new Response(JSON.stringify(prepEntry), { status: 200 })
+      if (m === 'DELETE') return new Response(null, { status: 204 })
+      if (url === '/api/v1/prep/sessions') return new Response(JSON.stringify({ sessions: [] }), { status: 200 })
+      if (url === '/api/v1/freezer') return new Response(JSON.stringify({ items: [] }), { status: 200 })
+      return new Response('{}', { status: 200 })
+    })
+    vi.stubGlobal('fetch', spy)
+    return spy
+  }
+  const urls = (spy: ReturnType<typeof routes>) => spy.mock.calls.map((c) => `${(c[1] as RequestInit | undefined)?.method ?? 'GET'} ${c[0]}`)
+
+  beforeEach(() => setActivePinia(createPinia()))
+
+  it('add sends kind, prepDishId and outValues and refreshes meal prep for a prep entry', async () => {
+    const spy = routes()
+    const p = usePlan()
+    await p.load('2026-11-02')
+    spy.mockClear()
+    await p.add({ date: '2026-11-03', slot: 'dinner', kind: 'prep', prepDishId: 'd1', servings: 2 })
+    const post = spy.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(post[1].body as string)).toMatchObject({ kind: 'prep', prepDishId: 'd1', servings: 2 })
+    expect(urls(spy)).toContain('GET /api/v1/prep/sessions')
+    expect(urls(spy)).toContain('GET /api/v1/freezer')
+  })
+
+  it('does not touch meal prep for an ordinary entry', async () => {
+    const spy = routes()
+    const p = usePlan()
+    await p.load('2026-11-02')
+    spy.mockClear()
+    await p.add({ date: '2026-11-03', slot: 'dinner', kind: 'out', outValues: { kcal: 800, protein: null, carbs: null, fat: null } })
+    expect(JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string).outValues.kcal).toBe(800)
+    expect(urls(spy)).toEqual(['POST /api/v1/plan/2026-11-02/entries'])
+  })
+
+  it('removing a prep entry refreshes meal prep', async () => {
+    const spy = routes()
+    const p = usePlan()
+    await p.load('2026-11-02')
+    await p.add({ date: '2026-11-03', slot: 'dinner', kind: 'prep', prepDishId: 'd1' })
+    spy.mockClear()
+    await p.remove('p1')
+    expect(urls(spy)).toContain('GET /api/v1/prep/sessions')
+  })
+
+  it('a failed meal prep refresh does not fail a saved write', async () => {
+    const spy = routes()
+    const p = usePlan()
+    await p.load('2026-11-02')
+    spy.mockImplementation(async (url: string, init?: RequestInit) =>
+      url.startsWith('/api/v1/prep') || url === '/api/v1/freezer' ? new Response(JSON.stringify({ code: 'internal', error: 'x' }), { status: 500 }) : new Response(JSON.stringify(prepEntry), { status: (init?.method ?? 'GET') === 'POST' ? 201 : 200 }))
+    await p.add({ date: '2026-11-03', slot: 'dinner', kind: 'prep', prepDishId: 'd1' })
+    expect(p.entries).toHaveLength(1)
+    expect(useMealPrepStore().reloadError).not.toBe('')
+  })
+
+  it('setDone keeps the prep link and kind', async () => {
+    const spy = routes()
+    const p = usePlan()
+    await p.load('2026-11-02')
+    await p.add({ date: '2026-11-03', slot: 'dinner', kind: 'prep', prepDishId: 'd1' })
+    spy.mockClear()
+    await p.setDone(p.entries[0], true)
+    const body = JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string)
+    expect(body).toMatchObject({ kind: 'prep', prepDishId: 'd1', done: true })
   })
 })

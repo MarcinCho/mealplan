@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"mealplan/internal/domain"
+	"mealplan/internal/mealprep"
 	"mealplan/internal/pantry"
 	"mealplan/internal/plan"
 	"mealplan/internal/product"
@@ -26,6 +27,7 @@ type fx struct {
 	rec   *recipe.Service
 	st    *store.Store
 	pan   *pantry.Service
+	mp    *mealprep.Service
 }
 
 const hid = "h1"
@@ -44,7 +46,12 @@ func newFx(t *testing.T) *fx {
 	now := func() time.Time { return time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC) }
 	prods := product.New(st, now)
 	pan := pantry.New(st, st, prods, now)
-	return &fx{svc: shopping.New(st, st, pan, prods), plans: plan.New(st, st), rec: recipe.New(st, now), st: st, pan: pan}
+	svc := shopping.New(st, st, pan, prods)
+	svc.SetSessions(st)
+	mp := mealprep.New(st, st, nil, now)
+	ps := plan.New(st, st)
+	ps.SetPortions(mp)
+	return &fx{svc: svc, plans: ps, rec: recipe.New(st, now), st: st, pan: pan, mp: mp}
 }
 
 func (f *fx) cook(t *testing.T, title string, servings int, ings ...recipe.IngredientInput) string {
@@ -490,5 +497,45 @@ func TestMoveCheckedUsesLinkedProduct(t *testing.T) {
 		if pr.NormalizedName == "mąki" {
 			t.Fatalf("stray product created: %+v", pr)
 		}
+	}
+}
+
+func TestGenerateIncludesSessionOfWeek(t *testing.T) {
+	f := newFx(t)
+	ctx := context.Background()
+	r := f.cook(t, "Ryż z warzywami", 4, recipe.IngredientInput{Name: "Ryż", Quantity: q(200), Unit: "g"})
+	sess, err := f.mp.CreateSession(ctx, hid, mealprep.SessionInput{Date: "2026-11-08", Name: "Niedziela"})
+	if err != nil || sess.Week != "2026-11-09" {
+		t.Fatalf("%v %+v", err, sess)
+	}
+	dish, err := f.mp.AddDish(ctx, hid, sess.ID, r, 12)
+	if err != nil {
+		t.Fatal(err)
+	}
+	next := "2026-11-09"
+	items, err := f.svc.Generate(ctx, hid, next, "2026-11-11", "2026-11-13")
+	rice := byName(items, "ryż")
+	if err != nil || rice == nil || *rice.Quantity != 600 {
+		t.Fatalf("%v %+v", err, items)
+	}
+	if items, err = f.svc.Generate(ctx, hid, wk, "", ""); err != nil || len(items) != 0 {
+		t.Fatalf("other week: %v %+v", err, items)
+	}
+	// an allocated prep entry adds nothing
+	if _, err := f.plans.Add(ctx, hid, next, plan.EntryInput{Date: "2026-11-10", Slot: domain.SlotDinner, Kind: domain.EntryPrep, PrepDishID: dish.ID, Servings: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if items, _ = f.svc.Generate(ctx, hid, next, "", ""); byName(items, "ryż") == nil || *byName(items, "ryż").Quantity != 600 {
+		t.Fatalf("prep entry changed list: %+v", items)
+	}
+	if n, err := f.svc.PreviousWeekUndone(ctx, hid, "2026-11-16"); err != nil || n != 0 {
+		t.Fatalf("prep entry counted: %d %v", n, err)
+	}
+	// cooked session: ingredients were already used
+	if _, err := f.mp.UpdateSession(ctx, hid, sess.ID, mealprep.SessionInput{Date: "2026-11-08", Name: "Niedziela", Cooked: true}); err != nil {
+		t.Fatal(err)
+	}
+	if items, _ = f.svc.Generate(ctx, hid, next, "", ""); byName(items, "ryż") != nil {
+		t.Fatalf("cooked session still listed: %+v", items)
 	}
 }

@@ -144,3 +144,59 @@ func TestCopyPlanEntriesAtomicAndRefusesNonEmptyTarget(t *testing.T) {
 		t.Fatalf("partial copy leaked: %+v", got)
 	}
 }
+
+func TestPlanEntryKindsRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedTwoHouseholds(t, s)
+	_ = s.CreateRecipe(ctx, sampleRecipe("r1", "hA"))
+	db := s.DB()
+	for _, q := range []string{
+		`INSERT INTO prep_session (id, household_id, date, name, week, cooked, created_at) VALUES ('s1', 'hA', '2026-11-08', 'Niedziela', '2026-11-09', 0, 1)`,
+		`INSERT INTO prep_dish (id, household_id, session_id, recipe_id, portions, written_off, position) VALUES ('d1', 'hA', 's1', 'r1', 6, 0, 0)`,
+	} {
+		if _, err := db.ExecContext(ctx, q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	prep := domain.PlanEntry{ID: "ep", HouseholdID: "hA", Date: "2026-11-10", Slot: domain.SlotDinner, RecipeID: "r1", Servings: 2, Kind: domain.EntryPrep, PrepDishID: "d1"}
+	if err := s.InsertPlanEntry(ctx, prep); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.PlanEntryByID(ctx, "hA", "ep")
+	if err != nil || got != prep {
+		t.Fatalf("prep: %v %+v", err, got)
+	}
+	out := domain.PlanEntry{ID: "eo", HouseholdID: "hA", Date: "2026-11-10", Slot: domain.SlotLunch, Servings: 1, Kind: domain.EntryOut,
+		OutValues: domain.Macros{Kcal: f(800), Protein: f(30), Carbs: f(90), Fat: f(35)}}
+	if err := s.InsertPlanEntry(ctx, out); err != nil {
+		t.Fatal(err)
+	}
+	nilOut := domain.PlanEntry{ID: "en", HouseholdID: "hA", Date: "2026-11-10", Slot: domain.SlotSnack, Servings: 1, Kind: domain.EntryOut}
+	if err := s.InsertPlanEntry(ctx, nilOut); err != nil {
+		t.Fatal(err)
+	}
+	list, err := s.PlanEntries(ctx, "hA", "2026-11-10", "2026-11-10")
+	if err != nil || len(list) != 3 {
+		t.Fatalf("list: %v %+v", err, list)
+	}
+	byID := map[string]domain.PlanEntry{}
+	for _, e := range list {
+		byID[e.ID] = e
+	}
+	o := byID["eo"].OutValues
+	if o.Kcal == nil || *o.Kcal != 800 || *o.Protein != 30 || *o.Carbs != 90 || *o.Fat != 35 {
+		t.Fatalf("out values: %+v", o)
+	}
+	if n := byID["en"].OutValues; n.Kcal != nil || n.Protein != nil || n.Carbs != nil || n.Fat != nil {
+		t.Fatalf("nil out values: %+v", n)
+	}
+	// Update flips values and keeps the kind.
+	out.OutValues = domain.Macros{Kcal: f(500)}
+	if err := s.UpdatePlanEntry(ctx, out); err != nil {
+		t.Fatal(err)
+	}
+	if g, _ := s.PlanEntryByID(ctx, "hA", "eo"); g.OutValues.Kcal == nil || *g.OutValues.Kcal != 500 || g.OutValues.Protein != nil {
+		t.Fatalf("after update: %+v", g.OutValues)
+	}
+}
