@@ -15,6 +15,9 @@ export function formatQuantity(q: number | null, unit: string): string {
 // v-model.number yields '' when a field is cleared; the API expects null. 0 is a real value.
 const num = (v: unknown): number | null => (v === '' || v === undefined || v === null ? null : Number(v))
 
+const blankIngredient = (i: Recipe['ingredients'][number]): boolean =>
+  !i.name.trim() && num(i.quantity) === null && !i.unit.trim() && !(i.note ?? '').trim() && !i.productId
+
 export const useRecipes = defineStore('recipes', {
   state: () => ({ items: [] as Recipe[], loaded: false }),
   actions: {
@@ -33,7 +36,8 @@ export const useRecipes = defineStore('recipes', {
         tags: r.tags,
         // v-model.number yields '' when the field is cleared; the API expects null.
         // Only schema fields are sent: imported rows carry extra hints the server rejects.
-        ingredients: r.ingredients.map((i) => ({
+        // A row left completely empty (e.g. "Dodaj składnik" clicked once too often) is dropped, not rejected.
+        ingredients: r.ingredients.filter((i) => !blankIngredient(i)).map((i) => ({
           name: i.name,
           quantity: (i.quantity as unknown) === '' ? null : i.quantity,
           unit: i.unit,
@@ -41,7 +45,7 @@ export const useRecipes = defineStore('recipes', {
           // PUT replaces the whole recipe: an omitted productId would clear the stored choice.
           productId: i.productId ? i.productId : null,
         })),
-        steps: r.steps,
+        steps: r.steps.filter((s) => s.trim() !== ''),
         nutrition: {
           kcal: num(r.nutrition?.kcal),
           protein: num(r.nutrition?.protein),

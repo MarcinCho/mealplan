@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Poprawki
+
+- „Nowy przepis" otwiera się znowu: pusty formularz nie miał pól wartości odżywczych i ekran wywracał się przy pierwszym renderze. Całkiem puste wiersze składników i puste kroki są przy zapisie pomijane zamiast blokować go błędem walidacji.
+
 ### Wydajność
 
 - Serwer wysyła pliki aplikacji skompresowane (gzip, jeśli przeglądarka go przyjmuje) i z `ETag`, więc `index.html` i pliki bez skrótu w nazwie są tylko sprawdzane, a nie pobierane od nowa.

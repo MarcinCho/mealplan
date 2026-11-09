@@ -99,6 +99,24 @@ describe('useRecipes', () => {
     expect(s.items).toHaveLength(1)
   })
 
+  it('drops completely empty ingredient rows and blank steps', async () => {
+    const s = useRecipes()
+    const spy = mockFetch(201, { id: 'n1', title: 'X' })
+    await s.save({
+      ...emptyRecipe(),
+      title: 'X',
+      ingredients: [
+        { name: '', quantity: '' as unknown as number, unit: ' ', note: '', productId: null },
+        { name: 'sól', quantity: null, unit: '' },
+        { name: '', quantity: 2, unit: 'szt' },
+      ],
+      steps: ['Gotuj', '  ', ''],
+    })
+    const body = JSON.parse(spy.mock.calls[0][1]!.body as string)
+    expect(body.ingredients.map((i: { name: string }) => i.name)).toEqual(['sól', ''])
+    expect(body.steps).toEqual(['Gotuj'])
+  })
+
   it('sends an emptied quantity as null', async () => {
     const s = useRecipes()
     const spy = mockFetch(201, { id: 'n1', title: 'X' })
