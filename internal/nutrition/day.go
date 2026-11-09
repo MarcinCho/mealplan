@@ -26,6 +26,7 @@ type IncompleteFlags struct {
 type MealNutrition struct {
 	EntryID, Title string
 	Slot           domain.Slot
+	Kind           domain.EntryKind
 	Values         domain.Macros
 	Sources        Sources
 	Approximate    bool
@@ -60,9 +61,22 @@ func BuildDay(date string, goal domain.Macros, entries []domain.PlanEntry, recip
 		}
 	}
 	for _, e := range entries {
-		meal := MealNutrition{EntryID: e.ID, Title: e.FreeText, Slot: e.Slot}
+		meal := MealNutrition{EntryID: e.ID, Title: e.FreeText, Slot: e.Slot, Kind: e.Kind}
+		if meal.Kind == "" {
+			meal.Kind = domain.EntryMeal
+		}
 		r, ok := recipes[e.RecipeID]
-		if e.RecipeID != "" && ok {
+		if e.Kind == domain.EntryOut {
+			meal.Values = e.OutValues
+			src := func(v *float64) Source {
+				if v == nil {
+					return SourceMissing
+				}
+				return SourceRecipe
+			}
+			meal.Sources = Sources{src(e.OutValues.Kcal), src(e.OutValues.Protein), src(e.OutValues.Carbs), src(e.OutValues.Fat)}
+			meal.Missing = !hasMacros(e.OutValues)
+		} else if e.RecipeID != "" && ok {
 			meal.Title = r.Title
 			n := ForRecipe(r, m)
 			meal.Values, meal.Sources, meal.Approximate = n.PerPortion, n.Sources, n.Approximate

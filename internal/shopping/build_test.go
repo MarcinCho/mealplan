@@ -194,3 +194,21 @@ func TestBuildMatchesUnitlessIngredientAsPieces(t *testing.T) {
 		t.Fatalf("szt stock must offset a unit-less amount: %+v", got)
 	}
 }
+
+func TestBuildSkipsPrepAndOutEntries(t *testing.T) {
+	r := recipes(domain.Recipe{ID: "r", BaseServings: 1, Ingredients: []domain.Ingredient{ing("ryż", q(100), "g")}})
+	entries := []domain.PlanEntry{
+		{ID: "a", RecipeID: "r", Servings: 1, Kind: domain.EntryPrep},
+		{ID: "b", Kind: domain.EntryOut, Servings: 1},
+		{ID: "c", RecipeID: "r", Servings: 1, Kind: domain.EntryMeal},
+		{ID: "d", RecipeID: "r", Servings: 1},
+	}
+	lines, err := shopping.Build(entries, r, none, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := find(lines, "ryż", "g")
+	if len(lines) != 1 || l == nil || *l.Quantity != 200 {
+		t.Fatalf("%+v", lines)
+	}
+}
