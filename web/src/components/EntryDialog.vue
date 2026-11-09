@@ -152,12 +152,12 @@ function save() {
       <v-card-text>
         <v-select v-model="date" :items="dayItems" :label="t.entryDay" />
         <v-select v-model="slot" :items="SLOTS" item-title="title" item-value="value" :label="t.entrySlot" />
-        <v-btn-toggle v-model="kind" mandatory density="comfortable" class="mb-4 flex-wrap h-auto" color="primary" :disabled="fixed">
-          <v-btn value="recipe">{{ t.entryRecipe }}</v-btn>
-          <v-btn value="text">{{ t.entryFreeText }}</v-btn>
-          <v-btn value="prep">{{ t.entryPrep }}</v-btn>
-          <v-btn value="out">{{ t.entryOut }}</v-btn>
-        </v-btn-toggle>
+        <v-chip-group v-model="kind" mandatory selected-class="text-primary" color="primary" class="mb-4" column :disabled="fixed" :aria-label="t.entryType">
+          <v-chip value="recipe" filter variant="outlined">{{ t.entryRecipe }}</v-chip>
+          <v-chip value="text" filter variant="outlined">{{ t.entryFreeText }}</v-chip>
+          <v-chip value="prep" filter variant="outlined">{{ t.entryPrep }}</v-chip>
+          <v-chip value="out" filter variant="outlined">{{ t.entryOut }}</v-chip>
+        </v-chip-group>
         <v-select v-if="kind === 'recipe'" v-model="recipeId" :items="recipes" item-title="title" item-value="id" :label="t.entryRecipe" />
         <v-text-field v-else-if="kind === 'text'" v-model="freeText" :label="t.entryFreeText" maxlength="300" />
         <template v-else-if="kind === 'prep'">
@@ -176,12 +176,12 @@ function save() {
         <template v-else>
           <v-text-field v-model="outText" :label="t.entryOutDescription" maxlength="300" />
           <div class="text-body-2 text-medium-emphasis mb-2">{{ t.entryOutValues }}</div>
-          <div class="d-flex ga-2">
-            <v-text-field v-model="out.kcal" :label="t.macroKcal" type="number" min="0" />
-            <v-text-field v-model="out.protein" :label="t.macroProtein" type="number" min="0" />
-            <v-text-field v-model="out.carbs" :label="t.macroCarbs" type="number" min="0" />
-            <v-text-field v-model="out.fat" :label="t.macroFat" type="number" min="0" />
-          </div>
+          <v-row dense>
+            <v-col cols="6" md="3"><v-text-field v-model="out.kcal" :label="t.macroKcal" suffix="kcal" type="number" min="0" /></v-col>
+            <v-col cols="6" md="3"><v-text-field v-model="out.protein" :label="t.macroProtein" suffix="g" type="number" min="0" /></v-col>
+            <v-col cols="6" md="3"><v-text-field v-model="out.carbs" :label="t.macroCarbs" suffix="g" type="number" min="0" /></v-col>
+            <v-col cols="6" md="3"><v-text-field v-model="out.fat" :label="t.macroFat" suffix="g" type="number" min="0" /></v-col>
+          </v-row>
         </template>
         <template v-if="kind === 'recipe' || kind === 'text'">
           <v-text-field v-model.number="servings" :label="t.entryServings" type="number" min="1" max="100" />

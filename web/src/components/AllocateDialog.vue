@@ -62,7 +62,6 @@ async function save() {
       },
       mondayOf(new Date(y, m - 1, d)),
     )
-    await prep.reload()
     emit('update:modelValue', false)
   } catch (e) {
     error.value = errorText(e)

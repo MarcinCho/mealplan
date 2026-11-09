@@ -169,9 +169,11 @@ async function removeEntry() {
         <template v-if="!ready_" #append><v-btn variant="text" @click="init">{{ t.retry }}</v-btn></template>
       </v-alert>
       <v-progress-linear v-if="!ready_ && !error" indeterminate class="mb-4" />
-      <v-chip v-if="needsReview" :to="{ name: 'pantry' }" color="warning" variant="tonal" prepend-icon="mdi-fridge-outline" class="mb-4">{{ t.pantryReviewDue }}</v-chip>
+      <div v-if="needsReview || staleCooking" class="d-flex flex-wrap ga-2 mb-4">
+      <v-chip v-if="needsReview" :to="{ name: 'pantry' }" color="warning" variant="tonal" prepend-icon="mdi-fridge-outline">{{ t.pantryReviewDue }}</v-chip>
 
-      <v-chip v-if="staleCooking" :to="{ name: 'prep' }" color="warning" variant="tonal" prepend-icon="mdi-pot-steam-outline" class="mb-4 ml-2" style="height: auto; white-space: normal">{{ t.prepStaleToday }}</v-chip>
+      <v-chip v-if="staleCooking" :to="{ name: 'prep' }" color="warning" variant="tonal" prepend-icon="mdi-pot-steam-outline" style="height: auto; white-space: normal">{{ t.prepStaleToday }}</v-chip>
+      </div>
 
       <template v-if="ready_">
         <section class="hero mb-5">
