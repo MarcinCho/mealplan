@@ -6,5 +6,5 @@ export default defineConfig({
   plugins: [vue(), vuetify({ autoImport: true })],
   server: { proxy: { '/api': 'http://localhost:8080' } },
   build: { outDir: 'dist', emptyOutDir: true },
-  test: { environment: 'jsdom' },
+  test: { environment: 'jsdom', setupFiles: ['src/test/setup.ts'], server: { deps: { inline: ['vuetify'] } } },
 })
