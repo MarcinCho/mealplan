@@ -65,6 +65,7 @@ async function save() {
     :is="mdAndUp ? VDialog : VBottomSheet"
     :model-value="modelValue"
     max-width="480"
+    :aria-label="t.logTitle"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <v-card>

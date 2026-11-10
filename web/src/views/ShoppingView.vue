@@ -95,14 +95,17 @@ function add() {
 
 <template>
   <div class="d-flex align-center flex-wrap ga-2 mb-4">
-    <div class="d-flex align-center ga-1" style="min-width: 0">
-      <v-btn icon="mdi-chevron-left" variant="text" :title="t.prevWeek" @click="go(-1)" />
-      <h1 class="text-subtitle-1 text-md-h6">{{ t.shopping }}: {{ formatDay(dates[0]) }} – {{ formatDay(dates[6]) }}</h1>
-      <v-btn icon="mdi-chevron-right" variant="text" :title="t.nextWeek" @click="go(1)" />
+    <div style="min-width: 0">
+      <h1 class="text-h5">{{ t.shopping }}</h1>
+      <div class="d-flex align-center week-nav">
+        <v-btn icon="mdi-chevron-left" variant="text" size="small" :title="t.prevWeek" :aria-label="t.prevWeek" @click="go(-1)" />
+        <span class="text-body-1">{{ formatDay(dates[0]) }} – {{ formatDay(dates[6]) }}</span>
+        <v-btn icon="mdi-chevron-right" variant="text" size="small" :title="t.nextWeek" :aria-label="t.nextWeek" @click="go(1)" />
+      </div>
     </div>
     <v-spacer />
     <div class="d-flex flex-wrap ga-2">
-      <v-btn variant="tonal" :disabled="!ready || busy || !movable" prepend-icon="mdi-package-down" @click="moveBought">
+      <v-btn v-if="movable" variant="tonal" :disabled="!ready || busy" prepend-icon="mdi-package-down" @click="moveBought">
         {{ t.moveToPantry }}
       </v-btn>
       <v-btn color="primary" :loading="busy" :disabled="!ready" prepend-icon="mdi-cart-arrow-down" @click="generate">
@@ -143,8 +146,7 @@ function add() {
           <v-btn icon="mdi-close" size="small" variant="text" :title="t.remove" @click="remove(i.id)" />
         </template>
       </v-list-item>
-      <v-divider v-if="shop.done.length" />
-      <v-list-subheader v-if="shop.done.length">{{ t.bought }}</v-list-subheader>
+      <v-list-subheader v-if="shop.done.length" class="list-split">{{ t.bought }}</v-list-subheader>
       <v-list-item v-for="i in shop.done" :key="i.id" class="text-medium-emphasis">
         <template #prepend>
           <v-checkbox-btn :model-value="i.checked" :aria-label="i.name" @update:model-value="toggle(i.id, $event)" />
@@ -158,8 +160,8 @@ function add() {
           <v-btn icon="mdi-close" size="small" variant="text" :title="t.remove" @click="remove(i.id)" />
         </template>
       </v-list-item>
-      <v-divider v-if="shop.covered.length" />
-      <v-list-item v-for="i in shop.covered" :key="i.id" class="text-medium-emphasis" style="opacity: 0.6">
+      <v-list-subheader v-if="shop.covered.length" class="list-split">{{ t.coveredHeader }}</v-list-subheader>
+      <v-list-item v-for="i in shop.covered" :key="i.id">
         <v-list-item-title>{{ i.name }}</v-list-item-title>
         <v-list-item-subtitle>{{ shoppingLine(i) }}</v-list-item-subtitle>
         <template v-if="i.manual" #append>
@@ -169,3 +171,8 @@ function add() {
     </v-list>
   </template>
 </template>
+
+<style scoped>
+.week-nav { margin-left: -8px; }
+.list-split { border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); margin-top: 4px; }
+</style>

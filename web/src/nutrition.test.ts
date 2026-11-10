@@ -15,7 +15,9 @@ function day(total: Macros, goal: Macros, incomplete = none): DaySummary {
 describe('formatNumber', () => {
   it('rounds kcal to whole numbers and grams to one decimal with a comma', () => {
     expect(formatNumber(639.6, 'kcal')).toBe('640')
-    expect(formatNumber(12.34, 'g')).toBe('12,3')
+    expect(formatNumber(12.34, 'g')).toBe('12')
+    expect(formatNumber(139.4, 'g')).toBe('139')
+    expect(formatNumber(4.56, 'g')).toBe('4,6')
     expect(formatNumber(12, 'g')).toBe('12')
     expect(formatNumber(null, 'g')).toBe('—')
   })
@@ -23,7 +25,7 @@ describe('formatNumber', () => {
 
 describe('formatMacros', () => {
   it('formats all values', () => {
-    expect(formatMacros(m(639.6, 38.04, 100.25, 12.5))).toBe('640 kcal · 38 g białka · 100,3 g węglowodanów · 12,5 g tłuszczu')
+    expect(formatMacros(m(639.6, 38.04, 100.25, 12.5))).toBe('640 kcal · 38 g białka · 100 g węglowodanów · 13 g tłuszczu')
   })
   it('skips null values', () => {
     expect(formatMacros(m(500, null, null, 7.25))).toBe('500 kcal · 7,3 g tłuszczu')
@@ -105,7 +107,7 @@ describe('validQuantity', () => {
 
 describe('dayLine', () => {
   it('shows kcal against the goal and protein', () => {
-    expect(dayLine(day(m(1850, 92.4, 1, 1), m(2000, 100, null, null)))).toBe('1850 / 2000 kcal · białko 92,4 g')
+    expect(dayLine(day(m(1850, 92.4, 1, 1), m(2000, 100, null, null)))).toBe('1850 / 2000 kcal · białko 92 g')
   })
   it('uses a dash for missing values and omits a missing goal', () => {
     expect(dayLine(day(m(null, null, null, null), m(null, null, null, null)))).toBe('— kcal · białko — g')
@@ -115,8 +117,8 @@ describe('dayLine', () => {
 describe('dayLine incompleteness', () => {
   const inc = (o: Partial<Record<keyof Macros, boolean>>) => ({ ...none, ...o })
   it('marks an incomplete known total with a lower bound', () => {
-    expect(dayLine(day(m(1850, 92.4, 1, 1), m(2000, 100, null, null), inc({ kcal: true })))).toBe('≥1850 / 2000 kcal · białko 92,4 g')
-    expect(dayLine(day(m(1850, 92.4, 1, 1), m(2000, 100, null, null), inc({ protein: true })))).toBe('1850 / 2000 kcal · białko ≥92,4 g')
+    expect(dayLine(day(m(1850, 92.4, 1, 1), m(2000, 100, null, null), inc({ kcal: true })))).toBe('≥1850 / 2000 kcal · białko 92 g')
+    expect(dayLine(day(m(1850, 92.4, 1, 1), m(2000, 100, null, null), inc({ protein: true })))).toBe('1850 / 2000 kcal · białko ≥92 g')
   })
   it('shows a dash for an unknown total even with a goal', () => {
     expect(dayLine(day(m(null, null, 1, 1), m(2000, 100, null, null), inc({ kcal: true })))).toBe('— / 2000 kcal · białko — g')

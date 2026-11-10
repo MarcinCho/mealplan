@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { portions } from '../polish'
 import { computed, onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import { api } from '../api/client'
@@ -10,7 +11,7 @@ import { dayLine, dayWarnings } from '../nutrition'
 import { useNutrition } from '../stores/nutrition'
 import { usePlan, type EntryInput } from '../stores/plan'
 import { useRecipes } from '../stores/recipes'
-import { formatDay, mondayOf, shiftWeek, SLOTS, weekDates } from '../weeks'
+import { formatDay, isoDate, mondayOf, shiftWeek, SLOTS, weekDates } from '../weeks'
 
 interface Member { id: string; displayName: string }
 
@@ -31,7 +32,11 @@ const dates = computed(() => weekDates(week.value))
 const recipeTitle = computed(() => Object.fromEntries(recipes.items.map((r) => [r.id, r.title])))
 const tracking = computed(() => nutrition.settings?.enabled === true)
 const warnOf = (d: string) => (tracking.value && nutrition.days[d] ? dayWarnings(nutrition.days[d]).join(' · ') : '')
-const lineOf = (d: string) => (tracking.value && nutrition.days[d] ? dayLine(nutrition.days[d]) : '')
+const todayIso = isoDate(new Date())
+const isCurrentWeek = computed(() => week.value === mondayOf(new Date()))
+const hasEntries = (d: string) => SLOTS.some((s) => plan.entriesFor(d, s.value).length > 0)
+// An empty day has nothing to sum up, so it shows no "0 / 2200 kcal" line.
+const lineOf = (d: string) => (tracking.value && nutrition.days[d] && hasEntries(d) ? dayLine(nutrition.days[d]) : '')
 // A failed summary must not break the plan, so its errors are swallowed here.
 async function refreshDays() {
   if (!tracking.value) return
@@ -149,7 +154,7 @@ async function copyPrev() {
     <v-btn icon="mdi-chevron-left" variant="text" :title="t.prevWeek" @click="go(-1)" />
     <h1 class="text-h6">{{ formatDay(dates[0]) }} – {{ formatDay(dates[6]) }}</h1>
     <v-btn icon="mdi-chevron-right" variant="text" :title="t.nextWeek" @click="go(1)" />
-    <v-btn variant="text" @click="today">{{ t.thisWeek }}</v-btn>
+    <v-btn v-if="!isCurrentWeek" variant="tonal" @click="today">{{ t.thisWeek }}</v-btn>
     <v-spacer />
     <v-btn variant="tonal" prepend-icon="mdi-content-copy" :disabled="!editable" @click="copyPrev">{{ t.copyPrevWeek }}</v-btn>
   </div>
@@ -166,8 +171,8 @@ async function copyPrev() {
     <thead>
       <tr>
         <th />
-        <th v-for="d in dates" :key="d">
-          {{ formatDay(d) }}
+        <th v-for="d in dates" :key="d" :class="{ 'is-today': d === todayIso }">
+          {{ formatDay(d) }}<span v-if="d === todayIso" class="today-tag">{{ t.today }}</span>
           <div v-if="lineOf(d)" class="day-line">
             {{ lineOf(d) }}
             <v-icon v-if="warnOf(d)" icon="mdi-alert-outline" size="x-small" color="warning" :title="warnOf(d)" :aria-label="warnOf(d)" />
@@ -178,7 +183,7 @@ async function copyPrev() {
     <tbody>
       <tr v-for="s in SLOTS" :key="s.value">
         <th class="text-left">{{ s.title }}</th>
-        <td v-for="d in dates" :key="d" class="align-top pa-1">
+        <td v-for="d in dates" :key="d" class="align-top pa-1" :class="{ 'is-today': d === todayIso }">
           <v-chip
             v-for="e in plan.entriesFor(d, s.value)"
             color="primary"
@@ -193,15 +198,15 @@ async function copyPrev() {
               <span v-if="entryChip(e)" class="d-block text-caption text-medium-emphasis">{{ entryChip(e) }}</span>
             </span>
           </v-chip>
-          <v-btn icon="mdi-plus" size="x-small" variant="text" color="primary" :title="t.addEntry" @click="openNew(d, s.value)" />
+          <v-btn icon="mdi-plus" size="x-small" variant="text" color="primary" :title="`${t.addEntryTitle}: ${formatDay(d)}, ${s.title}`" :aria-label="`${t.addEntryTitle}: ${formatDay(d)}, ${s.title}`" @click="openNew(d, s.value)" />
         </td>
       </tr>
     </tbody>
   </v-table>
 
   <div v-else>
-    <v-card v-for="d in dates" :key="d" class="mb-3">
-      <v-card-title class="text-subtitle-1">{{ formatDay(d) }}</v-card-title>
+    <v-card v-for="d in dates" :key="d" class="mb-3" :class="{ 'today-card': d === todayIso }">
+      <v-card-title class="text-subtitle-1 d-flex align-center ga-2">{{ formatDay(d) }}<span v-if="d === todayIso" class="today-tag">{{ t.today }}</span></v-card-title>
       <v-card-subtitle v-if="lineOf(d)" class="text-wrap">
         {{ lineOf(d) }}
         <v-icon v-if="warnOf(d)" icon="mdi-alert-outline" size="small" color="warning" :title="warnOf(d)" :aria-label="warnOf(d)" />
@@ -213,13 +218,13 @@ async function copyPrev() {
             v-for="e in plan.entriesFor(d, s.value)"
             :key="e.id"
             :title="label(e)"
-            :subtitle="`${s.title} · ${e.servings} ${t.servingsShort}${e.cookUserId ? ' · ' + memberName[e.cookUserId] : ''}${entryChip(e) ? ' · ' + entryChip(e) : ''}`"
+            :subtitle="`${s.title} · ${portions(e.servings)}${e.cookUserId ? ' · ' + memberName[e.cookUserId] : ''}${entryChip(e) ? ' · ' + entryChip(e) : ''}`"
             @click="openEdit(e)"
           />
         </template>
       </v-list>
       <v-card-actions>
-        <v-btn size="small" variant="text" prepend-icon="mdi-plus" @click="openNew(d, 'dinner')">{{ t.addEntry }}</v-btn>
+        <v-btn variant="text" prepend-icon="mdi-plus" @click="openNew(d, 'dinner')">{{ t.addEntryTitle }}</v-btn>
       </v-card-actions>
     </v-card>
   </div>
@@ -239,5 +244,11 @@ async function copyPrev() {
 
 <style scoped>
 .plan-grid td { min-width: 120px; }
-.day-line { font-size: 11px; font-weight: 400; opacity: 0.7; white-space: normal; }
+.day-line { font-size: 12px; font-weight: 400; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); white-space: normal; }
+.plan-grid .is-today { background: rgba(var(--v-theme-primary), 0.06); }
+.today-card { border-color: rgb(var(--v-theme-primary)) !important; border-width: 2px !important; }
+.today-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); vertical-align: middle;
+}
 </style>

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { api } from '../api/client'
 import type { Recipe } from '../api/types'
+import { fmtNumber, unitWord } from '../polish'
 
 export function emptyRecipe(): Recipe {
   return { id: '', title: '', baseServings: 4, sourceUrl: '', tags: [], ingredients: [], steps: [] }
@@ -8,8 +9,8 @@ export function emptyRecipe(): Recipe {
 
 export function formatQuantity(q: number | null, unit: string): string {
   if (q === null) return ''
-  const n = q.toLocaleString('pl-PL', { maximumFractionDigits: 3 })
-  return unit ? `${n} ${unit}` : n
+  const n = fmtNumber(q)
+  return unit ? `${n} ${unitWord(q, unit)}` : n
 }
 
 // v-model.number yields '' when a field is cleared; the API expects null. 0 is a real value.

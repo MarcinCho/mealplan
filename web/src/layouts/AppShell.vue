@@ -50,7 +50,7 @@ async function logout() {
 </script>
 
 <template>
-  <v-app-bar flat color="transparent" class="shell-bar">
+  <v-app-bar color="background" scroll-behavior="elevate" scroll-threshold="8" class="shell-bar">
     <v-app-bar-title class="brand-title"><BrandLogo :icon="!mdAndUp" :height="28" /></v-app-bar-title>
     <span class="text-body-2 text-medium-emphasis mr-2 d-none d-sm-inline">{{ session.me?.household.name }}</span>
     <v-menu :close-on-content-click="false">
@@ -85,15 +85,15 @@ async function logout() {
     </v-menu>
   </v-app-bar>
 
-  <v-navigation-drawer v-if="mdAndUp" permanent width="88" color="bar" class="rail">
-    <nav class="rail-nav">
+  <v-navigation-drawer v-if="mdAndUp" permanent width="88" color="bar" class="rail" :aria-label="t.navMain">
+    <div class="rail-nav">
       <router-link v-for="i in items" :key="i.title" v-slot="{ href, navigate, isActive, isExactActive }" :to="i.to" custom>
         <a :href="href" class="nav-item" :class="{ on: i.to.name === 'home' ? isExactActive : isActive }" @click="navigate">
           <span class="pill"><v-icon :icon="(i.to.name === 'home' ? isExactActive : isActive) ? i.active : i.icon" /></span>
           {{ i.title }}
         </a>
       </router-link>
-    </nav>
+    </div>
   </v-navigation-drawer>
 
   <v-main>
@@ -104,7 +104,7 @@ async function logout() {
     </v-container>
   </v-main>
 
-  <v-bottom-navigation v-if="!mdAndUp" grow class="bottom-nav" height="72">
+  <v-bottom-navigation v-if="!mdAndUp" tag="nav" :aria-label="t.navMain" grow class="bottom-nav" height="72">
     <router-link v-for="i in items" :key="i.title" v-slot="{ href, navigate, isActive, isExactActive }" :to="i.to" custom>
       <a :href="href" class="nav-item" :class="{ on: i.to.name === 'home' ? isExactActive : isActive }" @click="navigate">
         <span class="pill"><v-icon :icon="(i.to.name === 'home' ? isExactActive : isActive) ? i.active : i.icon" /></span>

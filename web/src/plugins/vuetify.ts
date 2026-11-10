@@ -26,5 +26,10 @@ export const vuetify = createVuetify({
     VList: { rounded: 'lg' },
     VTextField: { variant: 'outlined', density: 'comfortable', rounded: 'lg' },
     VSelect: { variant: 'outlined', density: 'comfortable', rounded: 'lg' },
+    // Inset switches show their track, so "off" reads as a switch and not a stray dot.
+    VSwitch: { inset: true, color: 'primary' },
+    VAutocomplete: { variant: 'outlined', density: 'comfortable', rounded: 'lg' },
+    VCombobox: { variant: 'outlined', density: 'comfortable', rounded: 'lg' },
+    VTextarea: { variant: 'outlined', rounded: 'lg' },
   },
 })

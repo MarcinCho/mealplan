@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { portions } from '../polish'
 import { computed } from 'vue'
 import type { PrepDish } from '../api/types'
 import { allocationLabel } from '../mealprep'
@@ -21,7 +22,7 @@ const pct = (n: number) => `${Math.max(0, Math.min(100, (n / total.value) * 100)
   <v-card variant="outlined" class="pa-3 mb-2">
     <div class="d-flex align-center ga-2">
       <div class="text-subtitle-1 flex-grow-1">{{ dish.recipeTitle }}</div>
-      <span class="text-body-2">{{ dish.portions }} {{ t.prepPortions.toLowerCase() }}</span>
+      <span class="text-body-2">{{ portions(dish.portions) }}</span>
       <v-btn icon="mdi-pencil-outline" size="small" variant="text" :title="t.prepEditDish" @click="emit('edit')" />
       <v-btn icon="mdi-delete-outline" size="small" variant="text" :title="t.prepDishDelete" @click="emit('remove')" />
     </div>

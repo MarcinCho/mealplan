@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Wygląd i dostępność
+
+- Poprawna odmiana: „1 porcja", „2 porcje", „12 porcji", „5 łyżek", „2 ząbki" (`web/src/polish.ts`); daty w spiżarni po polsku („do 12 lis", „Po terminie: 8 lis"), a data ważna najwyżej 2 dni jest wyróżniona.
+- Kontrast: tekst drugorzędny i etykiety pól spełniają WCAG AA (4,5:1) we wszystkich paletach, pilnowane testem; gramy w podsumowaniach bez zbędnych ułamków („139 g", „4,5 g").
+- Plan: dzisiejszy dzień wyróżniony, puste dni bez „0 / 2200 kcal", „Ten tydzień" tylko poza bieżącym tygodniem, „Dodaj posiłek" zamiast „Dodaj".
+- Przepisy: wyszukiwanie po tytule i tagu (bez polskich znaków), tagi pod tytułem zamiast ucinać go na telefonie.
+- Spiżarnia: zwarte karty; stały zapas, data ważności i usuwanie pod ołówkiem przy pozycji.
+- Zakupy: nagłówek „Zakupy" z tygodniem pod spodem, sekcja „Masz w domu", „Przenieś kupione do spiżarni" widoczne tylko, gdy jest co przenieść.
+- Przyciski bez wersalików także w oknach dialogowych, większe przyciski na ekranach dotykowych, widoczny tor przełączników, pasek aplikacji z tłem (treść nie wchodzi pod logo), jednolite obramowane pola.
+- Czytniki ekranu: nazwy okien dialogowych, pasków postępu i przycisków „zrobione"/„dodaj", jedna nawigacja z etykietą, nagłówek na ekranie logowania.
+
 ### Umiejętność Claude
 
 - `mealplan-recipe-format` zawsze podaje wartości na porcję: ze źródła albo wyliczone ze składników (wagi łyżek, szklanek i sztuk, wartości referencyjne na 100 g, kontrola kcal z makroskładnikami), z krótkim wyliczeniem pod przepisem. Nowy przykład z wyliczonymi wartościami; przykłady sprawdza test importu.

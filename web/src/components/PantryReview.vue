@@ -95,7 +95,7 @@ const finish = () =>
 </script>
 
 <template>
-  <v-dialog :model-value="modelValue" :fullscreen="!mdAndUp" max-width="520" scrollable @update:model-value="emit('update:modelValue', $event)">
+  <v-dialog :model-value="modelValue" :fullscreen="!mdAndUp" max-width="520" scrollable :aria-label="t.pantryReviewTitle" @update:model-value="emit('update:modelValue', $event)">
     <v-card class="review">
       <v-toolbar flat density="comfortable">
         <v-btn icon="mdi-close" :title="t.close" @click="emit('update:modelValue', false)" />

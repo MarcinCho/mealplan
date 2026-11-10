@@ -27,7 +27,7 @@ const rows = computed(() =>
 </script>
 
 <template>
-  <v-dialog :model-value="modelValue" max-width="420" @update:model-value="emit('update:modelValue', $event)">
+  <v-dialog :model-value="modelValue" max-width="420" :aria-label="t.mealNutritionTitle" @update:model-value="emit('update:modelValue', $event)">
     <v-card v-if="meal">
       <v-card-title class="text-wrap">{{ t.mealNutritionTitle }}</v-card-title>
       <v-card-subtitle class="text-wrap">{{ meal.title }}</v-card-subtitle>
