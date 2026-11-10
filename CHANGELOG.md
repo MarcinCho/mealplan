@@ -4,6 +4,7 @@
 
 ### Wygląd i dostępność
 
+- Zapisanie przepisu zamyka formularz i wraca do listy z komunikatem „Zapisano przepis „…””; usunięcie pokazuje „Usunięto przepis „…””. Komunikaty pokazuje wspólny pasek aplikacji (`stores/notice.ts`), na telefonie pod górnym paskiem.
 - Poprawna odmiana: „1 porcja", „2 porcje", „12 porcji", „5 łyżek", „2 ząbki" (`web/src/polish.ts`); daty w spiżarni po polsku („do 12 lis", „Po terminie: 8 lis"), a data ważna najwyżej 2 dni jest wyróżniona.
 - Kontrast: tekst drugorzędny i etykiety pól spełniają WCAG AA (4,5:1) we wszystkich paletach, pilnowane testem; gramy w podsumowaniach bez zbędnych ułamków („139 g", „4,5 g").
 - Plan: dzisiejszy dzień wyróżniony, puste dni bez „0 / 2200 kcal", „Ten tydzień" tylko poza bieżącym tygodniem, „Dodaj posiłek" zamiast „Dodaj".

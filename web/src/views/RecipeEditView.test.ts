@@ -5,6 +5,7 @@ import { defineComponent } from 'vue'
 import RecipeEditView from './RecipeEditView.vue'
 import { buttonByText, fakeApi, flush, mountWith, type Routes } from '../test/mount'
 import { t } from '../messages'
+import { useNotice } from '../stores/notice'
 
 const api = vi.hoisted(() => ({ current: (async () => ({})) as (m: string, p: string, b?: unknown) => Promise<unknown> }))
 vi.mock('../api/client', () => ({ api: (m: string, p: string, b?: unknown) => api.current(m, p, b), ApiError: class extends Error {} }))
@@ -54,6 +55,39 @@ describe('RecipeEditView', () => {
     const post = calls.find((c) => c.method === 'POST' && c.path === '/recipes')
     expect(post).toBeTruthy()
     expect((post!.body as { title: string }).title).toBe('Zupa')
-    expect(router.currentRoute.value.name).toBe('recipe-edit')
+    expect(router.currentRoute.value.name).toBe('recipes')
+    expect(useNotice().open).toBe(true)
+    expect(useNotice().text).toBe('Zapisano przepis „Zupa”')
+  })
+
+  it('closes the form after editing and names the saved recipe', async () => {
+    const leczo = { id: 'r2', title: 'Leczo', baseServings: 4, sourceUrl: '', tags: [], ingredients: [], steps: [] }
+    const { calls, router } = await show('/recipes/r2', {
+      'GET /products': () => [],
+      'GET /recipes/r2': () => leczo,
+      'PUT /recipes/r2': (b) => ({ ...leczo, ...(b as object) }),
+    })
+    buttonByText(t.save).click()
+    for (let i = 0; i < 4; i++) await flush()
+    expect(calls.some((c) => c.method === 'PUT' && c.path === '/recipes/r2')).toBe(true)
+    expect(router.currentRoute.value.name).toBe('recipes')
+    expect(useNotice().text).toBe('Zapisano przepis „Leczo”')
+  })
+
+  it('stays on the form and shows the error when saving fails', async () => {
+    const { w, router } = await show('/recipes/new', {
+      'GET /products': () => [],
+      'POST /recipes': () => {
+        throw new Error('boom')
+      },
+    })
+    const title = w.find('input').element as HTMLInputElement
+    title.value = 'Zupa'
+    title.dispatchEvent(new Event('input'))
+    await flush()
+    buttonByText(t.save).click()
+    for (let i = 0; i < 4; i++) await flush()
+    expect(router.currentRoute.value.name).toBe('recipe-new')
+    expect(useNotice().open).toBe(false)
   })
 })

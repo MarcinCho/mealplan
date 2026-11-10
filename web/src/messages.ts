@@ -294,6 +294,14 @@ export function movedText(n: number): string {
   return `Przeniesiono ${n} ${plural(n, 'pozycję', 'pozycje', 'pozycji')}`
 }
 
+export function recipeSavedText(title: string): string {
+  return `Zapisano przepis „${title.trim()}”`
+}
+
+export function recipeDeletedText(title: string): string {
+  return `Usunięto przepis „${title.trim()}”`
+}
+
 export function undonePreviousText(n: number): string {
   return `W poprzednim tygodniu ${n} ${plural(n, 'posiłek', 'posiłki', 'posiłków')} nie oznaczono jako zrobione — część zapasów może być już na nie potrzebna.`
 }

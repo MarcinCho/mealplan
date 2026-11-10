@@ -2,6 +2,7 @@
 import { useDisplay, useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
 import { useSession } from '../stores/session'
+import { useNotice } from '../stores/notice'
 import { t } from '../messages'
 import { loadChoice, PALETTES, saveChoice, themeName, type Choice, type PaletteId } from '../theme'
 import { initial } from '../today'
@@ -11,6 +12,7 @@ import BrandLogo from '../components/BrandLogo.vue'
 const { mdAndUp } = useDisplay()
 const theme = useTheme()
 const session = useSession()
+const notice = useNotice()
 const router = useRouter()
 
 const items = [
@@ -112,6 +114,22 @@ async function logout() {
       </a>
     </router-link>
   </v-bottom-navigation>
+
+  <v-snackbar
+    :key="notice.seq"
+    v-model="notice.open"
+    :timeout="4000"
+    color="secondary"
+    rounded="pill"
+    :location="mdAndUp ? 'bottom' : 'top'"
+    :class="{ 'notice-phone': !mdAndUp }"
+    role="status"
+  >
+    <span class="d-inline-flex align-center ga-2"><v-icon icon="mdi-check-circle" size="small" />{{ notice.text }}</span>
+    <template #actions>
+      <v-btn variant="text" :aria-label="t.close" icon="mdi-close" size="small" @click="notice.open = false" />
+    </template>
+  </v-snackbar>
 </template>
 
 <style scoped>
@@ -136,4 +154,9 @@ async function logout() {
 .page-enter-from { opacity: 0; transform: translateY(6px); }
 .page-leave-to { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .page-enter-active, .page-leave-active { transition: none; } }
+</style>
+
+<style>
+/* On phones the notice sits below the app bar, clear of the bottom navigation and quick add. */
+.notice-phone .v-snackbar__wrapper { margin-top: 72px; }
 </style>
