@@ -111,6 +111,8 @@ Parser linii składnika rozpoznaje też ilość po nazwie („czosnek 2 ząbki",
 
 Umiejętność `mealplan-recipe-format` uczy Claude zamieniać dowolny przepis (tekst, link do strony, przepis w innym języku) na format, który wklejasz w zakładce Tekst importu.
 
+Nazwy składników Claude pisze w mianowniku liczby pojedynczej (`3 jajko`, `2 pomidor`, `1 kg ziemniak`), tak jak nazywają się produkty w aplikacji; liczba mnoga zostaje tylko dla słów bez liczby pojedynczej (`płatki owsiane`, `drożdże`). Dzięki temu ten sam produkt z różnych przepisów to jeden wiersz listy zakupów i jedna pozycja spiżarni.
+
 Claude zawsze dopisuje linię `Wartości na porcję`. Bierze wartości ze źródła, a gdy ich nie ma, wylicza je ze składników: waży każdy składnik w gramach (łyżki, szklanki i sztuki według typowych wag), liczy z wartości referencyjnych na 100 g (USDA, tabele IŻŻ), pomija sól i przyprawy, dzieli przez liczbę porcji i sprawdza kcal z makroskładnikami. Pod przepisem pokazuje krótkie wyliczenie, żeby dało się je sprawdzić. Aplikacja traktuje te liczby jak wpisane ręcznie; wyczyszczenie ich w edytorze przywraca wyliczanie z bazy produktów gospodarstwa. Przykłady w pliku umiejętności są sprawdzane testem (`internal/importer/skill_test.go`): muszą się czysto importować, a kcal zgadzać z makroskładnikami w granicach 10%.
 
 Plik pobierzesz w aplikacji: Importuj, karta „Używasz Claude?" na dole ekranu (przycisk „Pobierz SKILL.md"), albo bezpośrednio spod `/claude-skill/SKILL.md`. Zapisz go w katalogu umiejętności Claude, np. `~/.claude/skills/mealplan-recipe-format/SKILL.md`.

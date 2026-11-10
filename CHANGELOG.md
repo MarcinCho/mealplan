@@ -16,6 +16,7 @@
 
 ### Umiejętność Claude
 
+- Nazwy składników w liczbie pojedynczej (`jajko`, `pomidor`, `ziemniak`), poza słowami bez liczby pojedynczej; test pilnuje przykładów.
 - `mealplan-recipe-format` zawsze podaje wartości na porcję: ze źródła albo wyliczone ze składników (wagi łyżek, szklanek i sztuk, wartości referencyjne na 100 g, kontrola kcal z makroskładnikami), z krótkim wyliczeniem pod przepisem. Nowy przykład z wyliczonymi wartościami; przykłady sprawdza test importu.
 
 ### Poprawki

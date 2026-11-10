@@ -27,6 +27,14 @@ func TestSkillExamplesImport(t *testing.T) {
 		if d.Title == "" || d.Servings == 0 || len(d.Ingredients) == 0 || len(d.Steps) == 0 || len(d.Warnings) > 0 {
 			t.Fatalf("example %d did not import cleanly: %+v", i, d)
 		}
+		// Product names stay singular so they match the product list and add up on the shopping list.
+		for _, ing := range d.Ingredients {
+			for _, pl := range []string{"jajka", "pomidory", "ziemniaki", "banany", "cebule"} {
+				if strings.HasPrefix(ing.Name, pl) {
+					t.Fatalf("example %d: plural ingredient name %q", i, ing.Name)
+				}
+			}
+		}
 		n := d.Nutrition
 		if n.Kcal == nil || n.Protein == nil || n.Carbs == nil || n.Fat == nil {
 			t.Fatalf("example %d: missing nutrition values %+v", i, n)

@@ -29,7 +29,7 @@ Wartości na porcję: 520 kcal, białko 32 g, węglowodany 60 g, tłuszcz 14 g
 
 Składniki:
 200 g mąka pszenna
-2 jajka
+2 jajko
 1 łyżeczka sól
 pieprz do smaku
 
@@ -58,8 +58,10 @@ Shape: `ilość jednostka nazwa`, optionally followed by `, notatka` or `(notatk
 - **Amount**: one number, written with a dot or comma (`1.5`, `1,5`) or a simple fraction (`1/2`). Do not write ranges (`2-3`): the parser keeps the upper number and flags the line as a guess, so pick the number you mean.
 - **Unit**, one of: `g`, `kg`, `ml`, `l`, `szt`, `łyżka`, `łyżeczka`, `szklanka`, `ząbek`, `plaster`, `szczypta`, `opakowanie`, `puszka`, `pęczek`, `garść`, `kostka`, `główka`, `kromka`. Common declined forms (`łyżki`, `łyżek`, `szklanki`, `ząbki`, `szt.`) are recognised and stored in the base form, so write them naturally. Use `g`/`kg`/`ml`/`l` whenever the source gives a metric amount: the shopping list adds those up correctly. Any other unit word (`cup`, `tbsp`, `kubek`, `plasterek`) is not recognised and ends up inside the name.
 - **Convert foreign units**: tablespoon → `łyżka`, teaspoon → `łyżeczka`, cup → `szklanka` (or 240 ml if the source relies on exact volume), 1 oz → 28 g, 1 lb → 454 g, 1 fl oz → 30 ml, °F → °C (round to 5). Dag/dkg are fine (`5 dag` becomes 50 g).
-- **Countable things** have no unit: `2 jajka`, `1 cebula`, `3 pomidory`. The parser stores them as `szt` and marks the row as a guess; that tint in the preview is normal and needs no fix.
-- **Name**: use the **base (nominative) form**, lowercase except proper names: `250 g mąka pszenna`, not `mąki pszennej`. The app has no word-form matching, so `mąka` and `mąki` would appear as two products on the shopping list. Keep the name short: the product only, no amount and no preparation.
+- **Countable things** have no unit: `2 jajko`, `1 cebula`, `3 pomidor`. The parser stores them as `szt` and marks the row as a guess; that tint in the preview is normal and needs no fix.
+- **Name**: the **product name in the nominative singular**, lowercase except proper names, whatever the amount: `250 g mąka pszenna` (not `mąki pszennej`), `3 jajko` (not `jajka`), `2 pomidor` (not `pomidory`), `1 kg ziemniak` (not `ziemniaki`). Units are still declined naturally (the parser stores them in the base form); only the **name** stays singular: `4 ząbki czosnek`, `1 pęczek koperek`. The app keeps the name exactly as written: the shopping list, the pantry and the product match use it, so `pomidor` and `pomidory` would be two rows on the shopping list and two pantry items. Singular is how products are named in the app's product list.
+  - Keep the plural only for words that have no singular in Polish (pluralia tantum) or are always sold that way: `płatki owsiane`, `drożdże`, `otręby`, `frytki`, `nudle`.
+  - Keep the name short: the product only, no amount and no preparation (`pokrojony`, `starty` go in the note).
 - **No amount** (salt, pepper, oil for frying): write only the name, with the note after it: `sól`, `pieprz do smaku`, `olej do smażenia`. Recognised endings (`do smaku`, `do posypania`, `do podania`, `do smażenia`, `do dekoracji`, `do wyboru`, `opcjonalnie`) become the note automatically.
 - **Notes** go after a comma or in parentheses: `1 cebula, drobno posiekana`, `250 g jogurt grecki (można zastąpić kefirem lub śmietaną)`. A note is **saved with the ingredient** and shown in the recipe editor, so use it for preparation (`rozpuszczone`, `w temperaturze pokojowej`), substitutions and any remark the source makes about that ingredient (`najlepiej mączyste`, `bez skórki`, `opcjonalnie`). Keep a note to one short phrase (at most 200 characters); do not put the product itself in the note.
 - **One product per line.** Split `sól i pieprz` into `sól` and `pieprz`. Keep alternatives as one name (`masło lub margarynę` → `masło lub margaryna`); put "or replace with" advice in the note.
@@ -90,7 +92,7 @@ Do this when the source gives no values, before writing the block.
 4. **Add up the whole dish and divide by `Porcje`.** Round kcal to whole numbers and macros to whole grams (one decimal below 10 g).
 5. **Check:** `4 × białko + 4 × węglowodany + 9 × tłuszcz` should be within about 10% of kcal (fibre and alcohol explain small gaps). If not, find the mistake before answering.
 
-In the notes after the block, write `Wartości wyliczone (przybliżone):` and one short line per ingredient that counts: `1000 g ziemniaki ≈ 770 kcal`, then the dish total and the per-portion result. Keep it compact: ingredients under about 2% of the total can go together as `reszta ≈ 40 kcal`. Add one line saying the app treats these numbers as typed in, and that clearing them in the editor makes the app calculate them from its own product base instead.
+In the notes after the block, write `Wartości wyliczone (przybliżone):` and one short line per ingredient that counts: `1000 g ziemniak ≈ 770 kcal`, then the dish total and the per-portion result. Keep it compact: ingredients under about 2% of the total can go together as `reszta ≈ 40 kcal`. Add one line saying the app treats these numbers as typed in, and that clearing them in the editor makes the app calculate them from its own product base instead.
 
 ## Language
 
@@ -114,7 +116,7 @@ Tags, the source link, preparation times and photos. (Nutrition values **are** r
 
 - The block starts with the title line, then `Porcje: N`, `Wartości na porcję: …` (per one portion, in kcal, all four values), a blank line, `Składniki:`, the ingredient lines, a blank line, `Przygotowanie:`, the numbered steps.
 - Every ingredient line is `ilość jednostka nazwa` (or a bare name for "to taste" items), at most 10 words per line (up to 30 when the line starts with an amount), no ranges, no bullets needed.
-- Names are in the nominative; metric units used where the source had them.
+- Names are in the nominative **singular** (`jajko`, `pomidor`, `ziemniak`), except pluralia tantum (`płatki owsiane`); metric units used where the source had them.
 - Every step is one numbered line; nothing from the page chrome remains.
 - Nutrition values come from the source, or were calculated per [Calculating nutrition](#calculating-nutrition): the macro check fits kcal within about 10%, and the notes say which it was and show the calculation.
 - Nothing was invented; every assumption is listed after the block.
@@ -133,9 +135,9 @@ Porcje: 4
 Wartości na porcję: 520 kcal, białko 32 g, węglowodany 60 g, tłuszcz 14 g
 
 Składniki:
-1 kg ziemniaki, najlepiej mączyste
+1 kg ziemniak, najlepiej mączysty
 1 cebula, drobno starta
-3 jajka
+3 jajko
 3 łyżki mąka pszenna
 sól do smaku
 pieprz do smaku
