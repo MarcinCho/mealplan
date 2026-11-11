@@ -35,6 +35,18 @@ Import przepisu z linku sprawia, że serwer łączy się z adresem podanym przez
 | Wynik | szkic to dane: tekst jest zawsze escapowany przy wyświetlaniu (interpolacja Vue, bez `v-html`), a surowy HTML pobranej strony nigdy nie jest renderowany; `sourceUrl` przechodzi tę samą walidację `http`/`https` co zwykły przepis |
 | Brak zapisu | endpointy importu niczego nie zapisują; przepis powstaje dopiero z zatwierdzonego podglądu |
 
+## Asystent produktów (OpenRouter)
+
+| Obszar | Rozwiązanie |
+|---|---|
+| Klucz | opcjonalny klucz OpenRouter gospodarstwa jest przechowywany jawnym tekstem w wierszu gospodarstwa w bazie (serwer musi go wysłać dalej, więc nie da się go zahaszować). Kopie zapasowe bazy go zawierają, więc traktuj je jak sekret |
+| Dostęp | API nigdy nie zwraca klucza, tylko `keyHint` (ostatnie 4 znaki); ustawić i usunąć go może tylko administrator |
+| Dane wysyłane | do OpenRoutera trafiają nazwy składników z ilością i jednostką, nazwy produktów i aliasy oraz (przy szukaniu duplikatów) wartości na 100 g. Nie są wysyłane: hasła, loginy, plan, dziennik jedzenia, spiżarnia ani adresy e-mail |
+| Model | domyślnie `google/gemini-3.1-flash-lite` (`DefaultModel` w `internal/assistant/openrouter.go`); administrator zmienia go w ustawieniach |
+| Limit | endpointy modelu dzielą limit importu: 10 zapytań na minutę na użytkownika (`429 rate_limited`) |
+| Błędy | odpowiedź niesie tylko kod (`assistant_bad_key`, `assistant_no_credit`, `assistant_unavailable`); klucz nie trafia do logów ani komunikatów |
+| Skutki | model niczego nie zapisuje ani nie scala: propozycje są danymi, a zmiana następuje po zatwierdzeniu przez użytkownika |
+
 ## Znane ograniczenia
 
 - **CSP dla stylów** dopuszcza `unsafe-inline`, bo Vuetify wstrzykuje arkusz motywu w czasie działania. Skrypty mają ścisłe `script-src 'self'`. Docelowo: nonce.

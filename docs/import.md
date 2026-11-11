@@ -126,6 +126,18 @@ Po analizie edytor porównuje szkic z listą przepisów. Za duplikat uważany je
 - **Zaktualizuj istniejący**: zapis zastąpi tytuł, składniki i kroki istniejącego przepisu. Gdy szkic czegoś nie ma, zachowane zostaje to, co jest w istniejącym przepisie: tytuł, liczba porcji, adres źródła, tagi, składniki i kroki.
 - **Dodaj jako nowy**: powstaje osobny przepis.
 
+## Podpowiedzi produktów (asystent)
+
+Opcjonalnie gospodarstwo może podać klucz OpenRouter (ekran Domownicy, sekcja asystenta; ustawia i usuwa go tylko administrator). Bez klucza import działa jak dotąd.
+
+Z kluczem edytor po analizie wysyła składniki bez dopasowanego produktu do modelu i pokazuje przy nich propozycję: istniejący produkt albo nowy produkt (z wartościami na 100 g). Nic nie jest zapisywane, dopóki nie klikniesz „Zatwierdź"; „Odrzuć" zostawia składnik bez produktu, a „Zatwierdź wszystkie" zatwierdza wszystkie propozycje naraz. Gdy model jest niedostępny (zły klucz, brak środków, błąd sieci), edytor pokazuje informację „Podpowiedzi produktów są teraz niedostępne…" i można zapisać przepis normalnie.
+
+Zatwierdzenie dopisuje znormalizowaną nazwę składnika jako alias produktu (najwyżej 100 aliasów na produkt), więc następnym razem składnik dopasuje się bez pytania modelu. Alias już należący do innego produktu jest odrzucany z komunikatem.
+
+Na liście przepisów przycisk „Sprawdź przepisy" robi to samo dla istniejących przepisów: przechodzi po składnikach bez produktu partiami, pokazuje propozycje pogrupowane po nazwie składnika (z liczbą przepisów, których dotyczą) i po zatwierdzeniu przypisuje produkt we wszystkich tych przepisach. Można przerwać w każdej chwili.
+
+Zapytania do modelu mają ten sam limit co import z linku: 10 na minutę na użytkownika. Po `429` aplikacja sama czeka i ponawia. Co jest wysyłane do OpenRoutera i jak przechowywany jest klucz: [security.md](security.md).
+
 ## Znane ograniczenia
 
 - Brak lematyzacji nazw („jajka" nie jest sprowadzane do „jajko"); scalanie na liście zakupów korzysta z `units.NormalizeName`.
