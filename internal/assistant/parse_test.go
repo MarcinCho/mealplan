@@ -3,6 +3,7 @@ package assistant
 import (
 	"errors"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"mealplan/internal/domain"
@@ -136,5 +137,48 @@ func TestParseDuplicates(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v\nwant %+v", got, want)
+	}
+}
+
+const emptyNew = `{"name":"","kcal":null,"protein":null,"carbs":null,"fat":null,"pieceGrams":null,"densityGPerMl":null,"aliases":[]}`
+
+func TestParseAlwaysPresentNewProduct(t *testing.T) {
+	raw := `{"suggestions":[
+		{"index":0,"kind":"existing","productId":"p-onion","newProduct":` + emptyNew + `,"reason":"zdrobnienie"},
+		{"index":1,"kind":"none","productId":"","newProduct":` + emptyNew + `,"reason":"nie wiem"},
+		{"index":2,"kind":"new","productId":"","newProduct":` + emptyNew + `,"reason":"pusty"}
+	]}`
+	got, err := parseMatch(raw, []IngredientQuery{{Name: "cebulki"}, {Name: "coś"}, {Name: "ghee"}}, parseProducts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Suggestion{
+		{Name: "cebulki", Kind: KindExisting, ProductID: "p-onion", ProductName: "cebula", Reason: "zdrobnienie"},
+		{Name: "coś", Kind: KindNone, Reason: "nie wiem"},
+		{Name: "ghee", Kind: KindNone},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestParseSameNewProductIsOneProposal(t *testing.T) {
+	np := func(name string, kcal int) string {
+		return `{"name":"` + name + `","kcal":` + strconv.Itoa(kcal) + `,"protein":1,"carbs":9,"fat":0,"pieceGrams":null,"densityGPerMl":null,"aliases":[]}`
+	}
+	raw := `{"suggestions":[
+		{"index":0,"kind":"new","productId":"","newProduct":` + np("cebula czerwona", 40) + `,"reason":"odmiana"},
+		{"index":1,"kind":"new","productId":"","newProduct":` + np("Cebula  Czerwona", 42) + `,"reason":"szyk"},
+		{"index":2,"kind":"new","productId":"","newProduct":` + np("szalotka", 72) + `,"reason":"inna"}
+	]}`
+	got, err := parseMatch(raw, []IngredientQuery{{Name: "czerwona cebula"}, {Name: "czerwonej cebuli"}, {Name: "szalotki"}}, parseProducts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].New == nil || got[1].New != got[0].New || got[1].New.Name != "cebula czerwona" || *got[1].New.Per100g.Kcal != 40 {
+		t.Fatalf("not one proposal: %+v / %+v", got[0].New, got[1].New)
+	}
+	if got[1].Reason != "szyk" || got[2].New == nil || got[2].New == got[0].New || got[2].New.Name != "szalotka" {
+		t.Fatalf("got %+v", got)
 	}
 }

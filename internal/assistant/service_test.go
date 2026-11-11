@@ -4,9 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"mealplan/internal/auth"
 	"mealplan/internal/domain"
@@ -215,15 +219,51 @@ func TestStatusHidesKey(t *testing.T) {
 	}
 }
 
+const noneReply = `{"suggestions":[{"index":0,"kind":"none","productId":"","newProduct":{"name":"","kcal":null,"protein":null,"carbs":null,"fat":null,"pieceGrams":null,"densityGPerMl":null,"aliases":[]},"reason":"test"}]}`
+
 func TestServiceTest(t *testing.T) {
-	fc := &fakeClient{reply: func(string) (string, error) { return `{"ok":true}`, nil }}
+	fc := &fakeClient{reply: func(string) (string, error) { return noneReply, nil }}
 	s, _ := configured(t, fc)
 	if err := s.Test(context.Background(), member); err != nil || fc.calls != 1 {
 		t.Fatalf("err %v calls %d", err, fc.calls)
 	}
+	// Test goes through the production matching path: same instructions, same schema.
+	if fc.systems[0] != matchSystem || string(fc.schemas[0]) != string(matchSchema) || !strings.Contains(fc.users[0], `"sól"`) {
+		t.Fatalf("system match %v schema match %v user %s", fc.systems[0] == matchSystem, string(fc.schemas[0]) == string(matchSchema), fc.users[0])
+	}
+	fc.reply = func(string) (string, error) { return `{"ok":true}`, nil }
+	if err := s.Test(context.Background(), member); !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("answer outside the schema: err = %v", err)
+	}
 	fc.reply = func(string) (string, error) { return "", ErrBadKey }
 	if err := s.Test(context.Background(), member); !errors.Is(err, ErrBadKey) {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestServiceTestThroughOpenRouter(t *testing.T) {
+	var schema json.RawMessage
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			ResponseFormat struct {
+				JSONSchema struct {
+					Schema json.RawMessage `json:"schema"`
+				} `json:"json_schema"`
+			} `json:"response_format"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		schema = body.ResponseFormat.JSONSchema.Schema
+		content, _ := json.Marshal(noneReply)
+		_, _ = io.WriteString(w, `{"choices":[{"message":{"content":`+string(content)+`}}]}`)
+	}))
+	defer srv.Close()
+	s, _ := configured(t, newTestClient(srv.URL, 5*time.Second))
+	if err := s.Test(context.Background(), member); err != nil {
+		t.Fatal(err)
+	}
+	var sent, want any
+	if json.Unmarshal(schema, &sent) != nil || json.Unmarshal(matchSchema, &want) != nil || !reflect.DeepEqual(sent, want) {
+		t.Fatalf("Test sent schema %s", schema)
 	}
 }
 

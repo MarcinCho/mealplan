@@ -90,6 +90,7 @@ func badReply(what string) error {
 // parseMatch turns the model's answer into one suggestion per query, in order. The answer is
 // untrusted: unknown ids, unknown kinds, missing or repeated indexes and new products outside the
 // allowed ranges all become KindNone; a "new" product that already exists becomes KindExisting.
+// Queries proposed as the same new product (same normalized name) share the first proposal.
 func parseMatch(raw string, qs []IngredientQuery, products []domain.Product) ([]Suggestion, error) {
 	var r matchReply
 	if err := json.Unmarshal([]byte(raw), &r); err != nil || r.Suggestions == nil {
@@ -105,6 +106,7 @@ func parseMatch(raw string, qs []IngredientQuery, products []domain.Product) ([]
 		out[i] = Suggestion{Name: q.Name, Kind: KindNone}
 	}
 	seen := make(map[int]bool, len(qs))
+	proposed := map[string]*NewProduct{} // one proposal per new product name, shared by its queries
 	for _, it := range *r.Suggestions {
 		if it.Index < 0 || it.Index >= len(qs) || seen[it.Index] {
 			continue
@@ -127,6 +129,11 @@ func parseMatch(raw string, qs []IngredientQuery, products []domain.Product) ([]
 			if p, ok := existingNamed(m, it.NewProduct.Name); ok {
 				s.Kind, s.ProductID, s.ProductName, s.Reason = KindExisting, p.ID, p.Name, reason
 			} else if np, ok := proposeNew(m, it.NewProduct); ok {
+				if first, dup := proposed[units.NormalizeName(np.Name)]; dup {
+					np = first
+				} else {
+					proposed[units.NormalizeName(np.Name)] = np
+				}
 				s.Kind, s.New, s.Reason = KindNew, np, reason
 			}
 		case KindNone:

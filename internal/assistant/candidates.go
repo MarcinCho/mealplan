@@ -90,8 +90,9 @@ func contains(list []string, s string) bool {
 
 // CandidateProductBatches groups products that might be duplicates and packs the groups into
 // batches of at most max ids. Products are sorted by normalized name and grouped by the first
-// four letters of their first word; products with no such neighbour are left out. A group
-// larger than max is split over consecutive batches, and a batch with a single id is dropped.
+// three letters of their first word; products with no such neighbour are left out. A group
+// larger than max is split over consecutive batches; a lone remainder shares the batch with the
+// previous chunk's last id, so the products of a group are never left out.
 func CandidateProductBatches(products []domain.Product, max int) [][]string {
 	out := [][]string{}
 	if max < 2 {
@@ -119,9 +120,17 @@ func CandidateProductBatches(products []domain.Product, max int) [][]string {
 		if len(cur)+len(group) > max {
 			flush()
 		}
-		for len(group) > max {
-			out = append(out, group[:max:max])
-			group = group[max:]
+		if len(group) > max {
+			for len(group) > max {
+				out = append(out, group[:max:max])
+				group = group[max:]
+			}
+			// The chunks above are full, so a lone remainder cannot join the last one: it is
+			// paired with that chunk's last id instead, so no product of the group is left out.
+			if len(group) == 1 {
+				prev := out[len(out)-1]
+				group = []string{prev[len(prev)-1], group[0]}
+			}
 		}
 		cur = append(cur, group...)
 	}
@@ -144,15 +153,16 @@ func CandidateProductBatches(products []domain.Product, max int) [][]string {
 	return out
 }
 
-// stem is the first four letters of the first word.
+// stem is the first three letters of the first word (the whole word if it is shorter), so that
+// "ser" and "sery" or "ryż" and "ryżu" land in one group.
 func stem(name string) string {
 	f := strings.Fields(name)
 	if len(f) == 0 {
 		return ""
 	}
 	r := []rune(f[0])
-	if len(r) > 4 {
-		r = r[:4]
+	if len(r) > 3 {
+		r = r[:3]
 	}
 	return string(r)
 }

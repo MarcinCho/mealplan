@@ -13,19 +13,23 @@ func fp(v float64) *float64 { return &v }
 
 // fakeClient records calls and answers with reply (or an empty JSON object).
 type fakeClient struct {
-	mu    sync.Mutex
-	calls int
-	users []string
-	key   string
-	model string
-	reply func(user string) (string, error)
+	mu      sync.Mutex
+	calls   int
+	users   []string
+	systems []string
+	schemas []json.RawMessage
+	key     string
+	model   string
+	reply   func(user string) (string, error)
 }
 
-func (f *fakeClient) Complete(_ context.Context, key, model, _, user string, _ json.RawMessage) (string, error) {
+func (f *fakeClient) Complete(_ context.Context, key, model, system, user string, schema json.RawMessage) (string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls++
 	f.users = append(f.users, user)
+	f.systems = append(f.systems, system)
+	f.schemas = append(f.schemas, schema)
 	f.key, f.model = key, model
 	if f.reply == nil {
 		return `{}`, nil

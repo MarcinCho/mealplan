@@ -18,9 +18,11 @@ const matchSystem = `Jesteś asystentem bazy produktów w polskiej aplikacji do 
 ` + namingRules + `
 
 Rodzaje propozycji ("kind"):
-- "existing": składnik to ten sam produkt co produkt z listy. Podaj "productId". Używaj WYŁĄCZNIE id z listy "products"; nie wymyślaj id. "newProduct" = null.
-- "new": na liście nie ma tego produktu (ani jako nazwy, ani aliasu). Podaj "newProduct": nazwa w mianowniku l. poj., wartości odżywcze na 100 g SUROWEGO produktu (kcal, białko "protein", węglowodany "carbs", tłuszcz "fat", w gramach), "pieceGrams" = typowa waga jednej sztuki w gramach albo null, "densityGPerMl" = gęstość w g/ml dla płynów albo null, "aliases" = inne zapisy tej samej rzeczy (np. liczba mnoga, inny szyk) małymi literami. "productId" = null.
-- "none": gdy nie wiesz, gdy składnik nie jest konkretnym produktem spożywczym albo gdy masz wątpliwości. Lepiej zwrócić "none" niż zgadywać.
+- "existing": składnik to ten sam produkt co produkt z listy. Podaj "productId". Używaj WYŁĄCZNIE id z listy "products"; nie wymyślaj id. "newProduct" wypełnij pustym produktem (patrz niżej).
+- "new": na liście nie ma tego produktu (ani jako nazwy, ani aliasu). Podaj "newProduct": nazwa w mianowniku l. poj., wartości odżywcze na 100 g SUROWEGO produktu (kcal, białko "protein", węglowodany "carbs", tłuszcz "fat", w gramach), "pieceGrams" = typowa waga jednej sztuki w gramach albo null, "densityGPerMl" = gęstość w g/ml dla płynów albo null, "aliases" = inne zapisy tej samej rzeczy (np. liczba mnoga, inny szyk) małymi literami. "productId" = "".
+- "none": gdy nie wiesz, gdy składnik nie jest konkretnym produktem spożywczym albo gdy masz wątpliwości. Lepiej zwrócić "none" niż zgadywać. "productId" = "".
+
+Pole "newProduct" jest zawsze obecne. Gdy "kind" to nie "new", wpisz pusty produkt: {"name": "", "kcal": null, "protein": null, "carbs": null, "fat": null, "pieceGrams": null, "densityGPerMl": null, "aliases": []}.
 
 Przykłady:
 - "pomidorów" przy produkcie "pomidor" → existing (przypadek).
@@ -38,8 +40,6 @@ Dla każdej grupy zwróć "keepId" (produkt, który zostaje: najlepiej ten w mia
 
 Przykłady: "pomidor" i "pomidory" → jedna grupa (keep "pomidor"). "cebula" i "cebula czerwona" → NIE (odmiana). "papryka czerwona" i "papryka żółta" → NIE.`
 
-const testSystem = `Odpowiedz obiektem JSON {"ok": true}.`
-
 var matchSchema = json.RawMessage(`{
   "type": "object",
   "additionalProperties": false,
@@ -54,26 +54,21 @@ var matchSchema = json.RawMessage(`{
         "properties": {
           "index": {"type": "integer"},
           "kind": {"type": "string", "enum": ["existing", "new", "none"]},
-          "productId": {"type": ["string", "null"]},
+          "productId": {"type": "string"},
           "newProduct": {
-            "anyOf": [
-              {"type": "null"},
-              {
-                "type": "object",
-                "additionalProperties": false,
-                "required": ["name", "kcal", "protein", "carbs", "fat", "pieceGrams", "densityGPerMl", "aliases"],
-                "properties": {
-                  "name": {"type": "string"},
-                  "kcal": {"type": ["number", "null"]},
-                  "protein": {"type": ["number", "null"]},
-                  "carbs": {"type": ["number", "null"]},
-                  "fat": {"type": ["number", "null"]},
-                  "pieceGrams": {"type": ["number", "null"]},
-                  "densityGPerMl": {"type": ["number", "null"]},
-                  "aliases": {"type": "array", "items": {"type": "string"}}
-                }
-              }
-            ]
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "kcal", "protein", "carbs", "fat", "pieceGrams", "densityGPerMl", "aliases"],
+            "properties": {
+              "name": {"type": "string"},
+              "kcal": {"type": ["number", "null"]},
+              "protein": {"type": ["number", "null"]},
+              "carbs": {"type": ["number", "null"]},
+              "fat": {"type": ["number", "null"]},
+              "pieceGrams": {"type": ["number", "null"]},
+              "densityGPerMl": {"type": ["number", "null"]},
+              "aliases": {"type": "array", "items": {"type": "string"}}
+            }
           },
           "reason": {"type": "string"}
         }
@@ -103,8 +98,6 @@ var duplicatesSchema = json.RawMessage(`{
   }
 }`)
 
-var testSchema = json.RawMessage(`{"type":"object","additionalProperties":false,"required":["ok"],"properties":{"ok":{"type":"boolean"}}}`)
-
 type promptIngredient struct {
 	Index    int      `json:"index"`
 	Name     string   `json:"name"`
@@ -125,6 +118,9 @@ type promptFullProduct struct {
 	Carbs   *float64 `json:"carbs,omitempty"`
 	Fat     *float64 `json:"fat,omitempty"`
 }
+
+// testQuery is the ingredient Service.Test sends through the real matching prompt and schema.
+var testQuery = []IngredientQuery{{Name: "sól"}}
 
 // matchPrompt is the user message: the ingredients with their index in qs, and every product.
 func matchPrompt(qs []IngredientQuery, products []domain.Product) string {

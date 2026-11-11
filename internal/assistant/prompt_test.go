@@ -28,9 +28,15 @@ func TestPromptRules(t *testing.T) {
 			t.Errorf("match prompt lacks %q", must)
 		}
 	}
-	for name, s := range map[string]json.RawMessage{"match": matchSchema, "duplicates": duplicatesSchema, "test": testSchema} {
+	for name, s := range map[string]json.RawMessage{"match": matchSchema, "duplicates": duplicatesSchema} {
 		if !json.Valid(s) {
 			t.Errorf("%s schema is not valid JSON", name)
+		}
+		// Keep to constructs strict mode supports everywhere.
+		for _, banned := range []string{"anyOf", "oneOf", "allOf", "$ref", "pattern", "format"} {
+			if strings.Contains(string(s), `"`+banned+`"`) {
+				t.Errorf("%s schema uses %s", name, banned)
+			}
 		}
 	}
 }

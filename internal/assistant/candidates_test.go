@@ -47,9 +47,11 @@ func TestCandidateProductBatches(t *testing.T) {
 		{ID: "e", Name: "jajko"},
 		{ID: "t3", Name: "Pomidorki koktajlowe"},
 		{ID: "t1", Name: "pomidor"},
+		{ID: "s2", Name: "sery"},
+		{ID: "s1", Name: "ser"},
 	}
 	got := CandidateProductBatches(products, 80)
-	want := [][]string{{"t1", "t3", "t2"}}
+	want := [][]string{{"t1", "t3", "t2", "s1", "s2"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
@@ -63,15 +65,24 @@ func TestCandidateProductBatchesPacking(t *testing.T) {
 		{ID: "x", Name: "sól"},
 		{ID: "d1", Name: "ryż"}, {ID: "d2", Name: "ryż basmati"}, {ID: "d3", Name: "ryż brązowy"}, {ID: "d4", Name: "ryż jaśminowy"}, {ID: "d5", Name: "ryżu"},
 	}
-	// Groups (sorted): jabł(2) mąka(2) ryż(4; "ryżu" is its own key) ser(2) sere(1, skipped) ... sól skipped.
+	// Groups (sorted): jab(2) mąk(2) ryż(5, with "ryżu") ser(3, with "serek"); sól has no neighbour.
+	// ryż is larger than max: chunk d1-d4, then the lone d5 is paired with d4.
 	got := CandidateProductBatches(products, 4)
-	want := [][]string{{"c2", "c1", "a1", "a2"}, {"d1", "d2", "d3", "d4"}, {"b2", "b1"}}
+	want := [][]string{{"c2", "c1", "a1", "a2"}, {"d1", "d2", "d3", "d4"}, {"d4", "d5"}, {"b2", "b1", "b3"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
-	// A group larger than max is split into consecutive batches.
+	// A group larger than max is split into consecutive batches and never loses an id.
 	big := []domain.Product{{ID: "1", Name: "ryż a"}, {ID: "2", Name: "ryż b"}, {ID: "3", Name: "ryż c"}, {ID: "4", Name: "ryż d"}, {ID: "5", Name: "ryż e"}}
-	if got := CandidateProductBatches(big, 2); !reflect.DeepEqual(got, [][]string{{"1", "2"}, {"3", "4"}}) {
-		t.Fatalf("split: got %v", got)
+	if got := CandidateProductBatches(big, 2); !reflect.DeepEqual(got, [][]string{{"1", "2"}, {"3", "4"}, {"4", "5"}}) {
+		t.Fatalf("split with lone remainder: got %v", got)
+	}
+	if got := CandidateProductBatches(big[:4], 3); !reflect.DeepEqual(got, [][]string{{"1", "2", "3"}, {"3", "4"}}) {
+		t.Fatalf("split 4 by 3: got %v", got)
+	}
+	// A remainder of two or more is a batch of its own and other groups can join it.
+	six := append(append([]domain.Product{}, big...), domain.Product{ID: "6", Name: "ryż f"}, domain.Product{ID: "x1", Name: "sól"}, domain.Product{ID: "x2", Name: "sól morska"})
+	if got := CandidateProductBatches(six, 4); !reflect.DeepEqual(got, [][]string{{"1", "2", "3", "4"}, {"5", "6", "x1", "x2"}}) {
+		t.Fatalf("split with pair remainder: got %v", got)
 	}
 }

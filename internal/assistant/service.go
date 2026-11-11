@@ -120,13 +120,18 @@ func (s *Service) settings(ctx context.Context, householdID string) (key, model 
 	return key, model, nil
 }
 
-// Test sends a minimal request to check the key and the model.
+// Test checks the key and the model with a one-ingredient request through the real matching
+// prompt and schema, so a provider that rejects the schema fails here and not on first use.
 func (s *Service) Test(ctx context.Context, p auth.Principal) error {
 	key, model, err := s.settings(ctx, p.HouseholdID)
 	if err != nil {
 		return err
 	}
-	_, err = s.client.Complete(ctx, key, model, testSystem, `{"ping":true}`, testSchema)
+	raw, err := s.client.Complete(ctx, key, model, matchSystem, matchPrompt(testQuery, nil), matchSchema)
+	if err != nil {
+		return err
+	}
+	_, err = parseMatch(raw, testQuery, nil)
 	return err
 }
 
