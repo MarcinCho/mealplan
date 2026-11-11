@@ -2,8 +2,11 @@ package seed
 
 import (
 	"math"
+	"slices"
+	"strings"
 	"testing"
 
+	"mealplan/internal/domain"
 	"mealplan/internal/units"
 )
 
@@ -93,5 +96,32 @@ func TestSeedProductsAreConsistent(t *testing.T) {
 	}
 	if i, ok := byName["oliwa"]; ok && products[i].DensityGPerML == nil {
 		t.Error("oliwa needs density")
+	}
+}
+
+func TestSeedRedOnionIsSeparateFromOnion(t *testing.T) {
+	products, err := Products()
+	if err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]domain.Product{}
+	for _, p := range products {
+		byName[p.NormalizedName] = p
+	}
+	onion, ok := byName["cebula"]
+	if !ok {
+		t.Fatal("cebula missing")
+	}
+	for _, a := range onion.Aliases {
+		if strings.Contains(a, "czerwon") {
+			t.Errorf("cebula has red alias %q", a)
+		}
+	}
+	red, ok := byName["cebula czerwona"]
+	if !ok {
+		t.Fatal("cebula czerwona missing")
+	}
+	if !slices.Contains(red.Aliases, "czerwona cebula") {
+		t.Errorf("cebula czerwona aliases = %v, want czerwona cebula", red.Aliases)
 	}
 }
