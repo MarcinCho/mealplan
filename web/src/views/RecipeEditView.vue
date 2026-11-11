@@ -126,8 +126,7 @@ async function useProduct(name: string, productId: string) {
     delete suggestions.value[name]
     const res = await assistant.assign(productId, name, [])
     if (res.aliasConflict) {
-      const other = useProducts().catalog.find((p) => p.id === productId)?.name ?? res.aliasConflict
-      notice.show(t.suggestionAliasConflict(name, other))
+      notice.show(t.suggestionAliasConflict(name, res.aliasConflict))
     }
   } catch (e) {
     notice.show(errorText(e))

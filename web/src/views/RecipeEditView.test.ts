@@ -13,7 +13,12 @@ import { ApiError } from '../api/client'
 import type { RecipeDraft } from '../api/types'
 
 const api = vi.hoisted(() => ({ current: (async () => ({})) as (m: string, p: string, b?: unknown) => Promise<unknown> }))
-vi.mock('../api/client', () => ({ api: (m: string, p: string, b?: unknown) => api.current(m, p, b), ApiError: class extends Error {} }))
+vi.mock('../api/client', () => ({ api: (m: string, p: string, b?: unknown) => api.current(m, p, b), ApiError: class extends Error {
+    constructor(public status: number, public code: string, message: string, public retryAfter?: number) {
+      super(message)
+    }
+  },
+}))
 
 const Stub = defineComponent({ render: () => null })
 
@@ -142,6 +147,24 @@ describe('RecipeEditView', () => {
       expect(w.text()).not.toContain('Propozycja')
     })
 
+    it('names the product that owns the alias on a conflict', async () => {
+      await show(
+        '/recipes/new',
+        {
+          'GET /products': () => [{ id: 'p9', name: 'Cebula czerwona', per100g: {}, aliases: [] }],
+          'GET /household/assistant': settings(true),
+          'POST /assistant/ingredients': () => ({
+            suggestions: [{ name: 'cebulka', kind: 'existing', productId: 'p9', productName: 'Cebula czerwona', reason: 'model' }],
+          }),
+          'POST /products/p9/assign': () => ({ updated: 0, aliasAdded: false, aliasConflict: 'cebula' }),
+        },
+        draftWith('cebulka'),
+      )
+      buttonByText('Zatwierdź').click()
+      for (let i = 0; i < 4; i++) await flush()
+      expect(useNotice().text).toBe('„cebulka” jest już aliasem produktu cebula')
+    })
+
     it('applies an exact match without asking', async () => {
       const { w } = await show(
         '/recipes/new',
@@ -171,7 +194,7 @@ describe('RecipeEditView', () => {
         },
         draftWith('cebula'),
       )
-      expect(w.text()).toContain('Podpowiedzi produktów są teraz niedostępne')
+      expect(w.text()).toContain('Podpowiedzi produktów są teraz niedostępne: OpenRouter nie odpowiada. Spróbuj później.')
       buttonByText(t.save).click()
       for (let i = 0; i < 4; i++) await flush()
       expect(calls.some((c) => c.method === 'POST' && c.path === '/recipes')).toBe(true)
@@ -188,11 +211,13 @@ describe('RecipeEditView', () => {
     })
 
     it('opens the product dialog prefilled for a new-product suggestion', async () => {
-      const { w } = await show(
+      const { w, calls } = await show(
         '/recipes/new',
         {
           'GET /products': () => [],
           'GET /household/assistant': settings(true),
+          'POST /products': (b) => ({ ...(b as object), id: 'p77' }),
+          'POST /products/p77/assign': () => ({ updated: 0, aliasAdded: true, aliasConflict: '' }),
           'POST /assistant/ingredients': () => ({
             suggestions: [
               {
@@ -213,6 +238,11 @@ describe('RecipeEditView', () => {
       expect(dlg?.props('modelValue')).toBe(true)
       expect(dlg?.props('initial')?.per100g?.kcal).toBe(120)
       expect(document.body.textContent).toContain(t.suggestionEstimate)
+      const dialogSave = [...document.querySelectorAll('.v-overlay button')].find((x) => x.textContent?.trim() === t.save) as HTMLButtonElement
+      dialogSave.click()
+      for (let i = 0; i < 6; i++) await flush()
+      expect(calls.find((c) => c.path === '/products/p77/assign')?.body).toEqual({ name: 'tofu', recipeIds: [] })
+      expect(w.findComponent(ProductPicker).props('modelValue')).toBe('p77')
     })
   })
 })

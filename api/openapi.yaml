@@ -1388,7 +1388,7 @@ components:
       properties:
         updated: { type: integer, description: Ingredients linked to the product }
         aliasAdded: { type: boolean }
-        aliasConflict: { type: string, description: Id of the product that already owns the alias, or empty }
+        aliasConflict: { type: string, description: Name of the product that already owns the alias, or empty }
     ProductUsage:
       type: object
       required: [recipes, pantry, foodLog, shopping]
