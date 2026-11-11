@@ -84,6 +84,12 @@ export const useProducts = defineStore('products', {
       }
       return saved
     },
+    // After a merge the absorbed products are gone: drop them now and refetch so pickers never offer them.
+    async merged(absorbIds: string[]) {
+      this.items = this.items.filter((p) => !absorbIds.includes(p.id))
+      this.catalog = this.catalog.filter((p) => !absorbIds.includes(p.id))
+      await this.ensureLoaded(true)
+    },
     async remove(id: string) {
       await api('DELETE', `/products/${encodeURIComponent(id)}`)
       this.items = this.items.filter((p) => p.id !== id)

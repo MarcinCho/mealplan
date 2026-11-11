@@ -117,6 +117,20 @@ export const t = {
   checkMoreRecipes: (k: number) => `i ${k} innych`,
   checkNoSuggestion: (k: number) => `${k} ${form(k, ['składnik', 'składniki', 'składników', 'składnika'])} bez propozycji`,
   checkAssigned: (name: string, n: number) => `Przypisano ${name} w ${n} ${form(n, ['przepisie', 'przepisach', 'przepisach', 'przepisach'])}`,
+  checkProducts: 'Sprawdź produkty',
+  productCheckNoBatches: 'Za mało produktów, żeby szukać duplikatów',
+  productCheckMerge: 'Scal',
+  productCheckKeepHint: 'Zaznaczony produkt zostaje, pozostałe zostaną scalone',
+  productAlreadyMerged: 'Ten produkt został już scalony lub usunięty — pomijam tę grupę',
+  mergeWith: 'Scal z…',
+  mergeAbsorb: 'Produkt do scalenia',
+  mergeWarning: (absorb: string, keep: string) => `„${absorb}” zniknie, a jego przepisy, spiżarnia i dziennik przejdą do „${keep}”.`,
+  moreActions: 'Więcej',
+  usageNone: 'nigdzie nie użyty',
+  usageRecipes: (n: number) => `${n} ${form(n, ['przepis', 'przepisy', 'przepisów', 'przepisu'])}`,
+  usagePantry: (n: number) => `${n} w spiżarni`,
+  usageFoodLog: (n: number) => `${n} w dzienniku`,
+  usageShopping: (n: number) => `${n} na liście zakupów`,
   suggestionEstimate: 'Wartości to szacunek asystenta — sprawdź przed zapisem',
   nutritionGiven: 'wpisane',
   entryCook: 'Kto gotuje',
@@ -403,4 +417,19 @@ export function prepErrorText(e: unknown): string {
     return 'Nie można usunąć — porcje są już przydzielone w planie. Najpierw usuń te posiłki z planu.'
   }
   return errorText(e)
+}
+
+// "3 przepisy · 1 w spiżarni · 2 w dzienniku": only the places where the product is used.
+export function usageLine(u: { recipes: number; pantry: number; foodLog: number; shopping: number }): string {
+  const parts = [
+    u.recipes ? t.usageRecipes(u.recipes) : '',
+    u.pantry ? t.usagePantry(u.pantry) : '',
+    u.foodLog ? t.usageFoodLog(u.foodLog) : '',
+    u.shopping ? t.usageShopping(u.shopping) : '',
+  ].filter(Boolean)
+  return parts.length ? parts.join(' · ') : t.usageNone
+}
+
+export function mergedNotice(name: string, skippedAliases: string[]): string {
+  return `Scalono w „${name}”${skippedAliases.length ? `, pominięte aliasy: ${skippedAliases.join(', ')}` : ''}`
 }
