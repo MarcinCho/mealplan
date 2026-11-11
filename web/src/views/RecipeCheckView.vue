@@ -25,7 +25,9 @@ const notice = useNotice()
 const rows = ref<Row[]>([])
 const total = ref(0)
 const checked = ref(0)
+const loading = ref(true) // settings, products and the candidate list are still on their way
 const checking = ref(false)
+const finished = ref(false)
 const noSuggestion = ref(0)
 const error = ref('')
 const busy = ref('') // name of the row being assigned
@@ -51,7 +53,12 @@ function recipesLine(c: IngredientCandidate): string {
 
 async function run() {
   error.value = ''
-  const cands = await assistant.candidates()
+  let cands: IngredientCandidate[]
+  try {
+    cands = await assistant.candidates()
+  } finally {
+    loading.value = false
+  }
   total.value = cands.length
   if (!cands.length) return
   checking.value = true
@@ -69,6 +76,7 @@ async function run() {
       }
       checked.value = Math.min(i + BATCH, cands.length)
     }
+    finished.value = !stopped
   } finally {
     checking.value = false
   }
@@ -80,6 +88,8 @@ onMounted(async () => {
     await run()
   } catch (e) {
     error.value = errorText(e)
+  } finally {
+    loading.value = false
   }
 })
 onBeforeUnmount(() => {
@@ -123,7 +133,11 @@ function approve(row: Row) {
 
 function newProductCreated(p: Product) {
   products.addToCatalog(p)
-  if (creating.value) void useProduct(creating.value, p.id)
+  const row = creating.value
+  if (!row) return
+  // Once the product exists the row is an ordinary existing match, so a failed assign can be retried without creating it twice.
+  row.sg = { name: row.cand.name, kind: 'existing', productId: p.id, productName: p.name, reason: 'model' }
+  void useProduct(row, p.id)
 }
 
 function reject(row: Row) {
@@ -165,7 +179,9 @@ async function approveAll() {
     <v-progress-linear :model-value="total ? (checked / total) * 100 : 0" :aria-label="t.checkProgress(checked, total)" />
   </div>
 
-  <EmptyState v-if="!checking && !error && !total" :title="t.checkAllMatched" />
+  <v-progress-linear v-if="loading" indeterminate :aria-label="t.checkRecipes" class="mb-4" />
+  <EmptyState v-else-if="!error && !total" :title="t.checkAllMatched" />
+  <EmptyState v-else-if="finished && !rows.length" :title="t.checkNothingToChange" />
 
   <v-card v-if="rows.length" class="mb-3">
     <v-list role="none">
@@ -175,7 +191,7 @@ async function approveAll() {
           <v-chip v-if="currentName(row.cand)" size="x-small" variant="tonal" color="warning">{{ t.checkCurrent(currentName(row.cand)) }}</v-chip>
         </div>
         <div class="text-caption text-medium-emphasis mb-1">{{ recipesLine(row.cand) }}</div>
-        <ProductSuggestion :suggestion="row.sg" :busy="busy === row.cand.name" @accept="approve(row)" @reject="reject(row)" />
+        <ProductSuggestion :suggestion="row.sg" :busy="busy === row.cand.name" :disabled="working" @accept="approve(row)" @reject="reject(row)" />
         <v-btn v-if="picking !== row.cand.name" size="small" variant="text" :disabled="working" @click="picking = row.cand.name">{{ t.checkOtherProduct }}</v-btn>
         <ProductPicker v-else :model-value="null" allow-create :suggest-name="row.cand.name" @update:model-value="pickOther(row, $event)" />
       </v-list-item>

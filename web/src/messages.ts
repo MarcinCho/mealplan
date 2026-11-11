@@ -109,6 +109,7 @@ export const t = {
   checkRecipes: 'Sprawdź przepisy',
   checkAllMatched: 'Wszystkie składniki mają produkty',
   checkProgress: (i: number, n: number) => `Sprawdzam… ${i} z ${n}`,
+  checkNothingToChange: 'Sprawdzanie zakończone — nic do zmiany',
   checkStop: 'Przerwij',
   checkApproveAll: 'Zatwierdź wszystkie',
   checkOtherProduct: 'Inny produkt',
