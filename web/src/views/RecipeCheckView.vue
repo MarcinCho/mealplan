@@ -13,6 +13,9 @@ import { useProducts } from '../stores/products'
 const BATCH = 25
 const MAX_TITLES = 3
 
+// One name can be both unlinked and linked to a product, so the name alone does not identify a row.
+const rowKey = (c: IngredientCandidate) => `${c.normalizedName}|${c.currentProductId}`
+
 interface Row {
   cand: IngredientCandidate
   sg: Suggestion
@@ -30,9 +33,9 @@ const checking = ref(false)
 const finished = ref(false)
 const noSuggestion = ref(0)
 const error = ref('')
-const busy = ref('') // name of the row being assigned
+const busy = ref('') // key of the row being assigned
 const bulk = ref(false)
-const picking = ref<string | null>(null) // name of the row showing its product picker
+const picking = ref<string | null>(null) // key of the row showing its product picker
 const creating = ref<Row | null>(null)
 const creatingOpen = ref(false)
 let stopped = false
@@ -115,7 +118,7 @@ async function assignTo(row: Row, productId: string): Promise<boolean> {
 }
 
 async function useProduct(row: Row, productId: string) {
-  busy.value = row.cand.name
+  busy.value = rowKey(row.cand)
   try {
     await assignTo(row, productId)
   } finally {
@@ -154,7 +157,7 @@ async function approveAll() {
   bulk.value = true
   try {
     for (const row of [...approvable.value]) {
-      busy.value = row.cand.name
+      busy.value = rowKey(row.cand)
       if (!(await assignTo(row, row.sg.productId!))) break
     }
   } finally {
@@ -177,6 +180,7 @@ async function approveAll() {
       <v-btn size="small" variant="text" @click="stop">{{ t.checkStop }}</v-btn>
     </div>
     <v-progress-linear :model-value="total ? (checked / total) * 100 : 0" :aria-label="t.checkProgress(checked, total)" />
+    <div v-if="assistant.waitingSeconds > 0" class="text-caption text-medium-emphasis mt-1" data-test="waiting">{{ t.checkWaiting(assistant.waitingSeconds) }}</div>
   </div>
 
   <v-progress-linear v-if="loading" indeterminate :aria-label="t.checkRecipes" class="mb-4" />
@@ -185,14 +189,14 @@ async function approveAll() {
 
   <v-card v-if="rows.length" class="mb-3">
     <v-list role="none">
-      <v-list-item v-for="row in rows" :key="row.cand.name" class="py-3">
+      <v-list-item v-for="row in rows" :key="rowKey(row.cand)" class="py-3">
         <div class="d-flex align-center flex-wrap ga-2">
           <span class="text-subtitle-1 font-weight-medium">{{ row.cand.name }}</span>
           <v-chip v-if="currentName(row.cand)" size="x-small" variant="tonal" color="warning">{{ t.checkCurrent(currentName(row.cand)) }}</v-chip>
         </div>
         <div class="text-caption text-medium-emphasis mb-1">{{ recipesLine(row.cand) }}</div>
-        <ProductSuggestion :suggestion="row.sg" :busy="busy === row.cand.name" :disabled="working" @accept="approve(row)" @reject="reject(row)" />
-        <v-btn v-if="picking !== row.cand.name" size="small" variant="text" :disabled="working" @click="picking = row.cand.name">{{ t.checkOtherProduct }}</v-btn>
+        <ProductSuggestion :suggestion="row.sg" :busy="busy === rowKey(row.cand)" :disabled="working" @accept="approve(row)" @reject="reject(row)" />
+        <v-btn v-if="picking !== rowKey(row.cand)" size="small" variant="text" :disabled="working" @click="picking = rowKey(row.cand)">{{ t.checkOtherProduct }}</v-btn>
         <ProductPicker v-else :model-value="null" allow-create :suggest-name="row.cand.name" @update:model-value="pickOther(row, $event)" />
       </v-list-item>
     </v-list>

@@ -29,7 +29,9 @@ async function run(fn: () => Promise<void>, done: 'saved' | 'ok' | '') {
 
 const save = () =>
   run(async () => {
-    await assistant.save(key.value.trim() === '' ? undefined : key.value.trim(), model.value.trim())
+    const chosen = model.value.trim()
+    // The default is not a choice: leave the model unset so a later default change applies.
+    await assistant.save(key.value.trim() === '' ? undefined : key.value.trim(), chosen === assistant.defaultModel ? '' : chosen)
     key.value = ''
     model.value = assistant.model
   }, 'saved')
@@ -58,7 +60,8 @@ onMounted(async () => {
         <v-text-field
           v-model="key"
           type="password"
-          autocomplete="off"
+          name="openrouter-api-key"
+          autocomplete="new-password"
           :label="t.assistantKey"
           style="max-width: 360px"
           @keydown.enter="save"

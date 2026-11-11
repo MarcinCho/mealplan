@@ -11,6 +11,7 @@ import { useProducts } from '../stores/products'
 interface Row {
   key: string
   keep: string // the product that stays; the others are merged into it
+  off: string[] // ids the user unchecked: they are left out of the merge
   ids: string[]
   reason: string
 }
@@ -74,7 +75,7 @@ async function run() {
       for (const g of groups) {
         const ids = [g.keepId, ...g.absorbIds].filter((id, j, all) => !absorbed.has(id) && all.indexOf(id) === j && nameOf(id))
         if (ids.length < 2) continue
-        rows.value.push({ key: String(n++), keep: ids.includes(g.keepId) ? g.keepId : ids[0], ids, reason: g.reason })
+        rows.value.push({ key: String(n++), off: [], keep: ids.includes(g.keepId) ? g.keepId : ids[0], ids, reason: g.reason })
         void loadUsage(ids)
       }
       checked.value = i + 1
@@ -103,12 +104,24 @@ function stop() {
   stopped = true
 }
 
+const absorbOf = (row: Row) => row.ids.filter((id) => id !== row.keep && !row.off.includes(id))
+
+function setKeep(row: Row, id: string) {
+  row.keep = id
+  row.off = row.off.filter((x) => x !== id) // the product that stays is never left out of anything
+}
+
+function setIncluded(row: Row, id: string, on: boolean) {
+  row.off = on ? row.off.filter((x) => x !== id) : [...row.off, id]
+}
+
 function dismiss(row: Row) {
   rows.value = rows.value.filter((r) => r !== row)
 }
 
 async function merge(row: Row) {
-  const absorb = row.ids.filter((id) => id !== row.keep)
+  const absorb = absorbOf(row)
+  if (!absorb.length) return
   busy.value = row.key
   try {
     const res = await assistant.merge(row.keep, absorb)
@@ -144,6 +157,7 @@ async function merge(row: Row) {
       <v-btn size="small" variant="text" @click="stop">{{ t.checkStop }}</v-btn>
     </div>
     <v-progress-linear :model-value="total ? (checked / total) * 100 : 0" :aria-label="t.checkProgress(checked, total)" />
+    <div v-if="assistant.waitingSeconds > 0" class="text-caption text-medium-emphasis mt-1" data-test="waiting">{{ t.checkWaiting(assistant.waitingSeconds) }}</div>
   </div>
 
   <v-progress-linear v-if="loading" indeterminate :aria-label="t.checkProducts" class="mb-4" />
@@ -153,21 +167,35 @@ async function merge(row: Row) {
   <v-card v-for="row in rows" :key="row.key" class="mb-3">
     <v-card-text>
       <div class="text-caption text-medium-emphasis mb-1">{{ row.reason }}</div>
-      <v-radio-group v-model="row.keep" :aria-label="t.productCheckKeepHint" :hint="t.productCheckKeepHint" persistent-hint :disabled="working">
-        <v-radio v-for="id in row.ids" :key="id" :value="id">
-          <template #label>
-            <div>
-              <div>{{ nameOf(id) }}</div>
-              <div class="text-caption text-medium-emphasis">{{ usages[id] ? usageLine(usages[id]) : '' }}</div>
-            </div>
-          </template>
-        </v-radio>
-      </v-radio-group>
+      <div class="text-body-2 mb-1">{{ t.productCheckKeepHint }}</div>
+      <!-- One radio per group: a checkbox cannot sit inside a v-radio-group (it would join the group), and the keep state lives in row.keep anyway. -->
+      <div v-for="id in row.ids" :key="id" class="d-flex align-center">
+        <v-radio-group :model-value="row.keep" hide-details :disabled="working" class="flex-grow-1" @update:model-value="setKeep(row, $event)">
+          <v-radio :value="id">
+            <template #label>
+              <div>
+                <div>{{ nameOf(id) }}</div>
+                <div class="text-caption text-medium-emphasis">{{ usages[id] ? usageLine(usages[id]) : '' }}</div>
+              </div>
+            </template>
+          </v-radio>
+        </v-radio-group>
+        <v-checkbox
+          v-if="id !== row.keep"
+          :model-value="!row.off.includes(id)"
+          :aria-label="t.productCheckInclude(nameOf(id))"
+          hide-details
+          density="compact"
+          class="flex-grow-0"
+          :disabled="working"
+          @update:model-value="setIncluded(row, id, Boolean($event))"
+        />
+      </div>
     </v-card-text>
     <v-card-actions>
       <v-spacer />
       <v-btn variant="text" :disabled="working" @click="dismiss(row)">{{ t.suggestionReject }}</v-btn>
-      <v-btn color="primary" :disabled="working" :loading="busy === row.key" @click="merge(row)">{{ t.productCheckMerge }}</v-btn>
+      <v-btn color="primary" :disabled="working || !absorbOf(row).length" :loading="busy === row.key" @click="merge(row)">{{ t.productCheckMerge }}</v-btn>
     </v-card-actions>
   </v-card>
 </template>

@@ -65,6 +65,23 @@ describe('useAssistant', () => {
     expect(await p).toHaveLength(1)
   })
 
+  it('exposes the seconds left while waiting out a 429', async () => {
+    vi.useFakeTimers()
+    let n = 0
+    vi.stubGlobal('fetch', vi.fn(async (_u: string, init?: RequestInit) =>
+      n++ === 0 ? json({ code: 'rate_limited', message: '' }, 429, { 'Retry-After': '3' }) : echo(init)))
+    const a = useAssistant()
+    expect(a.waitingSeconds).toBe(0)
+    const p = a.matchIngredients(queries(1))
+    await vi.advanceTimersByTimeAsync(10)
+    expect(a.waitingSeconds).toBe(3)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(a.waitingSeconds).toBe(2)
+    await vi.advanceTimersByTimeAsync(2100)
+    await p
+    expect(a.waitingSeconds).toBe(0)
+  })
+
   it('does not retry other errors', async () => {
     const spy = vi.fn(async () => json({ code: 'assistant_bad_key', message: 'x' }, 502))
     vi.stubGlobal('fetch', spy)

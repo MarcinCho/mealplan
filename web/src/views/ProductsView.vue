@@ -3,10 +3,9 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import EmptyState from '../components/EmptyState.vue'
 import MergeDialog from '../components/MergeDialog.vue'
 import ProductDialog from '../components/ProductDialog.vue'
-import type { Product } from '../api/types'
+import type { MergeResult, Product } from '../api/types'
 import { formatMacros } from '../nutrition'
 import { mergedNotice, productErrorText, t } from '../messages'
-import type { MergeResult } from '../api/types'
 import { useAssistant } from '../stores/assistant'
 import { useNotice } from '../stores/notice'
 import { useProducts } from '../stores/products'
@@ -71,11 +70,12 @@ onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
 <template>
-  <div class="d-flex align-center mb-4">
-    <h1 class="text-h5">{{ t.products }}</h1>
-    <v-spacer />
-    <v-btn v-if="assistant.configured" variant="tonal" class="mr-2" :to="{ name: 'product-check' }" prepend-icon="mdi-magnify">{{ t.checkProducts }}</v-btn>
-    <v-btn color="primary" prepend-icon="mdi-plus" @click="open(null)">{{ t.newProduct }}</v-btn>
+  <div class="d-flex align-center flex-wrap ga-2 mb-4">
+    <h1 class="text-h5 mr-auto">{{ t.products }}</h1>
+    <div class="d-flex flex-wrap ga-2">
+      <v-btn v-if="assistant.configured" variant="tonal" :to="{ name: 'product-check' }" prepend-icon="mdi-magnify">{{ t.checkProducts }}</v-btn>
+      <v-btn color="primary" prepend-icon="mdi-plus" @click="open(null)">{{ t.newProduct }}</v-btn>
+    </div>
   </div>
   <v-text-field
     v-model="q"

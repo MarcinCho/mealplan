@@ -68,6 +68,21 @@ describe('RecipeCheckView', () => {
     expect(w.text()).not.toContain('czerwona cebula')
   })
 
+  it('keeps two candidates with the same name apart', async () => {
+    const { w, calls } = await show({
+      'GET /assistant/ingredient-candidates': () => ({ candidates: [cand('cebula', { recipeIds: ['r1'] }), cand('cebula', { currentProductId: 'p0', recipeIds: ['r2'] })] }),
+      'POST /assistant/ingredients': () => ({ suggestions: [{ name: 'cebula', kind: 'existing', productId: 'p9', productName: 'Cebula żółta', reason: 'exact' }] }),
+      'POST /products/p9/assign': () => ({ updated: 1, aliasAdded: false, aliasConflict: '' }),
+    })
+    expect(w.findAll('.v-list-item')).toHaveLength(2)
+    const accept = [...document.querySelectorAll('button')].filter((b) => b.textContent?.trim() === t.suggestionAccept)
+    accept[0].click()
+    for (let i = 0; i < 4; i++) await flush()
+    expect(calls.filter((c) => c.path.endsWith('/assign'))[0].body).toEqual({ name: 'cebula', recipeIds: ['r1'] })
+    expect(w.findAll('.v-list-item')).toHaveLength(1)
+    expect(w.text()).toContain('teraz: Cebula')
+  })
+
   it('stops sending batches after Przerwij', async () => {
     const many = Array.from({ length: 26 }, (_, i) => cand(`skladnik${i}`))
     let batches = 0

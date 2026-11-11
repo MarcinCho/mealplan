@@ -34,7 +34,8 @@ describe('AssistantSettings', () => {
     const input = w.find('input[type="password"]')
     expect(input.exists()).toBe(true)
     expect((input.element as HTMLInputElement).value).toBe('')
-    expect(input.attributes('autocomplete')).toBe('off')
+    expect(input.attributes('autocomplete')).toBe('new-password')
+    expect(input.attributes('name')).toBe('openrouter-api-key')
     expect(w.text()).toContain('Klucz ustawiony, kończy się na …abcd')
     expect(buttonByText(t.save)).toBeTruthy()
   })
@@ -67,5 +68,17 @@ describe('AssistantSettings', () => {
     await flush()
     expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ key: 'sk-new', model: 'vendor/model' })
     expect(input.value).toBe('')
+  })
+
+  it('sends an empty model when the field holds the default', async () => {
+    const { w, calls } = await show('admin')
+    const field = w.findAll('input').find((i) => i.attributes('type') !== 'password')!.element as HTMLInputElement
+    field.value = 'vendor/default'
+    field.dispatchEvent(new Event('input'))
+    await flush()
+    buttonByText(t.save).click()
+    await flush()
+    await flush()
+    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ model: '' })
   })
 })

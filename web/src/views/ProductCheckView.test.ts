@@ -66,6 +66,31 @@ describe('ProductCheckView', () => {
     expect(w.text()).not.toContain('ta sama cebula')
   })
 
+  it('merges only the products that stay checked', async () => {
+    const { calls } = await show({
+      'GET /assistant/product-batches': () => ({ batches: [['A', 'B', 'C']] }),
+      'POST /assistant/duplicates': () => ({ groups: [{ keepId: 'A', absorbIds: ['B', 'C'], reason: 'g1' }] }),
+      'POST /products/A/merge': () => merged,
+    })
+    const boxes = [...document.querySelectorAll('input[type=checkbox]')] as HTMLInputElement[]
+    expect(boxes.map((b) => b.checked)).toEqual([true, true])
+    boxes[0].click() // leave out B
+    await flush()
+    buttonByText(t.productCheckMerge).click()
+    for (let i = 0; i < 4; i++) await flush()
+    expect(calls.filter((c) => c.path.endsWith('/merge'))[0].body).toEqual({ absorbIds: ['C'] })
+  })
+
+  it('disables Scal when every other product is unchecked', async () => {
+    await show({
+      'GET /assistant/product-batches': () => ({ batches: [['A', 'B']] }),
+      'POST /assistant/duplicates': () => ({ groups: [{ keepId: 'A', absorbIds: ['B'], reason: 'g1' }] }),
+    })
+    ;(document.querySelector('input[type=checkbox]') as HTMLInputElement).click()
+    await flush()
+    expect(buttonByText(t.productCheckMerge).disabled).toBe(true)
+  })
+
   it('drops products already absorbed from later groups and removes groups left with one', async () => {
     const { w, calls } = await show({
       'GET /assistant/product-batches': () => ({ batches: [['A', 'B'], ['B', 'C']] }),
