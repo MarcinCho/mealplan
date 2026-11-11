@@ -3,6 +3,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { defineComponent } from 'vue'
 import RecipeEditView from './RecipeEditView.vue'
+import ProductPicker from '../components/ProductPicker.vue'
+import ProductDialog from '../components/ProductDialog.vue'
 import { buttonByText, fakeApi, flush, mountWith, type Routes } from '../test/mount'
 import { t } from '../messages'
 import { useNotice } from '../stores/notice'
@@ -89,5 +91,12 @@ describe('RecipeEditView', () => {
     for (let i = 0; i < 4; i++) await flush()
     expect(router.currentRoute.value.name).toBe('recipe-new')
     expect(useNotice().open).toBe(false)
+  })
+
+  it('lets an ingredient add a missing product, prefilled with its name', async () => {
+    const leczo = { id: 'r2', title: 'Leczo', baseServings: 4, sourceUrl: '', tags: [], ingredients: [{ name: 'papryka', quantity: 2, unit: '', note: '', productId: null }], steps: [] }
+    const { w } = await show('/recipes/r2', { 'GET /products': () => [], 'GET /recipes/r2': () => leczo })
+    expect(w.findComponent(ProductPicker).props('allowCreate')).toBe(true)
+    expect(w.findComponent(ProductDialog).props('initialName')).toBe('papryka')
   })
 })

@@ -6,9 +6,10 @@ import { errorText, t } from '../messages'
 import { useProducts } from '../stores/products'
 import ProductDialog from './ProductDialog.vue'
 
-const props = withDefaults(defineProps<{ modelValue: string | null; allowCreate?: boolean; matchedId?: string | null }>(), {
+const props = withDefaults(defineProps<{ modelValue: string | null; allowCreate?: boolean; matchedId?: string | null; suggestName?: string }>(), {
   allowCreate: false,
   matchedId: null,
+  suggestName: '',
 })
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string | null): void
@@ -128,5 +129,5 @@ onBeforeUnmount(() => clearTimeout(timer))
       <v-list-item prepend-icon="mdi-plus" :title="t.addProduct" @click="creating = true" />
     </template>
   </v-autocomplete>
-  <ProductDialog v-if="allowCreate" v-model="creating" :product="null" :initial-name="search" @saved="created" />
+  <ProductDialog v-if="allowCreate" v-model="creating" :product="null" :initial-name="search.trim() || suggestName.trim()" @saved="created" />
 </template>
