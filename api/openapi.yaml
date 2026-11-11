@@ -1108,7 +1108,7 @@ paths:
               schema: { $ref: "#/components/schemas/AssistantSettings" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Csrf" }
+        "403": { $ref: "#/components/responses/CsrfOrForbidden" }
         "413": { $ref: "#/components/responses/TooLarge" }
         "422": { $ref: "#/components/responses/Unprocessable" }
     delete:
@@ -1117,7 +1117,7 @@ paths:
       responses:
         "204": { description: OK }
         "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Csrf" }
+        "403": { $ref: "#/components/responses/CsrfOrForbidden" }
   /api/v1/household/assistant/test:
     post:
       summary: Check the key and model with a one-ingredient request
@@ -1276,7 +1276,7 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
     BadGateway:
-      description: The OpenRouter call failed (code assistant_bad_key, assistant_no_credit or assistant_unavailable)
+      description: The OpenRouter call failed (code assistant_bad_key, assistant_no_credit, assistant_bad_model or assistant_unavailable)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
@@ -1433,7 +1433,7 @@ components:
             required: [name]
             properties:
               name: { type: string }
-              quantity: { type: [number, "null"] }
+              quantity: { type: number, nullable: true }
               unit: { type: string }
     AssistantSuggestions:
       type: object
@@ -1455,8 +1455,8 @@ components:
                 properties:
                   name: { type: string }
                   per100g: { $ref: "#/components/schemas/Macros" }
-                  pieceGrams: { type: [number, "null"] }
-                  densityGPerMl: { type: [number, "null"] }
+                  pieceGrams: { type: number, nullable: true }
+                  densityGPerMl: { type: number, nullable: true }
                   aliases: { type: array, items: { type: string } }
               reason: { type: string }
     AssistantCandidates:

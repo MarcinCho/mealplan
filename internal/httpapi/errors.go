@@ -71,6 +71,8 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, http.StatusBadGateway, "assistant_bad_key", "OpenRouter rejected the key")
 	case errors.Is(err, assistant.ErrNoCredit):
 		writeError(w, http.StatusBadGateway, "assistant_no_credit", "the OpenRouter account has no credit")
+	case errors.Is(err, assistant.ErrBadModel):
+		writeError(w, http.StatusBadGateway, "assistant_bad_model", err.Error())
 	case errors.Is(err, assistant.ErrUnavailable):
 		writeError(w, http.StatusBadGateway, "assistant_unavailable", err.Error())
 	case errors.Is(err, plan.ErrPantry):

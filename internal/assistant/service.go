@@ -56,15 +56,12 @@ func invalid(format string, a ...any) error {
 	return fmt.Errorf("%w: "+format, append([]any{domain.ErrInvalid}, a...)...)
 }
 
-// Status says whether a key is set, its last four characters and the model in use. The key itself
-// is never returned.
+// Status says whether a key is set, its last four characters and the stored model, which is empty
+// while the household has not chosen one (DefaultModel applies then). The key itself is never returned.
 func (s *Service) Status(ctx context.Context, p auth.Principal) (configured bool, keyHint, model string, err error) {
 	key, model, err := s.repo.AssistantSettings(ctx, p.HouseholdID)
 	if err != nil {
 		return false, "", "", err
-	}
-	if model == "" {
-		model = DefaultModel
 	}
 	if key == "" {
 		return false, "", model, nil

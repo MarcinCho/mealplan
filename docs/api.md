@@ -68,7 +68,7 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `GET /assistant/product-batches` | `{"batches": [[id, ...]]}`: podział produktów na partie dla `duplicates` (partie mogą mieć wspólny produkt), bez wywołania modelu |
 | `POST /assistant/duplicates` | `{"productIds"}` (do 80): `{"groups": [{"keepId", "absorbIds", "reason"}]}`; nic nie jest scalane |
 
-Wywołania modelu (`test`, `ingredients`, `duplicates`) mają wspólny z importem limit 10 na minutę na użytkownika i mogą trwać do 60 s. Błędy asystenta: `409 assistant_not_configured` (brak klucza), `502 assistant_bad_key` (klucz odrzucony), `502 assistant_no_credit` (brak środków na koncie), `502 assistant_unavailable` (OpenRouter niedostępny albo odpowiedź nie do użycia).
+Wywołania modelu (`test`, `ingredients`, `duplicates`) mają wspólny z importem limit 10 na minutę na użytkownika i mogą trwać do 60 s. Błędy asystenta: `409 assistant_not_configured` (brak klucza), `502 assistant_bad_key` (klucz odrzucony), `502 assistant_no_credit` (brak środków na koncie), `502 assistant_bad_model` (OpenRouter nie zna modelu albo model nie obsługuje odpowiedzi JSON), `502 assistant_unavailable` (OpenRouter niedostępny albo odpowiedź nie do użycia).
 
 `{week}` to poniedziałek w formacie `YYYY-MM-DD`; inna data daje `422 invalid_input`.
 

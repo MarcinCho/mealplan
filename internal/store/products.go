@@ -375,6 +375,21 @@ func (s *Store) MergeProducts(ctx context.Context, householdID, keepID string, a
 			}
 			aliasCount++
 		}
+		// Fill what the kept product lacks (macros, piece weight, density) from the absorbed ones in
+		// order; a value the kept product already has is never overwritten.
+		for _, id := range absorbed {
+			if err := s.exec(ctx, tx, `UPDATE product SET
+				kcal = COALESCE(kcal, (SELECT kcal FROM product WHERE id = ? AND household_id = ?)),
+				protein = COALESCE(protein, (SELECT protein FROM product WHERE id = ? AND household_id = ?)),
+				carbs = COALESCE(carbs, (SELECT carbs FROM product WHERE id = ? AND household_id = ?)),
+				fat = COALESCE(fat, (SELECT fat FROM product WHERE id = ? AND household_id = ?)),
+				piece_grams = COALESCE(piece_grams, (SELECT piece_grams FROM product WHERE id = ? AND household_id = ?)),
+				density = COALESCE(density, (SELECT density FROM product WHERE id = ? AND household_id = ?))
+				WHERE id = ? AND household_id = ?`,
+				id, householdID, id, householdID, id, householdID, id, householdID, id, householdID, id, householdID, keepID, householdID); err != nil {
+				return err
+			}
+		}
 		for _, id := range absorbed {
 			if err := s.exec(ctx, tx, `DELETE FROM product WHERE id = ? AND household_id = ?`, id, householdID); err != nil {
 				return err

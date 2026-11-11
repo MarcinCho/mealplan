@@ -451,3 +451,37 @@ func TestMergeCapsAliasesAndRejectsBadInput(t *testing.T) {
 		t.Fatalf("aliases %d skipped %v", len(a.Aliases), res.SkippedAliases)
 	}
 }
+
+func TestMergeFillsMissingValuesFromAbsorbed(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedTwoHouseholds(t, s)
+	keep := domain.Product{ID: "A", HouseholdID: "hA", Name: "mleko", NormalizedName: "mleko",
+		Per100g: domain.Macros{Kcal: f(60)}, CreatedAt: now, UpdatedAt: now}
+	b := domain.Product{ID: "B", HouseholdID: "hA", Name: "mleczko", NormalizedName: "mleczko",
+		Per100g: domain.Macros{Kcal: f(99), Protein: f(3)}, DensityGPerML: f(1.03), CreatedAt: now, UpdatedAt: now}
+	c := domain.Product{ID: "C", HouseholdID: "hA", Name: "mleka", NormalizedName: "mleka",
+		Per100g: domain.Macros{Kcal: f(98), Protein: f(7), Fat: f(2)}, PieceGrams: f(250), DensityGPerML: f(2), CreatedAt: now, UpdatedAt: now}
+	if err := s.CreateProduct(ctx, keep); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CreateProduct(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CreateProduct(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.MergeProducts(ctx, "hA", "A", []string{"B", "C"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.ProductByID(ctx, "hA", "A")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *got.Per100g.Kcal != 60 || *got.Per100g.Protein != 3 || *got.Per100g.Fat != 2 || got.Per100g.Carbs != nil {
+		t.Fatalf("macros %+v", got.Per100g)
+	}
+	if got.PieceGrams == nil || *got.PieceGrams != 250 || got.DensityGPerML == nil || *got.DensityGPerML != 1.03 {
+		t.Fatalf("piece %v density %v", got.PieceGrams, got.DensityGPerML)
+	}
+}

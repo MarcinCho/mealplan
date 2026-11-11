@@ -44,7 +44,7 @@ Import przepisu z linku sprawia, że serwer łączy się z adresem podanym przez
 | Dane wysyłane | do OpenRoutera trafiają nazwy składników z ilością i jednostką, nazwy produktów i aliasy oraz (przy szukaniu duplikatów) wartości na 100 g. Nie są wysyłane: hasła, loginy, plan, dziennik jedzenia, spiżarnia ani adresy e-mail |
 | Model | domyślnie `google/gemini-3.1-flash-lite` (`DefaultModel` w `internal/assistant/openrouter.go`); administrator zmienia go w ustawieniach |
 | Limit | endpointy modelu dzielą limit importu: 10 zapytań na minutę na użytkownika (`429 rate_limited`) |
-| Błędy | odpowiedź niesie tylko kod (`assistant_bad_key`, `assistant_no_credit`, `assistant_unavailable`); klucz nie trafia do logów ani komunikatów |
+| Błędy | odpowiedź niesie kod (`assistant_bad_key`, `assistant_no_credit`, `assistant_bad_model`, `assistant_unavailable`) i oczyszczony komunikat (status oraz skrócony opis błędu OpenRoutera, bez klucza); klucz nie trafia do logów ani komunikatów |
 | Skutki | model niczego nie zapisuje ani nie scala: propozycje są danymi, a zmiana następuje po zatwierdzeniu przez użytkownika |
 
 ## Znane ograniczenia

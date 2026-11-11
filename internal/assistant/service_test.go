@@ -159,8 +159,8 @@ func TestConfigureAdminOnly(t *testing.T) {
 	if k, m, _ := repo.AssistantSettings(ctx, "h1"); k != testKey || m != "" {
 		t.Fatalf("after nil key: %q %q", k, m)
 	}
-	if _, _, model, _ := s.Status(ctx, member); model != DefaultModel {
-		t.Fatalf("model = %q", model)
+	if _, _, model, _ := s.Status(ctx, member); model != "" {
+		t.Fatalf("model = %q, want none stored", model)
 	}
 	empty := ""
 	if err := s.Configure(ctx, admin, &empty, "vendor/m"); err != nil {
@@ -209,7 +209,7 @@ func TestStatusHidesKey(t *testing.T) {
 	repo := newFakeRepo()
 	s := NewService(repo, serviceProducts, &fakeClient{})
 	ctx := context.Background()
-	if ok, hint, model, err := s.Status(ctx, member); err != nil || ok || hint != "" || model != DefaultModel {
+	if ok, hint, model, err := s.Status(ctx, member); err != nil || ok || hint != "" || model != "" {
 		t.Fatalf("empty: %v %q %q %v", ok, hint, model, err)
 	}
 	repo.settings["h1"] = [2]string{"sk-or-v1-0123456789abcd", "vendor/m"}

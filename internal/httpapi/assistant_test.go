@@ -107,10 +107,15 @@ func TestAssistantIngredientsMapsErrors(t *testing.T) {
 	}{
 		{assistant.ErrBadKey, "assistant_bad_key"},
 		{assistant.ErrNoCredit, "assistant_no_credit"},
+		{fmt.Errorf("%w: status 400", assistant.ErrBadModel), "assistant_bad_model"},
 		{fmt.Errorf("%w: model said no", assistant.ErrUnavailable), "assistant_unavailable"},
 	} {
 		e.ai.err = tc.err
-		for _, path := range []string{"/api/v1/assistant/ingredients", "/api/v1/household/assistant/test"} {
+		paths := []string{"/api/v1/assistant/ingredients", "/api/v1/household/assistant/test"}
+		if tc.code == "assistant_bad_model" {
+			paths = paths[:1] // the model-call limit is 10 a minute
+		}
+		for _, path := range paths {
 			var b any = body
 			if strings.HasSuffix(path, "/test") {
 				b = nil
@@ -119,15 +124,11 @@ func TestAssistantIngredientsMapsErrors(t *testing.T) {
 			if rec.Code != 502 || errCode(t, rec) != tc.code {
 				t.Fatalf("%s %v: %d %s", path, tc.err, rec.Code, rec.Body)
 			}
+			if tc.code == "assistant_unavailable" && !strings.Contains(rec.Body.String(), "model said no") {
+				t.Fatalf("unavailable detail not surfaced: %s", rec.Body)
+			}
 		}
 	}
-	rec := c.do("POST", "/api/v1/assistant/ingredients", body)
-	var e2 struct{ Message string }
-	decode(t, rec, &e2)
-	if !strings.Contains(e2.Message, "model said no") {
-		t.Fatalf("unavailable detail not surfaced: %s", rec.Body)
-	}
-
 	e.ai.err = errors.New("boom")
 	if rec := c.do("POST", "/api/v1/assistant/ingredients", body); rec.Code != 500 {
 		t.Fatalf("unknown error: %d", rec.Code)

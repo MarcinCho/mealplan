@@ -39,10 +39,11 @@ var (
 	ErrUnavailable   = errors.New("assistant: OpenRouter is unavailable")
 	ErrBadKey        = errors.New("assistant: OpenRouter rejected the key")
 	ErrNoCredit      = errors.New("assistant: the OpenRouter account has no credit")
+	ErrBadModel      = errors.New("assistant: OpenRouter does not know the model or it cannot answer in JSON")
 )
 
 // Client sends one chat completion whose answer must follow the JSON schema and returns the
-// answer text. Errors wrap ErrUnavailable, ErrBadKey or ErrNoCredit and never contain the key.
+// answer text. Errors wrap ErrUnavailable, ErrBadKey, ErrNoCredit or ErrBadModel and never contain the key.
 type Client interface {
 	Complete(ctx context.Context, key, model string, system, user string, schema json.RawMessage) (string, error)
 }
@@ -140,6 +141,8 @@ func (c *openRouter) Complete(ctx context.Context, key, model, system, user stri
 		return "", ErrBadKey
 	case http.StatusPaymentRequired:
 		return "", ErrNoCredit
+	case http.StatusBadRequest, http.StatusNotFound:
+		return "", fmt.Errorf("%w: status %d%s", ErrBadModel, res.StatusCode, detail(out.Error, key))
 	default:
 		return "", fmt.Errorf("%w: status %d%s", ErrUnavailable, res.StatusCode, detail(out.Error, key))
 	}
