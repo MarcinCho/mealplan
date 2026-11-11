@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"mealplan/internal/assistant"
 	"mealplan/internal/auth"
 	"mealplan/internal/domain"
 	"mealplan/internal/importer"
@@ -64,6 +65,14 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, http.StatusUnprocessableEntity, "import_failed", "the page could not be fetched")
 	case errors.Is(err, importer.ErrTimeout):
 		writeError(w, http.StatusGatewayTimeout, "import_timeout", "the page took too long to respond")
+	case errors.Is(err, assistant.ErrNotConfigured):
+		writeError(w, http.StatusConflict, "assistant_not_configured", "the assistant has no OpenRouter key")
+	case errors.Is(err, assistant.ErrBadKey):
+		writeError(w, http.StatusBadGateway, "assistant_bad_key", "OpenRouter rejected the key")
+	case errors.Is(err, assistant.ErrNoCredit):
+		writeError(w, http.StatusBadGateway, "assistant_no_credit", "the OpenRouter account has no credit")
+	case errors.Is(err, assistant.ErrUnavailable):
+		writeError(w, http.StatusBadGateway, "assistant_unavailable", err.Error())
 	case errors.Is(err, plan.ErrPantry):
 		s.log.Error("pantry update failed", "method", r.Method, "path", r.URL.Path, "err", err)
 		writeError(w, http.StatusInternalServerError, "pantry_failed", "Zapisano posiłek, ale nie udało się zaktualizować spiżarni. Spróbuj ponownie.")

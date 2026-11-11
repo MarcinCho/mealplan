@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"mealplan/internal/assistant"
 	"mealplan/internal/auth"
 	"mealplan/internal/config"
 	"mealplan/internal/domain"
@@ -40,6 +41,7 @@ type env struct {
 	svc   *auth.Service
 	clock *fakeClock
 	imp   *fakeImporter
+	ai    *fakeAI
 	// cookFail makes the pantry hook of meal prep sessions fail while set.
 	cookFail *atomic.Bool
 }
@@ -92,6 +94,7 @@ func newEnv(t *testing.T) *env {
 	cfg := config.Config{Mode: config.ModeSelfhost, CookieSecure: false}
 	recipes := recipe.New(st, clock.Now)
 	imp := &fakeImporter{}
+	ai := &fakeAI{}
 	products := product.New(st, clock.Now)
 	planSvc := plan.New(st, st)
 	pantrySvc := pantry.New(st, st, products, clock.Now)
@@ -99,9 +102,9 @@ func newEnv(t *testing.T) *env {
 	fail := &atomic.Bool{}
 	prep := mealprep.New(st, st, flakyHook{inner: pantrySvc, fail: fail}, clock.Now)
 	planSvc.SetPortions(prep)
-	deps := httpapi.Deps{Recipes: recipes, Products: products, Plan: planSvc, Nutrition: nutrition.New(st, products, clock.Now), Pantry: pantrySvc, MealPrep: prep, Shopping: shopping.New(st, st, pantrySvc, products), Importer: imp}
+	deps := httpapi.Deps{Recipes: recipes, Products: products, Plan: planSvc, Nutrition: nutrition.New(st, products, clock.Now), Pantry: pantrySvc, MealPrep: prep, Shopping: shopping.New(st, st, pantrySvc, products), Importer: imp, Assistant: assistant.NewService(st, products, ai)}
 	srv := httpapi.New(svc, deps, cfg, http.NotFoundHandler(), slog.New(slog.NewTextHandler(io.Discard, nil)))
-	return &env{srv: srv, st: st, svc: svc, clock: clock, imp: imp, cookFail: fail}
+	return &env{srv: srv, st: st, svc: svc, clock: clock, imp: imp, ai: ai, cookFail: fail}
 }
 
 // secondHouseholdClient creates an independent household with its own admin and logs in.

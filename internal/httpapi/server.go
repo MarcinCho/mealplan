@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"mealplan/internal/assistant"
 	"mealplan/internal/auth"
 	"mealplan/internal/config"
 	"mealplan/internal/mealprep"
@@ -27,6 +28,7 @@ type Deps struct {
 	Pantry    *pantry.Service
 	MealPrep  *mealprep.Service
 	Importer  Importer
+	Assistant *assistant.Service
 }
 
 type Server struct {
@@ -72,6 +74,9 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/products", s.private(s.handleCreateProduct)},
 		{"PUT /api/v1/products/{id}", s.private(s.handleUpdateProduct)},
 		{"DELETE /api/v1/products/{id}", s.private(s.handleDeleteProduct)},
+		{"POST /api/v1/products/{id}/assign", s.private(s.handleAssignProduct)},
+		{"GET /api/v1/products/{id}/usage", s.private(s.handleProductUsage)},
+		{"POST /api/v1/products/{id}/merge", s.private(s.handleMergeProducts)},
 		{"PATCH /api/v1/household/members/{id}", s.private(s.handleChangeRole)},
 		{"DELETE /api/v1/household/members/{id}", s.private(s.handleRemoveMember)},
 		{"GET /api/v1/plan/{week}", s.private(s.handleGetWeek)},
@@ -109,6 +114,14 @@ func (s *Server) routes() []route {
 		{"DELETE /api/v1/freezer/{id}", s.private(s.handleDeleteFreezer)},
 		{"GET /api/v1/household/settings", s.private(s.handleGetHouseholdSettings)},
 		{"PUT /api/v1/household/settings", s.private(s.handlePutHouseholdSettings)},
+		{"GET /api/v1/household/assistant", s.private(s.handleGetAssistant)},
+		{"PUT /api/v1/household/assistant", s.private(s.handlePutAssistant)},
+		{"DELETE /api/v1/household/assistant", s.private(s.handleDeleteAssistantKey)},
+		{"POST /api/v1/household/assistant/test", s.private(s.handleTestAssistant)},
+		{"POST /api/v1/assistant/ingredients", s.private(s.handleAssistantIngredients)},
+		{"GET /api/v1/assistant/ingredient-candidates", s.private(s.handleIngredientCandidates)},
+		{"GET /api/v1/assistant/product-batches", s.private(s.handleProductBatches)},
+		{"POST /api/v1/assistant/duplicates", s.private(s.handleAssistantDuplicates)},
 	}
 }
 
