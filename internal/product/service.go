@@ -19,12 +19,13 @@ import (
 
 const (
 	maxName     = 200
-	maxAliases  = 20
+	maxAliases  = store.MaxAliases
 	maxAliasLen = 200
 	maxKcal     = 900
 	maxMacro    = 100
 	maxPiece    = 5000
 	maxAssign   = 500
+	maxMerge    = 20
 )
 
 type Repo interface {
@@ -35,6 +36,7 @@ type Repo interface {
 	ListProducts(ctx context.Context, householdID string) ([]domain.Product, error)
 	SeedProducts(ctx context.Context, householdID string, ps []domain.Product) (bool, error)
 	AssignIngredients(ctx context.Context, householdID, productID, normalizedName string, recipeIDs []string, alias string) (int, string, error)
+	MergeProducts(ctx context.Context, householdID, keepID string, absorbIDs []string) (store.MergeResult, error)
 	ProductUsage(ctx context.Context, householdID, productID string) (store.ProductUsage, error)
 	IngredientNames(ctx context.Context, householdID string) ([]store.IngredientRef, error)
 }
@@ -282,15 +284,19 @@ func (s *Service) Assign(ctx context.Context, householdID, productID, name strin
 	if err != nil {
 		return AssignResult{}, err
 	}
-	n, owner, err := s.repo.AssignIngredients(ctx, householdID, productID, alias, recipeIDs, alias)
-	if err != nil {
-		return AssignResult{}, err
-	}
 	known := alias == p.NormalizedName
 	for _, a := range p.Aliases {
 		known = known || a == alias
 	}
-	return AssignResult{Updated: n, AliasAdded: owner == "" && !known, AliasConflict: owner}, nil
+	learn := alias
+	if len(p.Aliases) >= maxAliases && !known {
+		learn = "" // the product has all the aliases it may have: link the ingredients, learn nothing
+	}
+	n, owner, err := s.repo.AssignIngredients(ctx, householdID, productID, alias, recipeIDs, learn)
+	if err != nil {
+		return AssignResult{}, err
+	}
+	return AssignResult{Updated: n, AliasAdded: owner == "" && !known && learn != "", AliasConflict: owner}, nil
 }
 
 // Usage counts where the product is referenced in the household.
@@ -302,4 +308,20 @@ func (s *Service) Usage(ctx context.Context, householdID, productID string) (sto
 		return store.ProductUsage{}, err
 	}
 	return s.repo.ProductUsage(ctx, householdID, productID)
+}
+
+// Merge folds the absorbed products into keep without losing data; see Store.MergeProducts.
+func (s *Service) Merge(ctx context.Context, householdID, keepID string, absorbIDs []string) (store.MergeResult, error) {
+	if n := len(absorbIDs); n < 1 || n > maxMerge {
+		return store.MergeResult{}, invalid("merge 1 to %d products at a time", maxMerge)
+	}
+	for _, id := range absorbIDs {
+		if id == keepID {
+			return store.MergeResult{}, invalid("a product cannot be merged into itself")
+		}
+	}
+	if err := s.ensureSeeded(ctx, householdID); err != nil {
+		return store.MergeResult{}, err
+	}
+	return s.repo.MergeProducts(ctx, householdID, keepID, absorbIDs)
 }

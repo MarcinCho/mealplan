@@ -3,6 +3,7 @@ package product_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -65,10 +66,10 @@ func TestValidation(t *testing.T) {
 		"piece 5001":  func(i *product.Input) { i.PieceGrams = fp(5001) },
 		"density 0.2": func(i *product.Input) { i.DensityGPerML = fp(0.2) },
 		"density 2.1": func(i *product.Input) { i.DensityGPerML = fp(2.1) },
-		"21 aliases": func(i *product.Input) {
-			i.Aliases = make([]string, 21)
+		"101 aliases": func(i *product.Input) {
+			i.Aliases = make([]string, 101)
 			for k := range i.Aliases {
-				i.Aliases[k] = string(rune('a' + k))
+				i.Aliases[k] = fmt.Sprintf("a%03d", k)
 			}
 		},
 		"long alias":    func(i *product.Input) { i.Aliases = []string{strings.Repeat("a", 201)} },
@@ -274,5 +275,54 @@ func TestAssignReportsAlias(t *testing.T) {
 	}
 	if u, err := s.Usage(ctx, "hA", p1.ID); err != nil || u != (store.ProductUsage{}) {
 		t.Fatalf("usage: %+v %v", u, err)
+	}
+}
+
+func TestMergeValidatesAndMerges(t *testing.T) {
+	s, _ := setup(t)
+	ctx := context.Background()
+	a, _ := s.Create(ctx, "hA", product.Input{Name: "zzz"})
+	b, _ := s.Create(ctx, "hA", product.Input{Name: "zzzb"})
+	f, _ := s.Create(ctx, "hB", product.Input{Name: "zzzf"})
+	if _, err := s.Merge(ctx, "hA", a.ID, nil); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("none: %v", err)
+	}
+	if _, err := s.Merge(ctx, "hA", a.ID, make([]string, 21)); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("too many: %v", err)
+	}
+	if _, err := s.Merge(ctx, "hA", a.ID, []string{a.ID}); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("self: %v", err)
+	}
+	if _, err := s.Merge(ctx, "hA", a.ID, []string{f.ID}); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("foreign: %v", err)
+	}
+	if _, err := s.Merge(ctx, "hA", f.ID, []string{b.ID}); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("foreign keep: %v", err)
+	}
+	if _, err := s.Merge(ctx, "hA", a.ID, []string{b.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.List(ctx, "hA", "zzzb"); len(got) != 1 || got[0].ID != a.ID {
+		t.Fatalf("after merge %+v", got)
+	}
+}
+
+func TestAssignStopsLearningAtAliasCap(t *testing.T) {
+	s, _ := setup(t)
+	ctx := context.Background()
+	var al []string
+	for i := 0; i < 100; i++ {
+		al = append(al, fmt.Sprintf("al%03d", i))
+	}
+	if _, err := s.Create(ctx, "hA", product.Input{Name: "zzz", Aliases: al}); err != nil {
+		t.Fatalf("100 aliases allowed: %v", err)
+	}
+	p, _ := s.List(ctx, "hA", "zzz")
+	r, err := s.Assign(ctx, "hA", p[0].ID, "nowy alias", nil)
+	if err != nil || r.AliasAdded || r.AliasConflict != "" {
+		t.Fatalf("at cap: %+v %v", r, err)
+	}
+	if got, _ := s.List(ctx, "hA", "zzz"); len(got[0].Aliases) != 100 {
+		t.Fatalf("aliases %d", len(got[0].Aliases))
 	}
 }
