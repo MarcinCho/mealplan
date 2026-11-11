@@ -6,7 +6,7 @@ import type { Product } from '../api/types'
 import { productErrorText, t } from '../messages'
 import { emptyProduct, useProducts } from '../stores/products'
 
-const props = defineProps<{ modelValue: boolean; product: Product | null; initialName?: string }>()
+const props = defineProps<{ modelValue: boolean; product: Product | null; initialName?: string; initial?: Partial<Product> }>()
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
   (e: 'saved', p: Product): void
@@ -24,9 +24,19 @@ watch(
     if (!props.modelValue) return
     error.value = ''
     const p = props.product
-    draft.value = p
-      ? { ...p, per100g: { ...p.per100g }, aliases: [...p.aliases] }
-      : { ...emptyProduct(), name: props.initialName ?? '' }
+    if (p) {
+      draft.value = { ...p, per100g: { ...p.per100g }, aliases: [...p.aliases] }
+      return
+    }
+    const base = emptyProduct()
+    const init = props.initial
+    draft.value = {
+      ...base,
+      name: props.initialName ?? '',
+      ...init,
+      per100g: { ...base.per100g, ...init?.per100g },
+      aliases: [...(init?.aliases ?? [])],
+    }
   },
   { immediate: true },
 )
@@ -59,6 +69,7 @@ async function save() {
       <v-card-title>{{ product ? t.editProduct : t.newProduct }}</v-card-title>
       <v-card-text>
         <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
+        <v-alert v-if="initial && !product" type="info" variant="tonal" density="compact" class="mb-4">{{ t.suggestionEstimate }}</v-alert>
         <v-text-field v-model="draft.name" :label="t.productName" maxlength="120" autofocus />
         <div class="text-subtitle-2 mb-2">{{ t.per100g }}</div>
         <v-row dense>
