@@ -170,7 +170,7 @@ async function merge(row: Row) {
       <div class="text-body-2 mb-1">{{ t.productCheckKeepHint }}</div>
       <!-- One radio per group: a checkbox cannot sit inside a v-radio-group (it would join the group), and the keep state lives in row.keep anyway. -->
       <div v-for="id in row.ids" :key="id" class="d-flex align-center">
-        <v-radio-group :model-value="row.keep" hide-details :disabled="working" class="flex-grow-1" @update:model-value="setKeep(row, $event)">
+        <v-radio-group :model-value="row.keep" hide-details :disabled="working" class="flex-grow-1" @update:model-value="$event && setKeep(row, $event)">
           <v-radio :value="id">
             <template #label>
               <div>
