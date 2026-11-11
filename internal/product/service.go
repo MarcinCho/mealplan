@@ -131,6 +131,10 @@ func build(in Input) (domain.Product, error) {
 	return p, nil
 }
 
+// Validate checks a product the way Create and Update do (name, value ranges, aliases) and
+// returns it normalized, without saving it or comparing it with other products.
+func Validate(in Input) (domain.Product, error) { return build(in) }
+
 // checkAliases refuses aliases that equal another product's name in the household.
 func (s *Service) checkAliases(ctx context.Context, p domain.Product) error {
 	if len(p.Aliases) == 0 {
