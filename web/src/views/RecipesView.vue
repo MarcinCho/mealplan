@@ -2,10 +2,12 @@
 import { computed, onMounted, ref } from 'vue'
 import EmptyState from '../components/EmptyState.vue'
 import { portions } from '../polish'
+import { useAssistant } from '../stores/assistant'
 import { useRecipes } from '../stores/recipes'
 import { errorText, t } from '../messages'
 
 const recipes = useRecipes()
+const assistant = useAssistant()
 const error = ref('')
 const query = ref('')
 
@@ -18,6 +20,7 @@ const shown = computed(() => {
 })
 
 onMounted(async () => {
+  if (!assistant.loaded) assistant.load().catch(() => {}) // the button is optional: a failed settings load just hides it
   try {
     await recipes.load()
   } catch (e) {
@@ -30,6 +33,7 @@ onMounted(async () => {
   <div class="d-flex align-center flex-wrap ga-2 mb-4">
     <h1 class="text-h5 mr-auto">{{ t.recipes }}</h1>
     <div class="d-flex flex-wrap ga-2">
+      <v-btn v-if="assistant.configured" variant="tonal" :to="{ name: 'recipe-check' }" prepend-icon="mdi-magnify">{{ t.checkRecipes }}</v-btn>
       <v-btn variant="tonal" :to="{ name: 'recipe-import' }" prepend-icon="mdi-download">{{ t.importRecipe }}</v-btn>
       <v-btn color="primary" :to="{ name: 'recipe-new' }" prepend-icon="mdi-plus">{{ t.newRecipe }}</v-btn>
     </div>

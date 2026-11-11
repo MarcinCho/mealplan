@@ -1,5 +1,6 @@
 import { ApiError } from './api/client'
 import { plural } from './nutrition'
+import { form } from './polish'
 
 export const t = {
   appName: 'Mealplan',
@@ -105,6 +106,16 @@ export const t = {
   suggestionAccept: 'Zatwierdź',
   suggestionReject: 'Odrzuć',
   suggestionAliasConflict: (name: string, other: string) => `„${name}” jest już aliasem produktu ${other}`,
+  checkRecipes: 'Sprawdź przepisy',
+  checkAllMatched: 'Wszystkie składniki mają produkty',
+  checkProgress: (i: number, n: number) => `Sprawdzam… ${i} z ${n}`,
+  checkStop: 'Przerwij',
+  checkApproveAll: 'Zatwierdź wszystkie',
+  checkOtherProduct: 'Inny produkt',
+  checkCurrent: (name: string) => `teraz: ${name}`,
+  checkMoreRecipes: (k: number) => `i ${k} innych`,
+  checkNoSuggestion: (k: number) => `${k} ${form(k, ['składnik', 'składniki', 'składników', 'składnika'])} bez propozycji`,
+  checkAssigned: (name: string, n: number) => `Przypisano ${name} w ${n} ${form(n, ['przepisie', 'przepisach', 'przepisach', 'przepisach'])}`,
   suggestionEstimate: 'Wartości to szacunek asystenta — sprawdź przed zapisem',
   nutritionGiven: 'wpisane',
   entryCook: 'Kto gotuje',
