@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"strings"
 
 	"mealplan/internal/domain"
 )
@@ -168,4 +170,82 @@ func (s *Store) SeedProducts(ctx context.Context, householdID string, ps []domai
 		return false, err
 	}
 	return seeded, nil
+}
+
+// AssignIngredients links the ingredients named normalizedName in the given recipes of the household
+// to the product and, when alias is non-empty and free, remembers it as an alias of the product.
+// If another product already owns the alias (as its name or alias), that product's name is returned
+// in aliasOwner and the alias is not added. An unknown product is ErrNotFound.
+func (s *Store) AssignIngredients(ctx context.Context, householdID, productID, normalizedName string, recipeIDs []string, alias string) (updated int, aliasOwner string, err error) {
+	err = s.inTx(ctx, func(tx *sql.Tx) error {
+		updated, aliasOwner = 0, ""
+		var ownName string
+		if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT normalized_name FROM product WHERE id = ? AND household_id = ?`), productID, householdID).Scan(&ownName); err != nil {
+			return mapErr(err)
+		}
+		if len(recipeIDs) > 0 {
+			ph := strings.TrimSuffix(strings.Repeat("?, ", len(recipeIDs)), ", ")
+			args := []any{productID, normalizedName, householdID}
+			for _, id := range recipeIDs {
+				args = append(args, id)
+			}
+			res, err := tx.ExecContext(ctx, s.db.Rebind(`UPDATE ingredient SET product_id = ? WHERE normalized_name = ?
+				AND recipe_id IN (SELECT id FROM recipe WHERE household_id = ? AND id IN (`+ph+`))`), args...)
+			if err != nil {
+				return mapErr(err)
+			}
+			n, _ := res.RowsAffected()
+			updated = int(n)
+		}
+		if alias == "" || alias == ownName {
+			return nil
+		}
+		var ownerID string
+		err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT product_id FROM product_alias WHERE household_id = ? AND alias = ?`), householdID, alias).Scan(&ownerID)
+		switch {
+		case err == nil:
+			if ownerID == productID {
+				return nil
+			}
+		case errors.Is(err, sql.ErrNoRows):
+			ownerID = ""
+		default:
+			return err
+		}
+		if ownerID == "" {
+			err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT id FROM product WHERE household_id = ? AND normalized_name = ?`), householdID, alias).Scan(&ownerID)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return err
+			}
+		}
+		if ownerID != "" {
+			return tx.QueryRowContext(ctx, s.db.Rebind(`SELECT name FROM product WHERE id = ?`), ownerID).Scan(&aliasOwner)
+		}
+		return s.exec(ctx, tx, `INSERT INTO product_alias (household_id, product_id, alias) VALUES (?, ?, ?)`, householdID, productID, alias)
+	})
+	if err != nil {
+		return 0, "", err
+	}
+	return updated, aliasOwner, nil
+}
+
+// ProductUsage counts where a product is referenced; Recipes is the number of distinct recipes.
+type ProductUsage struct{ Recipes, Pantry, FoodLog, Shopping int }
+
+func (s *Store) ProductUsage(ctx context.Context, householdID, productID string) (ProductUsage, error) {
+	var u ProductUsage
+	for _, q := range []struct {
+		dst *int
+		sql string
+	}{
+		{&u.Recipes, `SELECT COUNT(DISTINCT i.recipe_id) FROM ingredient i JOIN recipe r ON r.id = i.recipe_id WHERE r.household_id = ? AND i.product_id = ?`},
+		{&u.Pantry, `SELECT COUNT(*) FROM pantry_item WHERE household_id = ? AND product_id = ?`},
+		{&u.FoodLog, `SELECT COUNT(*) FROM food_log WHERE household_id = ? AND product_id = ?`},
+		{&u.Shopping, `SELECT COUNT(*) FROM shopping_item WHERE household_id = ? AND product_id = ?`},
+	} {
+		if err := s.db.QueryRowContext(ctx, s.db.Rebind(q.sql), householdID, productID).Scan(q.dst); err != nil {
+			return ProductUsage{}, err
+		}
+	}
+	return u, nil
 }

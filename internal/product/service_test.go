@@ -229,3 +229,50 @@ func TestWriteBeforeFirstListSeedsFirst(t *testing.T) {
 		}
 	})
 }
+
+func TestAssignValidates(t *testing.T) {
+	s, _ := setup(t)
+	ctx := context.Background()
+	pa, err := s.Create(ctx, "hA", product.Input{Name: "zzz"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pb, err := s.Create(ctx, "hB", product.Input{Name: "zzz"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Assign(ctx, "hA", pa.ID, "   ", nil); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("empty name: %v", err)
+	}
+	if _, err := s.Assign(ctx, "hA", pa.ID, "zzz", make([]string, 501)); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("too many recipes: %v", err)
+	}
+	if _, err := s.Assign(ctx, "hA", pb.ID, "zzz", nil); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("foreign product: %v", err)
+	}
+	if _, err := s.Usage(ctx, "hA", pb.ID); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("usage foreign product: %v", err)
+	}
+}
+
+func TestAssignReportsAlias(t *testing.T) {
+	s, _ := setup(t)
+	ctx := context.Background()
+	p1, _ := s.Create(ctx, "hA", product.Input{Name: "zzz", Aliases: []string{"zzzka"}})
+	p2, _ := s.Create(ctx, "hA", product.Input{Name: "zzzb"})
+	r, err := s.Assign(ctx, "hA", p2.ID, "  Zzzka ", nil)
+	if err != nil || r.AliasAdded || r.AliasConflict != "zzz" {
+		t.Fatalf("conflict: %+v %v", r, err)
+	}
+	r, err = s.Assign(ctx, "hA", p1.ID, "zzzka", nil)
+	if err != nil || r.AliasAdded || r.AliasConflict != "" {
+		t.Fatalf("known: %+v %v", r, err)
+	}
+	r, err = s.Assign(ctx, "hA", p1.ID, "zzz biała", nil)
+	if err != nil || !r.AliasAdded {
+		t.Fatalf("new: %+v %v", r, err)
+	}
+	if u, err := s.Usage(ctx, "hA", p1.ID); err != nil || u != (store.ProductUsage{}) {
+		t.Fatalf("usage: %+v %v", u, err)
+	}
+}
