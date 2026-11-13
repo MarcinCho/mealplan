@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Drobne poprawki
+
+- „Dodaj posiłek” podpowiada zwykłą liczbę porcji gospodarstwa zamiast liczby porcji z przepisu.
+- Produkt startowy „ziemniaki” nazywa się teraz „ziemniak” (liczba pojedyncza, „ziemniaki” zostaje aliasem); migracja poprawia istniejące gospodarstwa.
+
 ### Asystent produktów
 
 - Opcjonalny klucz OpenRouter gospodarstwa (ekran Domownicy; ustawia i usuwa tylko administrator). Klucz leży jawnie w bazie, API zwraca tylko ostatnie 4 znaki, a kopie zapasowe go zawierają. Domyślny model `google/gemini-3.1-flash-lite` można zmienić.
