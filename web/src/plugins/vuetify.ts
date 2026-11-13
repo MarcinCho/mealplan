@@ -2,6 +2,8 @@ import { h } from 'vue'
 import { createVuetify, type IconProps, type IconSet } from 'vuetify'
 import { VSvgIcon } from 'vuetify/components'
 import { aliases } from 'vuetify/iconsets/mdi-svg'
+import { en, pl } from 'vuetify/locale'
+import { locale } from '../i18n'
 import { ICONS } from '../icons'
 import { loadChoice, themeName, VUETIFY_THEMES } from '../theme'
 
@@ -12,6 +14,8 @@ const mdiNamed: IconSet = {
 }
 
 export const vuetify = createVuetify({
+  // Vuetify's own texts (no data, close, pagination) follow the interface language.
+  locale: { locale, fallback: 'en', messages: { pl, en } },
   icons: { defaultSet: 'mdi', aliases, sets: { mdi: mdiNamed } },
   theme: {
     defaultTheme: themeName(loadChoice()),

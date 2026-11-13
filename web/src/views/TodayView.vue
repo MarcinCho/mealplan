@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { intl } from '../i18n'
 import { portions } from '../polish'
 import { computed, onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
@@ -70,11 +71,11 @@ const free = computed(() => freeSlots(plan.entries, selected.value))
 const isToday = computed(() => selected.value === todayDate)
 const slotTitle = (s: Slot) => SLOTS.find((x) => x.value === s)?.title ?? ''
 const dayTitle = computed(() => {
-  const s = new Date(selected.value + 'T00:00').toLocaleDateString('pl-PL', { weekday: 'long' })
+  const s = new Date(selected.value + 'T00:00').toLocaleDateString(intl, { weekday: 'long' })
   return s.charAt(0).toUpperCase() + s.slice(1)
 })
 const dateLine = (() => {
-  const s = now.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })
+  const s = now.toLocaleDateString(intl, { weekday: 'long', day: 'numeric', month: 'long' })
   return s.charAt(0).toUpperCase() + s.slice(1)
 })()
 

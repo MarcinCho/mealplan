@@ -1,4 +1,6 @@
 import type { Slot } from './api/types'
+import { intl } from './i18n'
+import { t } from './messages'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -28,12 +30,10 @@ export function weekDates(week: string): string[] {
 }
 
 export function formatDay(date: string): string {
-  return parse(date).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' })
+  return parse(date).toLocaleDateString(intl, { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
-export const SLOTS: { value: Slot; title: string }[] = [
-  { value: 'breakfast', title: 'Śniadanie' },
-  { value: 'lunch', title: 'Obiad' },
-  { value: 'dinner', title: 'Kolacja' },
-  { value: 'snack', title: 'Przekąska' },
-]
+export const SLOTS: { value: Slot; title: string }[] = (['breakfast', 'lunch', 'dinner', 'snack'] as Slot[]).map((value) => ({
+  value,
+  title: t.slotNames[value],
+}))

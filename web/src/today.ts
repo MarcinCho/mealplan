@@ -1,14 +1,10 @@
 import type { PlanEntry, Slot } from './api/types'
+import { t } from './messages'
 
 const SLOT_ORDER: Slot[] = ['breakfast', 'lunch', 'dinner', 'snack']
 
-// "Dziś na obiad", "Dziś na kolację": the slot name in the accusative, as it follows "na".
-export const SLOT_ACCUSATIVE: Record<Slot, string> = {
-  breakfast: 'śniadanie',
-  lunch: 'obiad',
-  dinner: 'kolację',
-  snack: 'przekąskę',
-}
+// "Dziś na obiad" / "Today for lunch": the slot name as it follows todayOn/dayOn.
+export const SLOT_ACCUSATIVE: Record<Slot, string> = t.slotOn
 
 export const SLOT_ICON: Record<Slot, string> = {
   breakfast: 'mdi-coffee-outline',
@@ -51,9 +47,9 @@ export function initial(name: string): string {
 }
 
 export function greeting(hour: number): string {
-  if (hour < 5) return 'Dobrej nocy'
-  if (hour < 18) return 'Dzień dobry'
-  return 'Dobry wieczór'
+  if (hour < 5) return t.greetingNight
+  if (hour < 18) return t.greetingDay
+  return t.greetingEvening
 }
 
 // Case-insensitive title match; titles that start with the query come first.

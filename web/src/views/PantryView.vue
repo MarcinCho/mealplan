@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { intl } from '../i18n'
 import { computed, onMounted, ref } from 'vue'
 import type { PantryItem } from '../api/types'
 import EmptyState from '../components/EmptyState.vue'
@@ -28,7 +29,7 @@ const shown = computed(() => {
 })
 
 const lastReview = computed(() =>
-  pantry.reviewedAt ? `${t.pantryLastReview}: ${new Date(pantry.reviewedAt).toLocaleDateString('pl-PL')}` : t.pantryNeverReviewed,
+  pantry.reviewedAt ? `${t.pantryLastReview}: ${new Date(pantry.reviewedAt).toLocaleDateString(intl)}` : t.pantryNeverReviewed,
 )
 
 async function run(fn: () => Promise<unknown>) {

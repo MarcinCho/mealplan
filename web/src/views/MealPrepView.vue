@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { intl } from '../i18n'
 import { portions } from '../polish'
 import { computed, onMounted, ref } from 'vue'
 import type { FreezerItem, PrepDish, PrepSession } from '../api/types'
@@ -32,7 +33,7 @@ onMounted(load)
 
 const stale = computed(() => staleSessions(prep.sessions, today))
 const sorted = computed(() => [...prep.sessions].sort((a, b) => b.date.localeCompare(a.date)))
-const nl = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' })
+const nl = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString(intl, { day: 'numeric', month: 'long' })
 const weekLabel = (w: string) => `${t.prepWeekFrom} ${nl(w)}`
 
 // Which dialog is open; one at a time.

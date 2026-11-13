@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BrandLogo from '../components/BrandLogo.vue'
+import LanguageSwitch from '../components/LanguageSwitch.vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSession } from '../stores/session'
@@ -38,5 +39,6 @@ async function submit() {
         <v-btn type="submit" color="primary" size="large" block :loading="busy">{{ t.signIn }}</v-btn>
       </v-form>
     </v-card>
+    <LanguageSwitch class="mt-6" />
   </v-main>
 </template>

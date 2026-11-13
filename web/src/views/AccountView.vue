@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { errorText, t } from '../messages'
+import LanguageSwitch from '../components/LanguageSwitch.vue'
 import { useNutrition } from '../stores/nutrition'
 import type { Macros } from '../api/types'
 
@@ -51,6 +52,7 @@ onMounted(async () => {
 
 <template>
   <h1 class="text-h5 mb-4">{{ t.accountTitle }}</h1>
+  <LanguageSwitch class="mb-4" />
   <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
   <v-alert v-if="saved" type="success" variant="tonal" class="mb-4">{{ t.saved }}</v-alert>
   <v-card variant="outlined" class="pa-4" style="max-width: 560px">
