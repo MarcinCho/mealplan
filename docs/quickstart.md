@@ -2,7 +2,7 @@
 
 Ten przewodnik prowadzi od zera do działającej aplikacji dla Twojego domu. Mealplan to jeden program z wbudowanym interfejsem i bazą SQLite, więc nie potrzebujesz osobnego serwera bazy danych.
 
-Co dostajesz: konta domowników i zaproszenia, przepisy, tygodniowy plan (kto gotuje i na ile porcji) oraz listę zakupów. Aplikacja działa w przeglądarce na telefonie i komputerze.
+Co dostajesz: przepisy (także z importu), tygodniowy plan (kto gotuje i na ile porcji), listę zakupów, która odejmuje to, co masz w spiżarni, spiżarnię, meal prep z zamrażalką, wartości odżywcze oraz konta domowników i zaproszenia. Aplikacja działa w przeglądarce na telefonie i komputerze, po polsku albo po angielsku.
 
 ## Wymagania
 
@@ -48,14 +48,14 @@ Domyślnie baza to plik `mealplan.db` w katalogu, z którego uruchamiasz program
 flowchart TD
     A[Otwórz http://localhost:8080] --> B[Formularz pierwszego uruchomienia]
     B --> C[Nazwa gospodarstwa i konto administratora]
-    C --> D[Domownicy, Utwórz link]
+    C --> D[Menu konta, Domownicy, Utwórz link]
     D --> E[Wyślij link domownikowi]
     E --> F[Domownik zakłada konto]
 ```
 
 1. Otwórz `http://localhost:8080`. Zobaczysz formularz pierwszego uruchomienia.
 2. Podaj nazwę gospodarstwa, login (3 do 64 znaków: małe litery, cyfry, `.`, `_`, `-`), nazwę wyświetlaną i hasło administratora. Hasło ma od 12 do 128 znaków.
-3. Aby dodać rodzinę, wejdź w zakładkę Domownicy i w sekcji Zaproszenia wybierz Utwórz link. Link jest ważny 72 godziny, jest jednorazowy i pokazuje się tylko raz, więc skopiuj go od razu.
+3. Aby dodać rodzinę, kliknij swoje kółko z inicjałem w prawym górnym rogu, wybierz Domownicy i w sekcji Zaproszenia wybierz Utwórz link. Link jest ważny 72 godziny, jest jednorazowy i pokazuje się tylko raz, więc skopiuj go od razu.
 
 Uwaga: dopóki nie ukończysz kroku 2, formularz może wypełnić każdy, kto ma dostęp do adresu. Nie wystawiaj portu publicznie przed jego zakończeniem.
 
@@ -133,9 +133,12 @@ Logi: `docker logs -f mealplan` (albo `docker compose logs -f`). Program loguje 
 
 ## Co dalej
 
-- Dodaj przepisy w zakładce Przepisy.
-- Zaplanuj tydzień w zakładce Plan: wybierz, kto gotuje które danie i na ile porcji.
-- Wygeneruj listę zakupów w zakładce Zakupy.
-- Zaproś resztę rodziny (Domownicy).
-
-Planowane na później: import przepisów, inwentarz, statystyki i tryb hosted.
+- **Język:** przełącznik „Język / Language” jest pod formularzem logowania i na stronie Konto. Wybór zapamiętuje przeglądarka, domyślnie jest polski.
+- **Przepisy:** dodaj je w zakładce Przepisy, ręcznie albo przez Importuj (link lub wklejony tekst). Jeśli używasz Claude, pobierz tam umiejętność SKILL.md ([Import przepisów](import.md)).
+- **Plan:** zaplanuj tydzień w zakładce Plan. Wybierz, kto gotuje które danie i na ile porcji. Domyślną liczbę porcji na posiłek ustawisz w Domownikach.
+- **Spiżarnia:** wpisz, co masz w domu. Lista zakupów to odejmie ([Spiżarnia](pantry.md)).
+- **Zakupy:** wygeneruj listę w zakładce Zakupy, a po zakupach przenieś odhaczone pozycje do spiżarni.
+- **Meal prep:** jeśli gotujesz kilka dań naraz, zaplanuj sesję w zakładce Meal prep ([Meal prep](mealprep.md)).
+- **Kalorie:** włącz śledzenie i ustaw dzienny cel na stronie Konto ([Wartości odżywcze](nutrition.md)).
+- **Asystent produktów (opcjonalnie):** administrator wkleja klucz OpenRouter w Domownicy → „Asystent produktów (OpenRouter)” i klika „Sprawdź połączenie”. Klucz utworzysz na openrouter.ai w Settings → Keys. Bez klucza aplikacja działa normalnie.
+- **Domownicy:** zaproś resztę rodziny.

@@ -49,7 +49,7 @@ CI uruchamia testy Go dla obu baz (macierz `sqlite` i `postgres`), testy i budow
 - SQL musi być przenośny między SQLite i Postgres: znaki `?`, bez składni specyficznej dla jednego silnika.
 - Każde zapytanie dotyczące danych użytkownika filtruje po `household_id`. Dodając nowe zapytanie, dodaj test izolacji między dwoma gospodarstwami.
 - Zmiana API wymaga aktualizacji `api/openapi.yaml`. Test `TestRoutesMatchOpenAPI` pilnuje zgodności tras ze specyfikacją.
-- Napisy interfejsu (po polsku) trzymamy wyłącznie w `web/src/messages.ts`, nie w komponentach.
+- Napisy interfejsu trzymamy wyłącznie w słownikach `web/src/locales/pl.ts` i `web/src/locales/en.ts`, nie w komponentach. Komponenty biorą je z `t` (`web/src/messages.ts`). Nowy tekst dodaj w obu plikach; angielski słownik ma typ polskiego, więc brak klucza zatrzyma `npm run build`. Daty i liczby formatuj przez `intl` z `web/src/i18n.ts`, nie przez wpisane na stałe `'pl-PL'`.
 - Projekt używa Go 1.26 (`go.mod`, CI, Dockerfile). Przy podnoszeniu toolchainu lub zależności zmieniaj te trzy miejsca razem i uruchom `govulncheck ./...` (wersja przypięta w CI).
 - Audyt zależności frontendu w CI: `cd web && npm audit --omit=dev --omit=peer --omit=optional --audit-level=high`. Sprawdza tylko zależności dostarczane w produkcie; vite i esbuild to narzędzia czasu budowania i nie trafiają do obrazu.
 

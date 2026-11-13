@@ -1,6 +1,6 @@
 # Bezpieczeństwo
 
-## Zaimplementowane w Etapach 1 i 2
+## Zabezpieczenia
 
 | Obszar | Rozwiązanie |
 |---|---|
