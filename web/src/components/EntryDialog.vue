@@ -65,10 +65,16 @@ watch(
       fat: e?.outValues?.fat ?? null,
     }
     // The meal prep list needs the store; a failure only leaves the list empty.
-    if (!prep.loaded) prep.load().catch(() => {})
+    if (!prep.loaded) prep.load().then(suggestServings, () => {})
+    else suggestServings()
   },
   { immediate: true },
 )
+
+// A new meal starts with the household's usual portions instead of the recipe's base servings.
+function suggestServings() {
+  if (!props.entry && servings.value === null && (kind.value === 'recipe' || kind.value === 'text')) servings.value = prep.portionsPerMeal
+}
 
 const sources = computed(() =>
   prepSources(prep.sessions, prep.freezer, props.entry, props.recipes.find((r) => r.id === props.entry?.recipeId)?.title ?? null),
