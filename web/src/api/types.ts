@@ -194,3 +194,65 @@ export interface FreezerItem {
   frozenOn: string
   allocations: PrepAllocation[]
 }
+
+export interface AssistantSettings {
+  configured: boolean
+  keyHint: string
+  model: string
+  defaultModel: string
+}
+
+export interface IngredientQuery {
+  name: string
+  quantity?: number | null
+  unit?: string
+}
+
+export interface NewProductSuggestion {
+  name: string
+  per100g: Macros
+  pieceGrams: number | null
+  densityGPerMl: number | null
+  aliases: string[]
+}
+
+export interface Suggestion {
+  name: string
+  kind: 'existing' | 'new' | 'none'
+  productId?: string
+  productName?: string
+  newProduct?: NewProductSuggestion
+  reason: string
+}
+
+export interface IngredientCandidate {
+  name: string
+  normalizedName: string
+  currentProductId: string
+  recipeIds: string[]
+  recipeTitles: string[]
+}
+
+export interface DuplicateGroup {
+  keepId: string
+  absorbIds: string[]
+  reason: string
+}
+
+export interface ProductUsage {
+  recipes: number
+  pantry: number
+  foodLog: number
+  shopping: number
+}
+
+export interface AssignResult {
+  updated: number
+  aliasAdded: boolean
+  aliasConflict: string
+}
+
+export interface MergeResult {
+  repointed: ProductUsage
+  skippedAliases: string[]
+}

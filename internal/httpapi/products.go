@@ -86,3 +86,54 @@ func (s *Server) handleDeleteProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+type assignInJSON struct {
+	Name      string   `json:"name"`
+	RecipeIDs []string `json:"recipeIds"`
+}
+
+func (s *Server) handleAssignProduct(w http.ResponseWriter, r *http.Request) {
+	var in assignInJSON
+	if !decode(w, r, &in) {
+		return
+	}
+	res, err := s.deps.Products.Assign(r.Context(), principalFrom(r).HouseholdID, r.PathValue("id"), in.Name, in.RecipeIDs)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"updated": res.Updated, "aliasAdded": res.AliasAdded, "aliasConflict": res.AliasConflict})
+}
+
+type usageJSON struct {
+	Recipes  int `json:"recipes"`
+	Pantry   int `json:"pantry"`
+	FoodLog  int `json:"foodLog"`
+	Shopping int `json:"shopping"`
+}
+
+func (s *Server) handleProductUsage(w http.ResponseWriter, r *http.Request) {
+	u, err := s.deps.Products.Usage(r.Context(), principalFrom(r).HouseholdID, r.PathValue("id"))
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, usageJSON(u))
+}
+
+type mergeInJSON struct {
+	AbsorbIDs []string `json:"absorbIds"`
+}
+
+func (s *Server) handleMergeProducts(w http.ResponseWriter, r *http.Request) {
+	var in mergeInJSON
+	if !decode(w, r, &in) {
+		return
+	}
+	res, err := s.deps.Products.Merge(r.Context(), principalFrom(r).HouseholdID, r.PathValue("id"), in.AbsorbIDs)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"repointed": usageJSON(res.Repointed), "skippedAliases": orEmpty(res.SkippedAliases)})
+}

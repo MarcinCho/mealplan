@@ -58,6 +58,17 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `GET /freezer`, `POST /freezer` | pozycje zamrażalki (`{"items"}`) i dodanie ręczne: `portions`, opcjonalnie `recipeId`, `label` (domyślnie tytuł przepisu), `frozenOn` (domyślnie dziś) |
 | `PUT/DELETE /freezer/{id}` | zamiana i usunięcie pozycji; usunięcie pozycji z przydziałami daje `409 in_use` |
 | `GET/PUT /household/settings` | ustawienia gospodarstwa: `{"portionsPerMeal"}` (1-20, domyślnie 2) |
+| `POST /products/{id}/assign` | `{"name", "recipeIds"}`: wiąże składniki o tej nazwie w podanych przepisach z produktem i zapamiętuje nazwę jako alias; zwraca `{"updated", "aliasAdded", "aliasConflict"}` (`aliasConflict` to nazwa produktu, który już ma ten alias, albo pusty tekst) |
+| `GET /products/{id}/usage` | `{"recipes", "pantry", "foodLog", "shopping"}`: liczba odwołań do produktu |
+| `POST /products/{id}/merge` | `{"absorbIds"}` (1-20): scala wskazane produkty w ten bez gubienia danych; zwraca `{"repointed": {"recipes", "pantry", "foodLog", "shopping"}, "skippedAliases"}`; nieznany albo już scalony produkt daje `404 not_found` |
+| `GET/PUT/DELETE /household/assistant` | asystent produktów (OpenRouter): `GET` zwraca `{"configured", "keyHint", "model", "defaultModel"}` (klucz nigdy nie wychodzi, `keyHint` to ostatnie 4 znaki); `PUT {"key"?, "model"}` zmienia ustawienia, tylko administrator (brak `key` zostawia klucz, pusty go usuwa, pusty `model` daje model domyślny); `DELETE` usuwa klucz i zostawia model (`204`), tylko administrator |
+| `POST /household/assistant/test` | sprawdza klucz i model jednym zapytaniem (`204`) |
+| `POST /assistant/ingredients` | `{"ingredients": [{"name", "quantity", "unit"}]}` (do 25): propozycje produktów `{"suggestions": [{"name", "kind" (`existing`, `new`, `none`), "productId", "productName", "newProduct", "reason"}]}`; nic nie jest zapisywane |
+| `GET /assistant/ingredient-candidates` | `{"candidates": [{"name", "normalizedName", "currentProductId", "recipeIds", "recipeTitles"}]}`: składniki wartych sprawdzenia, bez wywołania modelu |
+| `GET /assistant/product-batches` | `{"batches": [[id, ...]]}`: podział produktów na partie dla `duplicates` (partie mogą mieć wspólny produkt), bez wywołania modelu |
+| `POST /assistant/duplicates` | `{"productIds"}` (do 80): `{"groups": [{"keepId", "absorbIds", "reason"}]}`; nic nie jest scalane |
+
+Wywołania modelu (`test`, `ingredients`, `duplicates`) mają wspólny z importem limit 10 na minutę na użytkownika i mogą trwać do 60 s. Błędy asystenta: `409 assistant_not_configured` (brak klucza), `502 assistant_bad_key` (klucz odrzucony), `502 assistant_no_credit` (brak środków na koncie), `502 assistant_bad_model` (OpenRouter nie zna modelu albo model nie obsługuje odpowiedzi JSON), `502 assistant_unavailable` (OpenRouter niedostępny albo odpowiedź nie do użycia).
 
 `{week}` to poniedziałek w formacie `YYYY-MM-DD`; inna data daje `422 invalid_input`.
 

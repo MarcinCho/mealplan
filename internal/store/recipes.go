@@ -193,3 +193,32 @@ func (s *Store) DeleteRecipe(ctx context.Context, householdID, id string) error 
 		return s.exec(ctx, tx, `DELETE FROM recipe WHERE id = ? AND household_id = ?`, id, householdID)
 	})
 }
+
+// IngredientRef is one ingredient line of a household recipe, with its current product link.
+type IngredientRef struct {
+	RecipeID, RecipeTitle, Name, NormalizedName, ProductID string
+	Quantity                                               *float64
+	Unit                                                   string
+}
+
+// IngredientNames lists every ingredient of the household's recipes, ordered by recipe title, id and position.
+func (s *Store) IngredientNames(ctx context.Context, householdID string) ([]IngredientRef, error) {
+	rows, err := s.db.QueryContext(ctx, s.db.Rebind(`SELECT r.id, r.title, i.name, i.normalized_name, i.product_id, i.quantity, i.unit
+		FROM ingredient i JOIN recipe r ON r.id = i.recipe_id WHERE r.household_id = ? ORDER BY r.title, r.id, i.position`), householdID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []IngredientRef
+	for rows.Next() {
+		var ref IngredientRef
+		var pid sql.NullString
+		var q sql.NullFloat64
+		if err := rows.Scan(&ref.RecipeID, &ref.RecipeTitle, &ref.Name, &ref.NormalizedName, &pid, &q, &ref.Unit); err != nil {
+			return nil, err
+		}
+		ref.ProductID, ref.Quantity = pid.String, pf(q)
+		out = append(out, ref)
+	}
+	return out, rows.Err()
+}

@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"mealplan/internal/assistant"
 	"mealplan/internal/auth"
 	"mealplan/internal/config"
 	"mealplan/internal/httpapi"
@@ -74,7 +75,7 @@ func run(log *slog.Logger) error {
 	shoppingSvc.SetSessions(st)
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.New(svc, httpapi.Deps{Recipes: recipe.New(st, nil), Products: products, Plan: planSvc, Nutrition: nutrition.New(st, products, nil), Pantry: pantrySvc, MealPrep: prepSvc, Shopping: shoppingSvc, Importer: importer.New()}, cfg, spa.Handler(dist), log).Handler(),
+		Handler:           httpapi.New(svc, httpapi.Deps{Recipes: recipe.New(st, nil), Products: products, Plan: planSvc, Nutrition: nutrition.New(st, products, nil), Pantry: pantrySvc, MealPrep: prepSvc, Shopping: shoppingSvc, Importer: importer.New(), Assistant: assistant.NewService(st, products, assistant.NewOpenRouter(&http.Client{Timeout: 60 * time.Second}))}, cfg, spa.Handler(dist), log).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,

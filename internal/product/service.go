@@ -19,11 +19,13 @@ import (
 
 const (
 	maxName     = 200
-	maxAliases  = 20
+	maxAliases  = store.MaxAliases
 	maxAliasLen = 200
 	maxKcal     = 900
 	maxMacro    = 100
 	maxPiece    = 5000
+	maxAssign   = 500
+	maxMerge    = 20
 )
 
 type Repo interface {
@@ -33,6 +35,10 @@ type Repo interface {
 	ProductByID(ctx context.Context, householdID, id string) (domain.Product, error)
 	ListProducts(ctx context.Context, householdID string) ([]domain.Product, error)
 	SeedProducts(ctx context.Context, householdID string, ps []domain.Product) (bool, error)
+	AssignIngredients(ctx context.Context, householdID, productID, normalizedName string, recipeIDs []string, alias string) (int, string, error)
+	MergeProducts(ctx context.Context, householdID, keepID string, absorbIDs []string) (store.MergeResult, error)
+	ProductUsage(ctx context.Context, householdID, productID string) (store.ProductUsage, error)
+	IngredientNames(ctx context.Context, householdID string) ([]store.IngredientRef, error)
 }
 
 type Input struct {
@@ -124,6 +130,10 @@ func build(in Input) (domain.Product, error) {
 	}
 	return p, nil
 }
+
+// Validate checks a product the way Create and Update do (name, value ranges, aliases) and
+// returns it normalized, without saving it or comparing it with other products.
+func Validate(in Input) (domain.Product, error) { return build(in) }
 
 // checkAliases refuses aliases that equal another product's name in the household.
 func (s *Service) checkAliases(ctx context.Context, p domain.Product) error {
@@ -248,4 +258,74 @@ func (s *Service) List(ctx context.Context, householdID, q string) ([]domain.Pro
 		}
 	}
 	return out, nil
+}
+
+// AssignResult reports what Assign did: how many ingredient lines were linked, whether the
+// alias was learned, and the name of the product that already owns the alias if it was refused.
+type AssignResult struct {
+	Updated       int
+	AliasAdded    bool
+	AliasConflict string
+}
+
+// Assign links the ingredients called name in the given recipes to the product and remembers
+// name as an alias of the product unless it is already taken or equal to the product's own names.
+func (s *Service) Assign(ctx context.Context, householdID, productID, name string, recipeIDs []string) (AssignResult, error) {
+	if domain.HasControl(name) {
+		return AssignResult{}, invalid("text must not contain control characters")
+	}
+	alias := units.NormalizeName(name)
+	if n := utf8.RuneCountInString(alias); n == 0 || n > maxAliasLen {
+		return AssignResult{}, invalid("name must be 1 to %d characters", maxAliasLen)
+	}
+	if len(recipeIDs) > maxAssign {
+		return AssignResult{}, invalid("at most %d recipes", maxAssign)
+	}
+	if err := s.ensureSeeded(ctx, householdID); err != nil {
+		return AssignResult{}, err
+	}
+	p, err := s.repo.ProductByID(ctx, householdID, productID)
+	if err != nil {
+		return AssignResult{}, err
+	}
+	known := alias == p.NormalizedName
+	for _, a := range p.Aliases {
+		known = known || a == alias
+	}
+	learn := alias
+	if len(p.Aliases) >= maxAliases && !known {
+		learn = "" // the product has all the aliases it may have: link the ingredients, learn nothing
+	}
+	n, owner, err := s.repo.AssignIngredients(ctx, householdID, productID, alias, recipeIDs, learn)
+	if err != nil {
+		return AssignResult{}, err
+	}
+	return AssignResult{Updated: n, AliasAdded: owner == "" && !known && learn != "", AliasConflict: owner}, nil
+}
+
+// Usage counts where the product is referenced in the household.
+func (s *Service) Usage(ctx context.Context, householdID, productID string) (store.ProductUsage, error) {
+	if err := s.ensureSeeded(ctx, householdID); err != nil {
+		return store.ProductUsage{}, err
+	}
+	if _, err := s.repo.ProductByID(ctx, householdID, productID); err != nil {
+		return store.ProductUsage{}, err
+	}
+	return s.repo.ProductUsage(ctx, householdID, productID)
+}
+
+// Merge folds the absorbed products into keep without losing data; see Store.MergeProducts.
+func (s *Service) Merge(ctx context.Context, householdID, keepID string, absorbIDs []string) (store.MergeResult, error) {
+	if n := len(absorbIDs); n < 1 || n > maxMerge {
+		return store.MergeResult{}, invalid("merge 1 to %d products at a time", maxMerge)
+	}
+	for _, id := range absorbIDs {
+		if id == keepID {
+			return store.MergeResult{}, invalid("a product cannot be merged into itself")
+		}
+	}
+	if err := s.ensureSeeded(ctx, householdID); err != nil {
+		return store.MergeResult{}, err
+	}
+	return s.repo.MergeProducts(ctx, householdID, keepID, absorbIDs)
 }

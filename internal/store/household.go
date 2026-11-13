@@ -22,3 +22,23 @@ func (s *Store) SetPortionsPerMeal(ctx context.Context, householdID string, n in
 	}
 	return nil
 }
+
+// AssistantSettings returns the household's OpenRouter key and model ("" when not set).
+func (s *Store) AssistantSettings(ctx context.Context, householdID string) (key, model string, err error) {
+	if err := s.db.QueryRowContext(ctx, s.db.Rebind(`SELECT openrouter_key, openrouter_model FROM household WHERE id = ?`), householdID).Scan(&key, &model); err != nil {
+		return "", "", mapErr(err)
+	}
+	return key, model, nil
+}
+
+// SetAssistantSettings changes the household's OpenRouter key and model; an unknown household is ErrNotFound.
+func (s *Store) SetAssistantSettings(ctx context.Context, householdID, key, model string) error {
+	res, err := s.db.ExecContext(ctx, s.db.Rebind(`UPDATE household SET openrouter_key = ?, openrouter_model = ? WHERE id = ?`), key, model, householdID)
+	if err != nil {
+		return mapErr(err)
+	}
+	if c, _ := res.RowsAffected(); c == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

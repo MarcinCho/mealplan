@@ -6,8 +6,11 @@ import { useProducts } from '../stores/products'
 import { useImport } from '../stores/import'
 import { emptyRecipe, useRecipes } from '../stores/recipes'
 import { useNotice } from '../stores/notice'
-import type { Macros, Recipe } from '../api/types'
+import type { Macros, Product, Recipe, Suggestion } from '../api/types'
 import ProductPicker from '../components/ProductPicker.vue'
+import ProductDialog from '../components/ProductDialog.vue'
+import ProductSuggestion from '../components/ProductSuggestion.vue'
+import { useAssistant } from '../stores/assistant'
 import { formatNumber } from '../nutrition'
 import { errorText, recipeDeletedText, recipeSavedText, t } from '../messages'
 
@@ -53,6 +56,7 @@ onMounted(async () => {
   if (isNew.value) {
     if (d && !imports.targetId) recipe.value = normalize(draftToRecipe(d))
     loaded.value = true
+    void suggestProducts()
     return
   }
   try {
@@ -65,8 +69,87 @@ onMounted(async () => {
     loaded.value = true
   } catch (e) {
     error.value = errorText(e)
+    return
   }
+  void suggestProducts()
 })
+
+// Assistant suggestions are keyed by the ingredient name they were asked for, so removing rows cannot misalign them.
+const assistant = useAssistant()
+const suggestions = ref<Record<string, Suggestion>>({})
+const suggestionError = ref('')
+const approving = ref('')
+const creating = ref<{ name: string; suggestion: Suggestion } | null>(null)
+const creatingOpen = ref(false)
+
+async function suggestProducts() {
+  if (!fromImport.value) return
+  try {
+    if (!assistant.loaded) await assistant.load()
+  } catch {
+    return // no settings means no assistant, and that is not worth a message
+  }
+  if (!assistant.configured) return
+  const queried = recipe.value.ingredients.filter((i) => !i.productId && i.name.trim())
+  if (!queried.length) return
+  try {
+    const res = await assistant.matchIngredients(
+      queried.map((i) => ({ name: i.name, quantity: i.quantity ?? null, unit: i.unit ?? '' })),
+    )
+    for (const sg of res) {
+      if (sg.kind === 'none') continue
+      for (const ing of recipe.value.ingredients) {
+        if (ing.name !== sg.name || ing.productId) continue
+        // An exact match is today's matcher, not a model decision, so it needs no confirmation.
+        if (sg.kind === 'existing' && sg.reason === 'exact' && sg.productId) ing.productId = sg.productId
+        else suggestions.value[sg.name] = sg
+      }
+    }
+  } catch (e) {
+    suggestionError.value = errorText(e)
+  }
+}
+
+function suggestionFor(ing: { name: string; productId?: string | null }): Suggestion | null {
+  const sg = suggestions.value[ing.name]
+  return sg && !ing.productId ? sg : null
+}
+
+function reject(name: string) {
+  delete suggestions.value[name]
+}
+
+async function useProduct(name: string, productId: string) {
+  approving.value = name
+  try {
+    for (const ing of recipe.value.ingredients) if (ing.name === name && !ing.productId) ing.productId = productId
+    delete suggestions.value[name]
+    const res = await assistant.assign(productId, name, [])
+    if (res.aliasConflict) {
+      notice.show(t.suggestionAliasConflict(name, res.aliasConflict))
+    }
+  } catch (e) {
+    notice.show(errorText(e))
+  } finally {
+    approving.value = ''
+  }
+}
+
+function approve(name: string) {
+  const sg = suggestions.value[name]
+  if (!sg) return
+  if (sg.kind === 'existing' && sg.productId) void useProduct(name, sg.productId)
+  else if (sg.kind === 'new' && sg.newProduct) {
+    creating.value = { name, suggestion: sg }
+    creatingOpen.value = true
+  }
+}
+
+function newProductCreated(p: Product) {
+  useProducts().addToCatalog(p)
+  const c = creating.value
+  if (c) void useProduct(c.name, p.id)
+}
 
 // A draft must never leak into the next "new recipe" form.
 onBeforeUnmount(() => imports.clear())
@@ -126,6 +209,7 @@ async function remove() {
       <li v-for="(w, wi) in imports.draft.warnings" :key="wi">{{ w }}</li>
     </ul>
   </v-alert>
+  <v-alert v-if="suggestionError" type="info" variant="tonal" class="mb-4">{{ t.suggestionUnavailable(suggestionError) }}</v-alert>
   <v-progress-linear v-if="!loaded && !error" indeterminate class="mb-4" :aria-label="t.loading" />
   <v-btn v-if="!loaded && error" variant="text" :to="{ name: 'recipes' }">{{ t.backToList }}</v-btn>
   <v-form v-if="loaded" @submit.prevent="submit">
@@ -171,6 +255,13 @@ async function remove() {
         :suggest-name="ing.name"
         @update:model-value="ing.productId = $event"
       />
+      <ProductSuggestion
+        v-if="suggestionFor(ing)"
+        :suggestion="suggestionFor(ing)!"
+        :busy="approving === ing.name"
+        @accept="approve(ing.name)"
+        @reject="reject(ing.name)"
+      />
       <v-text-field v-model="ing.note" :label="t.ingredientNote" :placeholder="t.ingredientNotePlaceholder" maxlength="200" density="compact" />
       <div v-if="ing.confidence && ing.confidence !== 'ok'" class="text-caption text-medium-emphasis pb-1">{{ t.fromText }}: „{{ ing.raw }}"</div>
     </div>
@@ -193,6 +284,7 @@ async function remove() {
       </template>
     </div>
   </v-form>
+  <ProductDialog v-model="creatingOpen" :product="null" :initial-name="creating?.name" :initial="creating?.suggestion.newProduct" @saved="newProductCreated" />
 </template>
 
 <style scoped>

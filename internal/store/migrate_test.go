@@ -59,3 +59,66 @@ func TestMigration0007KeepsRows(t *testing.T) {
 		t.Fatal("meal with recipe and free text must fail the CHECK")
 	}
 }
+
+func TestMigration0008SplitsRedOnion(t *testing.T) {
+	ctx := context.Background()
+	db := storetest.OpenRaw(t)
+	if err := db.MigrateTo(ctx, "0007_mealprep"); err != nil {
+		t.Fatal(err)
+	}
+	ex := func(q string, args ...any) {
+		t.Helper()
+		if _, err := db.ExecContext(ctx, db.Rebind(q), args...); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+	ex(`INSERT INTO household (id, name, created_at, products_seeded) VALUES ('h1', 'Dom', 1, 1)`)
+	ex(`INSERT INTO product (id, household_id, name, normalized_name, created_at, updated_at) VALUES ('c1', 'h1', 'cebula', 'cebula', 1, 1)`)
+	for _, a := range []string{"cebula czerwona", "cebuli czerwonej", "cebula biała"} {
+		ex(`INSERT INTO product_alias (household_id, product_id, alias) VALUES ('h1', 'c1', ?)`, a)
+	}
+	// h2 already has its own red onion product.
+	ex(`INSERT INTO household (id, name, created_at, products_seeded) VALUES ('h2', 'Dom2', 1, 1)`)
+	ex(`INSERT INTO product (id, household_id, name, normalized_name, created_at, updated_at) VALUES ('c2', 'h2', 'cebula', 'cebula', 1, 1)`)
+	ex(`INSERT INTO product (id, household_id, name, normalized_name, created_at, updated_at) VALUES ('r2', 'h2', 'cebula czerwona', 'cebula czerwona', 1, 1)`)
+	ex(`INSERT INTO product_alias (household_id, product_id, alias) VALUES ('h2', 'c2', 'cebula czerwona')`)
+	// h3 is not seeded: it must not get the product.
+	ex(`INSERT INTO household (id, name, created_at) VALUES ('h3', 'Dom3', 1)`)
+
+	if err := db.Migrate(ctx); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	count := func(q string, args ...any) int {
+		t.Helper()
+		var n int
+		if err := db.QueryRowContext(ctx, db.Rebind(q), args...).Scan(&n); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+		return n
+	}
+	aliasOf := func(h, product, alias string) int {
+		return count(`SELECT COUNT(*) FROM product_alias a JOIN product p ON p.id = a.product_id WHERE a.household_id = ? AND p.normalized_name = ? AND a.alias = ?`, h, product, alias)
+	}
+	if aliasOf("h1", "cebula", "cebula biała") != 1 {
+		t.Error("cebula lost its white onion alias")
+	}
+	if n := count(`SELECT COUNT(*) FROM product_alias a JOIN product p ON p.id = a.product_id WHERE p.normalized_name = 'cebula' AND a.alias LIKE '%czerwon%'`); n != 0 {
+		t.Errorf("cebula still has %d red aliases", n)
+	}
+	if n := count(`SELECT COUNT(*) FROM product WHERE household_id = 'h1' AND normalized_name = 'cebula czerwona'`); n != 1 {
+		t.Fatalf("h1 red onion products = %d, want 1", n)
+	}
+	if aliasOf("h1", "cebula czerwona", "czerwona cebula") != 1 || aliasOf("h1", "cebula czerwona", "cebuli czerwonej") != 1 {
+		t.Error("h1 red onion lacks its aliases")
+	}
+	if n := count(`SELECT COUNT(*) FROM product WHERE household_id = 'h2' AND normalized_name = 'cebula czerwona'`); n != 1 {
+		t.Errorf("h2 red onion products = %d, want 1", n)
+	}
+	if n := count(`SELECT COUNT(*) FROM product WHERE household_id = 'h3'`); n != 0 {
+		t.Errorf("unseeded household got %d products", n)
+	}
+	var key, model string
+	if err := db.QueryRowContext(ctx, `SELECT openrouter_key, openrouter_model FROM household WHERE id = 'h1'`).Scan(&key, &model); err != nil || key != "" || model != "" {
+		t.Fatalf("openrouter columns: %q %q %v", key, model, err)
+	}
+}

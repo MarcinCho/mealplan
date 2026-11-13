@@ -1,5 +1,6 @@
 import { ApiError } from './api/client'
 import { plural } from './nutrition'
+import { form } from './polish'
 
 export const t = {
   appName: 'Mealplan',
@@ -90,6 +91,49 @@ export const t = {
   portionsPerMeal: 'Porcji na posiłek',
   portionsPerMealHint: 'Tyle porcji z meal prepu zapisuje się domyślnie w jednym posiłku (1–20).',
   settingSaved: 'Zapisano',
+  assistantTitle: 'Asystent produktów (OpenRouter)',
+  assistantKey: 'Klucz API OpenRouter',
+  assistantModel: 'Model',
+  assistantKeySet: (hint: string) => `Klucz ustawiony, kończy się na …${hint}`,
+  assistantNoKey: 'Klucz nie jest ustawiony.',
+  assistantPrivacy: 'Nazwy składników i produktów (a przy szukaniu duplikatów także wartości na 100 g) są wysyłane do OpenRoutera, żeby dopasować je do Twojej bazy.',
+  assistantTest: 'Sprawdź połączenie',
+  assistantOk: 'Połączenie działa',
+  assistantRemoveKey: 'Usuń klucz',
+  suggestionUnavailable: (err: string) => `Podpowiedzi produktów są teraz niedostępne: ${err}`,
+  suggestionExisting: (name: string) => `Propozycja: ${name}`,
+  suggestionNew: (name: string) => `Propozycja: ${name} (nowy produkt)`,
+  suggestionAccept: 'Zatwierdź',
+  suggestionReject: 'Odrzuć',
+  suggestionAliasConflict: (name: string, other: string) => `„${name}” jest już aliasem produktu ${other}`,
+  checkRecipes: 'Sprawdź przepisy',
+  checkAllMatched: 'Wszystkie składniki mają produkty',
+  checkProgress: (i: number, n: number) => `Sprawdzam… ${i} z ${n}`,
+  checkNothingToChange: 'Sprawdzanie zakończone — nic do zmiany',
+  checkStop: 'Przerwij',
+  checkWaiting: (n: number) => `Limit zapytań — czekam ${n} s…`,
+  checkApproveAll: 'Zatwierdź wszystkie',
+  checkOtherProduct: 'Inny produkt',
+  checkCurrent: (name: string) => `teraz: ${name}`,
+  checkMoreRecipes: (k: number) => `i ${k} innych`,
+  checkNoSuggestion: (k: number) => `${k} ${form(k, ['składnik', 'składniki', 'składników', 'składnika'])} bez propozycji`,
+  checkAssigned: (name: string, n: number) => `Przypisano ${name} w ${n} ${form(n, ['przepisie', 'przepisach', 'przepisach', 'przepisach'])}`,
+  checkProducts: 'Sprawdź produkty',
+  productCheckNoBatches: 'Za mało produktów, żeby szukać duplikatów',
+  productCheckMerge: 'Scal',
+  productCheckInclude: (name: string) => `Scal produkt ${name}`,
+  productCheckKeepHint: 'Zaznaczony produkt zostaje, pozostałe zostaną scalone',
+  productAlreadyMerged: 'Ten produkt został już scalony lub usunięty — pomijam tę grupę',
+  mergeWith: 'Scal z…',
+  mergeAbsorb: 'Produkt do scalenia',
+  mergeWarning: (absorb: string, keep: string) => `„${absorb}” zniknie, a jego przepisy, spiżarnia i dziennik przejdą do „${keep}”.`,
+  moreActions: 'Więcej',
+  usageNone: 'nigdzie nie użyty',
+  usageRecipes: (n: number) => `${n} ${form(n, ['przepis', 'przepisy', 'przepisów', 'przepisu'])}`,
+  usagePantry: (n: number) => `${n} w spiżarni`,
+  usageFoodLog: (n: number) => `${n} w dzienniku`,
+  usageShopping: (n: number) => `${n} na liście zakupów`,
+  suggestionEstimate: 'Wartości to szacunek asystenta — sprawdź przed zapisem',
   nutritionGiven: 'wpisane',
   entryCook: 'Kto gotuje',
   entryNoCook: 'Nikt',
@@ -329,6 +373,11 @@ const errors: Record<string, string> = {
   import_unparsable: 'Nie udało się odczytać przepisu. Spróbuj wkleić jego tekst w zakładce „Tekst".',
   import_failed: 'Nie udało się pobrać strony. Sprawdź adres albo wklej tekst przepisu.',
   import_timeout: 'Strona odpowiada zbyt wolno. Spróbuj ponownie lub wklej tekst przepisu.',
+  assistant_bad_key: 'OpenRouter nie przyjął klucza',
+  assistant_no_credit: 'Brak środków na koncie OpenRouter',
+  assistant_bad_model: 'OpenRouter nie zna tego modelu albo model nie obsługuje odpowiedzi JSON',
+  assistant_unavailable: 'OpenRouter nie odpowiada. Spróbuj później.',
+  assistant_not_configured: 'Asystent nie ma klucza API',
   cookie_not_stored:
     'Przeglądarka nie zapisała sesji. Jeśli otwierasz aplikację przez zwykłe HTTP, ustaw MEALPLAN_COOKIE_SECURE=false lub użyj HTTPS (np. tailscale serve).',
 }
@@ -371,4 +420,19 @@ export function prepErrorText(e: unknown): string {
     return 'Nie można usunąć — porcje są już przydzielone w planie. Najpierw usuń te posiłki z planu.'
   }
   return errorText(e)
+}
+
+// "3 przepisy · 1 w spiżarni · 2 w dzienniku": only the places where the product is used.
+export function usageLine(u: { recipes: number; pantry: number; foodLog: number; shopping: number }): string {
+  const parts = [
+    u.recipes ? t.usageRecipes(u.recipes) : '',
+    u.pantry ? t.usagePantry(u.pantry) : '',
+    u.foodLog ? t.usageFoodLog(u.foodLog) : '',
+    u.shopping ? t.usageShopping(u.shopping) : '',
+  ].filter(Boolean)
+  return parts.length ? parts.join(' · ') : t.usageNone
+}
+
+export function mergedNotice(name: string, skippedAliases: string[]): string {
+  return `Scalono w „${name}”${skippedAliases.length ? `, pominięte aliasy: ${skippedAliases.join(', ')}` : ''}`
 }

@@ -1018,6 +1018,188 @@ paths:
         "403": { $ref: "#/components/responses/Csrf" }
         "413": { $ref: "#/components/responses/TooLarge" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/products/{id}/assign:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Link the recipe ingredients called name to the product and remember the name as an alias
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductAssignInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductAssignResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/products/{id}/usage:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: Count where the product is referenced
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductUsage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/products/{id}/merge:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Fold the absorbed products into this one without losing data
+      description: An unknown or already absorbed product gives 404 not_found. Stock of the same unit is summed; names and aliases of the absorbed products become aliases of this one.
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductMergeInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductMergeResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/household/assistant:
+    get:
+      summary: Assistant settings (the key is never returned, only its last four characters)
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantSettings" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      summary: Set the OpenRouter key and model (admin only)
+      description: A missing key keeps the current one; an empty key removes it. An empty model means the default model.
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssistantSettingsInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CsrfOrForbidden" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      summary: Remove the OpenRouter key, keeping the model (admin only)
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CsrfOrForbidden" }
+  /api/v1/household/assistant/test:
+    post:
+      summary: Check the key and model with a one-ingredient request
+      description: Limited to 10 requests per minute per user (shared with recipe import). Calls the configured OpenRouter model, so it can take up to 60 s.
+      security: [{ session: [], csrf: [] }]
+      responses:
+        "204": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "502": { $ref: "#/components/responses/BadGateway" }
+  /api/v1/assistant/ingredients:
+    post:
+      summary: Suggest a product for each ingredient (nothing is saved)
+      description: Limited to 10 requests per minute per user (shared with recipe import). Calls the configured OpenRouter model, so it can take up to 60 s. At most 25 ingredients.
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssistantIngredientsInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantSuggestions" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "502": { $ref: "#/components/responses/BadGateway" }
+  /api/v1/assistant/ingredient-candidates:
+    get:
+      summary: Recipe ingredients worth checking (no model call)
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantCandidates" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/assistant/product-batches:
+    get:
+      summary: Possible duplicate products split into batches for /assistant/duplicates (no model call)
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantBatches" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/assistant/duplicates:
+    post:
+      summary: Propose duplicate groups among the given products (nothing is merged)
+      description: Limited to 10 requests per minute per user (shared with recipe import). Calls the configured OpenRouter model, so it can take up to 60 s. At most 80 products.
+      security: [{ session: [], csrf: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssistantDuplicatesInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantDuplicateGroups" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Csrf" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "502": { $ref: "#/components/responses/BadGateway" }
 components:
   securitySchemes:
     session: { type: apiKey, in: cookie, name: mealplan_session }
@@ -1090,6 +1272,11 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
     Unprocessable:
       description: Validation failed (code invalid_input or password_length) or the import could not produce a draft (code import_blocked, import_unparsable or import_failed)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    BadGateway:
+      description: The OpenRouter call failed (code assistant_bad_key, assistant_no_credit, assistant_bad_model or assistant_unavailable)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
@@ -1189,6 +1376,130 @@ components:
         label: { type: string, description: Defaults to the recipe title }
         portions: { type: integer }
         frozenOn: { type: string, format: date, description: Defaults to today }
+    ProductAssignInput:
+      type: object
+      required: [name, recipeIds]
+      properties:
+        name: { type: string, description: Ingredient name to link and remember as an alias }
+        recipeIds: { type: array, items: { type: string } }
+    ProductAssignResult:
+      type: object
+      required: [updated, aliasAdded, aliasConflict]
+      properties:
+        updated: { type: integer, description: Ingredients linked to the product }
+        aliasAdded: { type: boolean }
+        aliasConflict: { type: string, description: Name of the product that already owns the alias, or empty }
+    ProductUsage:
+      type: object
+      required: [recipes, pantry, foodLog, shopping]
+      properties:
+        recipes: { type: integer }
+        pantry: { type: integer }
+        foodLog: { type: integer }
+        shopping: { type: integer }
+    ProductMergeInput:
+      type: object
+      required: [absorbIds]
+      properties:
+        absorbIds: { type: array, items: { type: string }, minItems: 1 }
+    ProductMergeResult:
+      type: object
+      required: [repointed, skippedAliases]
+      properties:
+        repointed: { $ref: "#/components/schemas/ProductUsage" }
+        skippedAliases: { type: array, items: { type: string } }
+    AssistantSettings:
+      type: object
+      required: [configured, keyHint, model, defaultModel]
+      properties:
+        configured: { type: boolean }
+        keyHint: { type: string, description: Last four characters of the key, or empty }
+        model: { type: string }
+        defaultModel: { type: string }
+    AssistantSettingsInput:
+      type: object
+      required: [model]
+      properties:
+        key: { type: string, description: Omit to keep the current key; empty removes it }
+        model: { type: string, description: "vendor/model, empty for the default" }
+    AssistantIngredientsInput:
+      type: object
+      required: [ingredients]
+      properties:
+        ingredients:
+          type: array
+          items:
+            type: object
+            required: [name]
+            properties:
+              name: { type: string }
+              quantity: { type: number, nullable: true }
+              unit: { type: string }
+    AssistantSuggestions:
+      type: object
+      required: [suggestions]
+      properties:
+        suggestions:
+          type: array
+          items:
+            type: object
+            required: [name, kind, reason]
+            properties:
+              name: { type: string }
+              kind: { type: string, enum: [existing, new, none] }
+              productId: { type: string }
+              productName: { type: string }
+              newProduct:
+                type: object
+                required: [name, per100g, pieceGrams, densityGPerMl, aliases]
+                properties:
+                  name: { type: string }
+                  per100g: { $ref: "#/components/schemas/Macros" }
+                  pieceGrams: { type: number, nullable: true }
+                  densityGPerMl: { type: number, nullable: true }
+                  aliases: { type: array, items: { type: string } }
+              reason: { type: string }
+    AssistantCandidates:
+      type: object
+      required: [candidates]
+      properties:
+        candidates:
+          type: array
+          items:
+            type: object
+            required: [name, normalizedName, currentProductId, recipeIds, recipeTitles]
+            properties:
+              name: { type: string }
+              normalizedName: { type: string }
+              currentProductId: { type: string, description: Empty when the ingredient has no product }
+              recipeIds: { type: array, items: { type: string } }
+              recipeTitles: { type: array, items: { type: string } }
+    AssistantBatches:
+      type: object
+      required: [batches]
+      properties:
+        batches:
+          type: array
+          description: Batches may share a product id on purpose
+          items: { type: array, items: { type: string } }
+    AssistantDuplicatesInput:
+      type: object
+      required: [productIds]
+      properties:
+        productIds: { type: array, items: { type: string }, maxItems: 80 }
+    AssistantDuplicateGroups:
+      type: object
+      required: [groups]
+      properties:
+        groups:
+          type: array
+          items:
+            type: object
+            required: [keepId, absorbIds, reason]
+            properties:
+              keepId: { type: string }
+              absorbIds: { type: array, items: { type: string } }
+              reason: { type: string }
     HouseholdSettings:
       type: object
       required: [portionsPerMeal]

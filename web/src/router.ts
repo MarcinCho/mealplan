@@ -14,8 +14,10 @@ const MembersView = () => import('./views/MembersView.vue')
 const MealPrepView = () => import('./views/MealPrepView.vue')
 const PantryView = () => import('./views/PantryView.vue')
 const PlanView = () => import('./views/PlanView.vue')
+const ProductCheckView = () => import('./views/ProductCheckView.vue')
 const ProductsView = () => import('./views/ProductsView.vue')
 const RecipeEditView = () => import('./views/RecipeEditView.vue')
+const RecipeCheckView = () => import('./views/RecipeCheckView.vue')
 const RecipesView = () => import('./views/RecipesView.vue')
 const SetupView = () => import('./views/SetupView.vue')
 const ShoppingView = () => import('./views/ShoppingView.vue')
@@ -35,12 +37,14 @@ export const router = createRouter({
         { path: 'prep', name: 'prep', component: MealPrepView },
         { path: 'recipes', name: 'recipes', component: RecipesView },
         { path: 'recipes/import', name: 'recipe-import', component: ImportView },
+        { path: 'recipes/check', name: 'recipe-check', component: RecipeCheckView },
         { path: 'recipes/new', name: 'recipe-new', component: RecipeEditView },
         { path: 'recipes/:id', name: 'recipe-edit', component: RecipeEditView },
         { path: 'shopping', name: 'shopping', component: ShoppingView },
         { path: 'pantry', name: 'pantry', component: PantryView },
         { path: 'account', name: 'account', component: AccountView },
         { path: 'products', name: 'products', component: ProductsView },
+        { path: 'products/check', name: 'product-check', component: ProductCheckView },
         { path: 'members', name: 'members', component: MembersView },
       ],
     },

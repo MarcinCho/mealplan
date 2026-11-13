@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Asystent produktów
+
+- Opcjonalny klucz OpenRouter gospodarstwa (ekran Domownicy; ustawia i usuwa tylko administrator). Klucz leży jawnie w bazie, API zwraca tylko ostatnie 4 znaki, a kopie zapasowe go zawierają. Domyślny model `google/gemini-3.1-flash-lite` można zmienić.
+- Import: składniki bez produktu dostają propozycję (istniejący albo nowy produkt) do zatwierdzenia; zatwierdzenie dopisuje nazwę składnika jako alias (do 100 na produkt), więc kolejne importy dopasowują się bez modelu. Gdy model jest niedostępny, edytor to pokazuje i zapis działa jak dotąd.
+- „Sprawdź przepisy": propozycje produktów dla składników istniejących przepisów, grupowane po nazwie, z „Zatwierdź wszystkie".
+- „Sprawdź produkty" i „Scal z…": scalanie duplikatów przenosi przepisy, spiżarnię (sumowanie, najwcześniejsza data, stały zapas wygrywa), ruchy spiżarni, dziennik i zakupy; nazwy pochłoniętych produktów stają się aliasami, pominięte aliasy są zgłaszane.
+- Do OpenRoutera trafiają tylko nazwy składników z ilością i jednostką, nazwy produktów i aliasy, a przy szukaniu duplikatów także wartości na 100 g; zapytania dzielą limit importu (10 na minutę na użytkownika).
+- Czerwona cebula jest osobnym produktem.
+
 ### Wygląd i dostępność
 
 - Zapisanie przepisu zamyka formularz i wraca do listy z komunikatem „Zapisano przepis „…””; usunięcie pokazuje „Usunięto przepis „…””. Komunikaty pokazuje wspólny pasek aplikacji (`stores/notice.ts`), na telefonie pod górnym paskiem.

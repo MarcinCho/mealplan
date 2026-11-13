@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import EmptyState from '../components/EmptyState.vue'
+import MergeDialog from '../components/MergeDialog.vue'
 import ProductDialog from '../components/ProductDialog.vue'
-import type { Product } from '../api/types'
+import type { MergeResult, Product } from '../api/types'
 import { formatMacros } from '../nutrition'
-import { productErrorText, t } from '../messages'
+import { mergedNotice, productErrorText, t } from '../messages'
+import { useAssistant } from '../stores/assistant'
+import { useNotice } from '../stores/notice'
 import { useProducts } from '../stores/products'
 
 const products = useProducts()
+const assistant = useAssistant()
+const notice = useNotice()
+const merging = ref<Product | null>(null)
+const mergeOpen = ref(false)
 const q = ref<string | null>('')
 const error = ref('')
 const dialog = ref(false)
@@ -45,15 +52,30 @@ async function remove(id: string) {
   }
 }
 
-onMounted(load)
+function openMerge(p: Product) {
+  merging.value = p
+  mergeOpen.value = true
+}
+
+function merged(keep: Product, res: MergeResult) {
+  notice.show(mergedNotice(keep.name, res.skippedAliases))
+  void load()
+}
+
+onMounted(() => {
+  void load()
+  if (!assistant.loaded) assistant.load().catch(() => {}) // the check button is optional: a failed settings load just hides it
+})
 onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
 <template>
-  <div class="d-flex align-center mb-4">
-    <h1 class="text-h5">{{ t.products }}</h1>
-    <v-spacer />
-    <v-btn color="primary" prepend-icon="mdi-plus" @click="open(null)">{{ t.newProduct }}</v-btn>
+  <div class="d-flex align-center flex-wrap ga-2 mb-4">
+    <h1 class="text-h5 mr-auto">{{ t.products }}</h1>
+    <div class="d-flex flex-wrap ga-2">
+      <v-btn v-if="assistant.configured" variant="tonal" :to="{ name: 'product-check' }" prepend-icon="mdi-magnify">{{ t.checkProducts }}</v-btn>
+      <v-btn color="primary" prepend-icon="mdi-plus" @click="open(null)">{{ t.newProduct }}</v-btn>
+    </div>
   </div>
   <v-text-field
     v-model="q"
@@ -72,6 +94,14 @@ onBeforeUnmount(() => clearTimeout(timer))
         <span class="wrap">{{ formatMacros(p.per100g) }}</span>
       </template>
       <template #append>
+        <v-menu>
+          <template #activator="{ props: menu }">
+            <v-btn v-bind="menu" icon="mdi-dots-vertical" size="small" variant="text" :aria-label="t.moreActions" @click.stop />
+          </template>
+          <v-list>
+            <v-list-item prepend-icon="mdi-call-merge" :title="t.mergeWith" @click="openMerge(p)" />
+          </v-list>
+        </v-menu>
         <v-btn
           size="small"
           variant="text"
@@ -82,6 +112,7 @@ onBeforeUnmount(() => clearTimeout(timer))
     </v-list-item>
   </v-list>
   <ProductDialog v-model="dialog" :product="editing" @saved="load" />
+  <MergeDialog v-model="mergeOpen" :keep="merging" @merged="merged" />
 </template>
 
 <style scoped>

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api/client'
 import { copyText } from '../clipboard'
+import AssistantSettings from '../components/AssistantSettings.vue'
 import { useMealPrepStore } from '../stores/mealprep'
 import { useSession } from '../stores/session'
 import { errorText, t } from '../messages'
@@ -173,6 +174,8 @@ onMounted(() => {
     />
     <v-btn color="primary" class="mt-1" :disabled="!portionsOk" @click="savePortions">{{ portionsSaved ? t.settingSaved : t.save }}</v-btn>
   </div>
+
+  <AssistantSettings />
 
   <template v-if="session.isAdmin">
     <h2 class="text-h6 mb-2">{{ t.invites }}</h2>

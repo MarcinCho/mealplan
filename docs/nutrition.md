@@ -49,6 +49,14 @@ Produkty należą do gospodarstwa (wartości na 100 g, opcjonalnie gęstość i 
 
 Znane ograniczenie: w danych startowych nie ma suszonych przypraw (ich błonnik psuje kontrolę zgodności energii). Przepisy z suszonymi przyprawami są „przybliżone", dopóki nie dodasz tych produktów.
 
+## Aliasy, asystent i scalanie produktów
+
+Aliasy produktu (najwyżej 100) pochodzą z ręcznych zmian, z danych startowych i z zatwierdzonych propozycji asystenta (zob. [import.md](import.md)). Czerwona cebula jest osobnym produktem („cebula czerwona"), a nie aliasem zwykłej cebuli, bo ma inne wartości odżywcze.
+
+„Sprawdź produkty" (lista produktów) prosi model o grupy możliwych duplikatów; porównuje nazwy, aliasy i wartości na 100 g. Nic nie jest scalane bez Twojego wyboru, który produkt ma zostać. „Scal z…" w menu produktu robi to samo ręcznie.
+
+Scalenie przenosi do zachowanego produktu: składniki przepisów, spiżarnię (ta sama jednostka jest sumowana, zostaje najwcześniejsza data ważności, a „stały zapas" wygrywa), ruchy spiżarni, dziennik jedzenia i pozycje listy zakupów. Nazwy i aliasy pochłoniętych produktów stają się aliasami zachowanego; aliasy pominięte (należące do innego produktu albo ponad limit 100) są zgłaszane po scaleniu. Pochłonięty produkt jest usuwany.
+
 ## Konto: śledzenie, cel i dziennik
 
 Na ekranie **Konto** włączasz śledzenie i ustawiasz dzienny cel; każda wartość celu jest opcjonalna. Dziennik jedzenia zawiera produkt i ilość w `g` lub `szt` (`szt` tylko dla produktu z wagą sztuki) i jest osobisty dla konta.
