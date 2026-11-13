@@ -1,10 +1,12 @@
 # Tryby wdrożenia i konfiguracja
 
-Jedna baza kodu, dwa tryby wybierane zmienną `MEALPLAN_MODE`. W Etapie 1 działa tylko `selfhost`; wartość `hosted` jest przyjmowana przez konfigurację, ale jego funkcje (samodzielna rejestracja, zaufane proxy) dojdą w Etapie 5.
+Jedna baza kodu, dwa tryby wybierane zmienną `MEALPLAN_MODE`. Dziś działa `selfhost`. Wartość `hosted` jest przyjmowana przez konfigurację, ale niczego jeszcze nie zmienia: samodzielna rejestracja i obsługa zaufanego reverse proxy są planowane.
 
-| Obszar | `selfhost` | `hosted` (Etap 5) |
+Silnik bazy wybiera się niezależnie od trybu: SQLite (domyślnie, jeden plik) albo Postgres (`MEALPLAN_DB_DRIVER=postgres`). Oba silniki przechodzą te same testy.
+
+| Obszar | `selfhost` | `hosted` (planowany) |
 |---|---|---|
-| Baza | SQLite | Postgres |
+| Baza | SQLite albo Postgres | Postgres |
 | Rejestracja | zamknięta, zaproszenia | samodzielna |
 | Sieć | Tailscale | reverse proxy i własna domena |
 
@@ -30,3 +32,5 @@ flowchart TD
 | `MEALPLAN_SESSION_MAX` | `720h` | maksymalny wiek sesji (nie krótszy niż `MEALPLAN_SESSION_IDLE`) |
 
 Czasy podajemy w formacie Go (`168h`, `30m`).
+
+Klucz OpenRouter dla asystenta produktów nie jest zmienną środowiskową: administrator ustawia go w aplikacji (Domownicy → „Asystent produktów (OpenRouter)”), osobno dla każdego gospodarstwa. Zobacz [Bezpieczeństwo](security.md).

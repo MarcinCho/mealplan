@@ -19,7 +19,7 @@ sequenceDiagram
     S-->>C: 201 + token zaproszenia
 ```
 
-## Zasoby Etapu 2
+## Zasoby
 
 Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. Wszyscy członkowie gospodarstwa edytują przepisy, plan i listę zakupów; role, członków i zaproszenia zmienia tylko administrator.
 
@@ -103,6 +103,11 @@ Szczegóły formatu i ograniczeń importu: [import.md](import.md).
 | `import_failed` | 422 | nie udało się pobrać strony (status inny niż 2xx, zły typ treści, za duży plik, zbyt wiele przekierowań, błąd sieci) |
 | `import_timeout` | 504 | strona nie odpowiedziała w 10 s |
 | `pantry_failed` | 500 | zmiana wpisu planu, sesji lub dania ugotowanej sesji została zapisana, ale aktualizacja spiżarni (zdjęcie lub zwrot składników) się nie udała; ponowny zapis naprawia stan. Przy usuwaniu ugotowanej sesji nic nie zostało usunięte |
+| `assistant_not_configured` | 409 | wywołanie modelu bez ustawionego klucza OpenRouter |
+| `assistant_bad_key` | 502 | OpenRouter odrzucił klucz (401) |
+| `assistant_no_credit` | 502 | brak środków na koncie OpenRouter (402) |
+| `assistant_bad_model` | 502 | OpenRouter nie zna modelu albo model nie obsługuje odpowiedzi JSON (400, 404) |
+| `assistant_unavailable` | 502 | OpenRouter nie odpowiada, przekroczył 60 s albo zwrócił niepoprawną odpowiedź |
 | `internal` | 500 | nieoczekiwany błąd serwera (szczegóły tylko w dzienniku) |
 
 Pozostałe kody (`unauthenticated`, `invalid_credentials`, `rate_limited` (też przy imporcie z linku, z nagłówkiem `Retry-After`), `login_taken`, `invite_invalid`, `setup_done`, `password_length`) dotyczą kont i sesji z Etapu 1.
