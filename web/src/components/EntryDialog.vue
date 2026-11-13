@@ -131,10 +131,11 @@ function save() {
     :is="mdAndUp ? VDialog : VBottomSheet"
     :model-value="modelValue"
     max-width="480"
+    :aria-label="entry ? t.editEntryTitle : t.addEntryTitle"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <v-card>
-      <v-card-title>{{ entry ? t.save : t.addEntry }}</v-card-title>
+      <v-card-title>{{ entry ? t.editEntryTitle : t.addEntryTitle }}</v-card-title>
       <v-card-text>
         <v-select v-model="date" :items="dayItems" :label="t.entryDay" />
         <v-select v-model="slot" :items="SLOTS" item-title="title" item-value="value" :label="t.entrySlot" />

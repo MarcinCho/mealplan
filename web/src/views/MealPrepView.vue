@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { portions } from '../polish'
 import { computed, onMounted, ref } from 'vue'
 import type { FreezerItem, PrepDish, PrepSession } from '../api/types'
 import AllocateDialog, { type AllocateSource } from '../components/AllocateDialog.vue'
@@ -46,6 +47,18 @@ const dlgState = ref<Dlg | null>(null)
 // Opening a dialog starts it with a clean error slate.
 const dlg = computed<Dlg | null>({ get: () => dlgState.value, set: (v) => { if (v) error.value = ''; dlgState.value = v } })
 const open = computed({ get: () => dlgState.value !== null, set: (v) => { if (!v) dlgState.value = null } })
+const dlgTitle = computed(() => {
+  const x = dlgState.value
+  if (!x) return ''
+  switch (x.k) {
+    case 'session': return t.prepNewSession
+    case 'dish': return t.prepAddDish
+    case 'editDish': return x.dish.recipeTitle
+    case 'freeze': return t.prepFreeze
+    case 'freezer': return x.id ? t.prepEditDish : t.freezerAdd
+    default: return t.delete
+  }
+})
 const alloc = ref<AllocateSource | null>(null)
 const allocOpen = computed({ get: () => alloc.value !== null, set: (v) => { if (!v) alloc.value = null } })
 const shownError = computed(() => error.value || prep.reloadError)
@@ -167,7 +180,7 @@ const editFreezer = (f: FreezerItem) =>
     </EmptyState>
     <v-card v-for="f in prep.freezer" :key="f.id" class="pa-3 mb-2">
       <div class="font-weight-bold">{{ f.title }}</div>
-      <div class="text-body-2 text-medium-emphasis">{{ f.remaining }} {{ t.freezerLeft }} · {{ t.freezerFrozenOn }} {{ nl(f.frozenOn) }}</div>
+      <div class="text-body-2 text-medium-emphasis">{{ t.freezerLeft }}: {{ portions(f.remaining) }} · {{ t.freezerFrozenOn }} {{ nl(f.frozenOn) }}</div>
       <div class="d-flex align-center ga-2 mt-2">
         <v-btn size="small" color="primary" variant="tonal" :disabled="f.remaining < 1" @click="allocFreezer(f)">{{ t.prepAllocate }}</v-btn>
         <v-spacer />
@@ -179,16 +192,9 @@ const editFreezer = (f: FreezerItem) =>
 
   <AllocateDialog v-if="alloc" v-model="allocOpen" :source="alloc" />
 
-  <v-dialog v-model="open" max-width="480">
+  <v-dialog v-model="open" max-width="480" :aria-label="dlgTitle">
     <v-card v-if="dlg">
-      <v-card-title>
-        <template v-if="dlg.k === 'session'">{{ t.prepNewSession }}</template>
-        <template v-else-if="dlg.k === 'dish'">{{ t.prepAddDish }}</template>
-        <template v-else-if="dlg.k === 'editDish'">{{ dlg.dish.recipeTitle }}</template>
-        <template v-else-if="dlg.k === 'freeze'">{{ t.prepFreeze }}</template>
-        <template v-else-if="dlg.k === 'freezer'">{{ dlg.id ? t.prepEditDish : t.freezerAdd }}</template>
-        <template v-else>{{ t.delete }}</template>
-      </v-card-title>
+      <v-card-title>{{ dlgTitle }}</v-card-title>
       <v-card-text>
         <template v-if="dlg.k === 'session'">
           <v-text-field :model-value="dlg.date" type="date" :label="t.prepSessionDate" @update:model-value="onSessionDate($event)" />

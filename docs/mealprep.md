@@ -47,8 +47,9 @@ Zamrażalka jest jedna dla gospodarstwa i obejmuje wszystkie sesje. Pozycja ma n
 
 ## „Ugotowane" i spiżarnia
 
-- Oznaczenie sesji jako **„Ugotowane"** zdejmuje ze spiżarni składniki **wszystkich porcji wszystkich dań naraz**, według zasad opisanych w [pantry.md](pantry.md) (ta sama jednostka bazowa, nie poniżej 0). Cofnięcie „Ugotowane" zwraca dokładnie to, co zdjęto.
-- **Zmiana dań po „Ugotowane"** (dodanie dania, zmiana porcji) **nie odejmuje drugi raz**. Rozbieżność poprawia się w przeglądzie spiżarni.
+- Oznaczenie sesji jako **„Ugotowane"** zdejmuje ze spiżarni składniki **wszystkich porcji wszystkich dań naraz**, według zasad opisanych w [pantry.md](pantry.md) (ta sama lub przeliczalna jednostka, nie poniżej 0). Cofnięcie „Ugotowane" zwraca dokładnie to, co zdjęto.
+- **Zmiana dań po „Ugotowane"** (dodanie lub usunięcie dania, zmiana liczby porcji) **przelicza spiżarnię**: aplikacja oddaje to, co zdjęła, i zdejmuje ponownie dla dań w obecnym kształcie. Zmiana liczby porcji spisanych (zjedzone, wyrzucone) niczego nie zmienia.
+- **Usunięcie ugotowanej sesji** oddaje do spiżarni to, co zdjęło „Ugotowane". Jeśli spiżarni nie da się zaktualizować, sesja nie jest usuwana (`500 pantry_failed`).
 - **„Zrobione" na wpisach z meal prepu i z zamrażalki nigdy nie rusza spiżarni**: składniki zdjęło już oznaczenie sesji.
 - Usunięcie sesji, dania albo pozycji zamrażalki, do których są przydziały (wpisy planu), jest odrzucane (`409 in_use`). Najpierw usuń te wpisy z planu. Porcje w zamrażalce nie blokują usunięcia dania ani sesji: pozycje zamrażalki zostają (tracą tylko powiązanie z daniem).
 

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { api } from '../api/client'
 import type { Recipe } from '../api/types'
+import { fmtNumber, unitWord } from '../polish'
 
 export function emptyRecipe(): Recipe {
   return { id: '', title: '', baseServings: 4, sourceUrl: '', tags: [], ingredients: [], steps: [] }
@@ -8,12 +9,15 @@ export function emptyRecipe(): Recipe {
 
 export function formatQuantity(q: number | null, unit: string): string {
   if (q === null) return ''
-  const n = q.toLocaleString('pl-PL', { maximumFractionDigits: 3 })
-  return unit ? `${n} ${unit}` : n
+  const n = fmtNumber(q)
+  return unit ? `${n} ${unitWord(q, unit)}` : n
 }
 
 // v-model.number yields '' when a field is cleared; the API expects null. 0 is a real value.
 const num = (v: unknown): number | null => (v === '' || v === undefined || v === null ? null : Number(v))
+
+const blankIngredient = (i: Recipe['ingredients'][number]): boolean =>
+  !i.name.trim() && num(i.quantity) === null && !i.unit.trim() && !(i.note ?? '').trim() && !i.productId
 
 export const useRecipes = defineStore('recipes', {
   state: () => ({ items: [] as Recipe[], loaded: false }),
@@ -33,7 +37,8 @@ export const useRecipes = defineStore('recipes', {
         tags: r.tags,
         // v-model.number yields '' when the field is cleared; the API expects null.
         // Only schema fields are sent: imported rows carry extra hints the server rejects.
-        ingredients: r.ingredients.map((i) => ({
+        // A row left completely empty (e.g. "Dodaj składnik" clicked once too often) is dropped, not rejected.
+        ingredients: r.ingredients.filter((i) => !blankIngredient(i)).map((i) => ({
           name: i.name,
           quantity: (i.quantity as unknown) === '' ? null : i.quantity,
           unit: i.unit,
@@ -41,7 +46,7 @@ export const useRecipes = defineStore('recipes', {
           // PUT replaces the whole recipe: an omitted productId would clear the stored choice.
           productId: i.productId ? i.productId : null,
         })),
-        steps: r.steps,
+        steps: r.steps.filter((s) => s.trim() !== ''),
         nutrition: {
           kcal: num(r.nutrition?.kcal),
           protein: num(r.nutrition?.protein),

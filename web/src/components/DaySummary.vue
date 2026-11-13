@@ -49,6 +49,7 @@ const itemValue = (v: Macros) => (v.kcal === null ? '—' : `${formatNumber(v.kc
       <v-progress-linear
         v-if="r.percent !== null"
         :model-value="r.percent"
+        :aria-label="r.label"
         height="6"
         rounded
         :color="r.partial ? 'warning' : 'accent'"
@@ -73,6 +74,6 @@ const itemValue = (v: Macros) => (v.kcal === null ? '—' : `${formatNumber(v.kc
 </template>
 
 <style scoped>
-.section-label { font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; opacity: 0.65; margin-bottom: 4px; }
+.section-label { font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); margin-bottom: 4px; }
 .log-name { overflow-wrap: anywhere; }
 </style>

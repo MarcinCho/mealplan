@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { portions } from '../polish'
 import { computed, onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import type { MealNutrition, PlanEntry, Slot } from '../api/types'
@@ -185,7 +186,7 @@ async function removeEntry() {
                 <span class="avatar avatar-sm" :style="{ background: color(hero.entry.cookUserId) }">{{ initial(members.name(hero.entry.cookUserId)) }}</span>
                 {{ t.cooks }} {{ members.name(hero.entry.cookUserId) }}
               </span>
-              <span class="hero-chip">{{ hero.entry.servings }} {{ t.servingsShort }}</span>
+              <span class="hero-chip">{{ portions(hero.entry.servings) }}</span>
               <span v-if="entryChip(hero.entry)" class="hero-chip">{{ entryChip(hero.entry) }}</span>
             </div>
             <div class="d-flex flex-wrap ga-2">
@@ -227,9 +228,9 @@ async function removeEntry() {
             <span class="tile"><v-icon :icon="SLOT_ICON[e.slot]" /></span>
             <div class="flex-grow-1" style="min-width: 0">
               <div class="font-weight-bold meal-title">{{ label(e) }}</div>
-              <div class="text-body-2 text-medium-emphasis">{{ slotTitle(e.slot) }} · {{ e.servings }} {{ t.servingsShort }}<template v-if="entryChip(e)"> · {{ entryChip(e) }}</template></div>
+              <div class="text-body-2 text-medium-emphasis">{{ slotTitle(e.slot) }} · {{ portions(e.servings) }}<template v-if="entryChip(e)"> · {{ entryChip(e) }}</template></div>
             </div>
-            <v-chip v-if="tracking && mealOf(e)" size="small" variant="tonal" :title="t.mealNutritionTitle" @click.stop="openMeal(e)">{{ chipText(e) }}</v-chip>
+            <v-chip v-if="tracking && mealOf(e)" size="small" variant="tonal" class="flex-shrink-0" :title="t.mealNutritionTitle" @click.stop="openMeal(e)">{{ chipText(e) }}</v-chip>
             <span v-if="e.cookUserId" class="avatar" :style="{ background: color(e.cookUserId) }" :title="members.name(e.cookUserId)">
               {{ initial(members.name(e.cookUserId)) }}
             </span>
@@ -238,6 +239,7 @@ async function removeEntry() {
               variant="text"
               :color="e.done ? 'success' : undefined"
               :title="e.done ? t.markUndone : t.markDone"
+              :aria-label="`${e.done ? t.markUndone : t.markDone}: ${label(e)}`"
               @click.stop="toggleDone(e)"
             />
           </div>
@@ -330,14 +332,15 @@ async function removeEntry() {
   border-radius: 20px; background: rgb(var(--v-theme-surface)); border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   font: inherit; color: inherit; cursor: pointer;
 }
-.day span { font-size: 12px; opacity: 0.7; }
+.day span { font-size: 12px; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
 .day b { font-size: 18px; }
 .day i { width: 6px; height: 6px; border-radius: 50%; background: rgb(var(--v-theme-primary)); }
 .day i.off { background: transparent; }
 .day.today:not(.on) { border-color: rgb(var(--v-theme-primary)); }
 .day.on { background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); border-color: rgb(var(--v-theme-primary)); }
 .day.on i { background: rgb(var(--v-theme-on-primary)); }
-.section-label { font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; opacity: 0.65; margin: 8px 4px 10px; }
+.day.on span { color: rgba(var(--v-theme-on-primary), 0.85); }
+.section-label { font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); margin: 8px 4px 10px; }
 .meal { cursor: pointer; }
 .meal.done .meal-title { text-decoration: line-through; opacity: 0.6; }
 .tile {

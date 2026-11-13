@@ -44,7 +44,7 @@ async function submit() {
   <v-main class="d-flex flex-column align-center justify-center">
     <BrandLogo :height="50" class="mb-6" style="max-width: 70vw" />
     <v-card width="440" max-width="92vw" class="pa-4" elevation="2">
-      <v-card-title>{{ t.inviteTitle }}</v-card-title>
+      <v-card-title tag="h1">{{ t.inviteTitle }}</v-card-title>
       <v-alert v-if="valid === false" type="error" variant="tonal" class="mt-2">{{ t.inviteInvalid }}</v-alert>
       <v-form v-else-if="valid" @submit.prevent="submit">
         <v-card-subtitle class="mb-4">{{ householdName }}</v-card-subtitle>

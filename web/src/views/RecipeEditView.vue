@@ -5,21 +5,22 @@ import { draftToRecipe, mergeIntoExisting } from '../importDraft'
 import { useProducts } from '../stores/products'
 import { useImport } from '../stores/import'
 import { emptyRecipe, useRecipes } from '../stores/recipes'
+import { useNotice } from '../stores/notice'
 import type { Macros, Recipe } from '../api/types'
 import ProductPicker from '../components/ProductPicker.vue'
 import { formatNumber } from '../nutrition'
-import { errorText, t } from '../messages'
+import { errorText, recipeDeletedText, recipeSavedText, t } from '../messages'
 
 const route = useRoute()
 const router = useRouter()
 const recipes = useRecipes()
 const imports = useImport()
-const recipe = ref<Recipe>(emptyRecipe())
+const notice = useNotice()
+const recipe = ref<Recipe>(normalize(emptyRecipe()))
 const error = ref('')
 const busy = ref(false)
 const confirming = ref(false)
 const loaded = ref(false)
-const savedOk = ref(false)
 const isNew = computed(() => !route.params.id)
 
 const FIELDS: { key: keyof Macros; label: string; unit: 'kcal' | 'g' }[] = [
@@ -82,7 +83,6 @@ function addStep() {
 async function submit() {
   if (!loaded.value || (!isNew.value && !recipe.value.id)) return
   error.value = ''
-  savedOk.value = false
   if (!recipe.value.title.trim()) {
     error.value = t.titleRequired
     return
@@ -91,13 +91,9 @@ async function submit() {
   try {
     const saved = await recipes.save(recipe.value)
     imports.clear()
-    if (isNew.value) {
-      // The edit route reloads the recipe, including the freshly computed values.
-      await router.replace({ name: 'recipe-edit', params: { id: saved.id } })
-    } else {
-      recipe.value = normalize(await recipes.get(saved.id))
-      savedOk.value = true
-    }
+    // Saving closes the form: back to the list, with a confirmation that names the recipe.
+    notice.show(recipeSavedText(saved.title || recipe.value.title))
+    await router.push({ name: 'recipes' })
   } catch (e) {
     error.value = errorText(e)
   } finally {
@@ -109,7 +105,9 @@ async function remove() {
   if (!loaded.value || isNew.value || !recipe.value.id) return
   error.value = ''
   try {
+    const title = recipe.value.title
     await recipes.remove(recipe.value.id)
+    notice.show(recipeDeletedText(title))
     await router.push({ name: 'recipes' })
   } catch (e) {
     error.value = errorText(e)
@@ -121,7 +119,6 @@ async function remove() {
 <template>
   <h1 class="text-h5 mb-4">{{ isNew ? t.newRecipe : t.editRecipe }}</h1>
   <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
-  <v-alert v-if="savedOk" type="success" variant="tonal" class="mb-4" closable @click:close="savedOk = false">{{ t.saved }}</v-alert>
   <v-alert v-if="loaded && fromImport" type="info" variant="tonal" class="mb-4">
     {{ t.importedBanner }}
     <div v-if="!isNew" class="mt-2">{{ t.importedUpdateNote }}</div>
@@ -167,7 +164,13 @@ async function remove() {
         <v-text-field v-model="ing.unit" :label="t.unit" density="compact" class="ing-unit" />
         <v-btn icon="mdi-close" variant="text" :title="t.remove" @click="recipe.ingredients.splice(i, 1)" />
       </div>
-      <ProductPicker :matched-id="ing.matchedProductId ?? null" :model-value="ing.productId ?? null" @update:model-value="ing.productId = $event" />
+      <ProductPicker
+        :matched-id="ing.matchedProductId ?? null"
+        :model-value="ing.productId ?? null"
+        allow-create
+        :suggest-name="ing.name"
+        @update:model-value="ing.productId = $event"
+      />
       <v-text-field v-model="ing.note" :label="t.ingredientNote" :placeholder="t.ingredientNotePlaceholder" maxlength="200" density="compact" />
       <div v-if="ing.confidence && ing.confidence !== 'ok'" class="text-caption text-medium-emphasis pb-1">{{ t.fromText }}: „{{ ing.raw }}"</div>
     </div>

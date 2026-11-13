@@ -52,6 +52,7 @@ async function save() {
     :model-value="modelValue"
     max-width="520"
     scrollable
+    :aria-label="product ? t.editProduct : t.newProduct"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <v-card>

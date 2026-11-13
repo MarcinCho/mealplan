@@ -7,7 +7,9 @@ const ABOUT: Record<string, string> = { kcal: 'kaloriach', protein: 'białku', c
 
 export function formatNumber(v: number | null, unit: 'kcal' | 'g'): string {
   if (v === null || v === undefined) return '—'
-  return v.toLocaleString('pl-PL', unit === 'kcal' ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 1 })
+  // Grams carry one decimal only below 10 g, where it still means something ("4,5 g", but "139 g").
+  const digits = unit === 'kcal' || Math.abs(v) >= 10 ? 0 : 1
+  return v.toLocaleString('pl-PL', { maximumFractionDigits: digits })
 }
 
 function amount(k: keyof Macros, v: number): string {

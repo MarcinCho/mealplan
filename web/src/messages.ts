@@ -10,6 +10,7 @@ export const t = {
   displayName: 'Imię',
   householdName: 'Nazwa gospodarstwa',
   signIn: 'Zaloguj',
+  loginTitle: 'Zaloguj się',
   signOut: 'Wyloguj',
   setupTitle: 'Pierwsze uruchomienie',
   setupIntro: 'Utwórz gospodarstwo i konto administratora.',
@@ -33,6 +34,7 @@ export const t = {
   inviteLinkOnce: 'Link jest pokazywany tylko raz. Skopiuj go teraz.',
   noInvites: 'Brak oczekujących zaproszeń.',
   expires: 'Ważne do',
+  pantryEditItem: 'Zmień datę, stały zapas lub usuń',
   revoke: 'Unieważnij',
   theme: 'Zmień motyw',
   palette: 'Kolory',
@@ -44,7 +46,7 @@ export const t = {
   editRecipe: 'Edytuj przepis',
   recipeTitle: 'Tytuł',
   baseServings: 'Porcje bazowe',
-  sourceUrl: 'Adres źródła (opcjonalnie)',
+  sourceUrl: 'Link do źródła',
   tags: 'Tagi',
   ingredients: 'Składniki',
   ingredientName: 'Nazwa',
@@ -60,7 +62,6 @@ export const t = {
   delete: 'Usuń',
   confirmDelete: 'Na pewno usunąć?',
   noRecipes: 'Nie masz jeszcze przepisów.',
-  servingsShort: 'porcji',
   remove: 'Usuń',
   loading: 'Ładowanie…',
   backToList: 'Wróć do listy',
@@ -69,6 +70,9 @@ export const t = {
   thisWeek: 'Ten tydzień',
   copyPrevWeek: 'Skopiuj z poprzedniego tygodnia',
   addEntry: 'Dodaj',
+  addEntryTitle: 'Dodaj posiłek',
+  editEntryTitle: 'Edytuj posiłek',
+  navMain: 'Nawigacja główna',
   entryRecipe: 'Przepis',
   entryFreeText: 'Wolny tekst',
   entryType: 'Rodzaj wpisu',
@@ -160,6 +164,9 @@ export const t = {
   goalFat: 'Tłuszcz (g)',
   saved: 'Zapisano',
   searchProducts: 'Szukaj produktu',
+  coveredHeader: 'Masz w domu',
+  searchRecipes: 'Szukaj przepisu lub tagu',
+  noRecipesFound: 'Żaden przepis nie pasuje do wyszukiwania.',
   newProduct: 'Nowy produkt',
   editProduct: 'Edytuj produkt',
   productName: 'Nazwa',
@@ -251,7 +258,7 @@ export const t = {
   pantryStaple: 'stały zapas',
   pantryStapleSwitch: 'Stały zapas',
   pantryExpires: 'Ważne do',
-  pantryExpired: 'Przeterminowane',
+  pantryExpired: 'Po terminie:',
   pantryExpiresShort: 'do',
   pantryQuantityRequired: 'Podaj ilość (od 0 do 1 000 000) albo zaznacz „Stały zapas”.',
   pantryDecrease: 'Zmniejsz ilość',
@@ -287,6 +294,14 @@ export function movedText(n: number): string {
   return `Przeniesiono ${n} ${plural(n, 'pozycję', 'pozycje', 'pozycji')}`
 }
 
+export function recipeSavedText(title: string): string {
+  return `Zapisano przepis „${title.trim()}”`
+}
+
+export function recipeDeletedText(title: string): string {
+  return `Usunięto przepis „${title.trim()}”`
+}
+
 export function undonePreviousText(n: number): string {
   return `W poprzednim tygodniu ${n} ${plural(n, 'posiłek', 'posiłki', 'posiłków')} nie oznaczono jako zrobione — część zapasów może być już na nie potrzebna.`
 }
@@ -298,7 +313,7 @@ const errors: Record<string, string> = {
   login_taken: 'Ten login jest już zajęty.',
   password_length: 'Hasło musi mieć od 12 do 128 znaków.',
   invalid_input: 'Sprawdź poprawność wpisanych danych.',
-  pantry_failed: 'Zapisano posiłek, ale nie udało się zaktualizować spiżarni. Spróbuj ponownie.',
+  pantry_failed: 'Nie udało się zaktualizować spiżarni. Spróbuj ponownie.',
   forbidden: 'Brak uprawnień do tej operacji.',
   unauthenticated: 'Sesja wygasła. Zaloguj się ponownie.',
   csrf: 'Sesja jest nieaktualna. Odśwież stronę i spróbuj ponownie.',

@@ -1,21 +1,24 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { resolveRoute } from './guard'
 import { useSession } from './stores/session'
+import { isStaleChunk } from './chunks'
 import AppShell from './layouts/AppShell.vue'
-import AccountView from './views/AccountView.vue'
-import ImportView from './views/ImportView.vue'
-import InviteAcceptView from './views/InviteAcceptView.vue'
 import LoginView from './views/LoginView.vue'
-import MembersView from './views/MembersView.vue'
-import MealPrepView from './views/MealPrepView.vue'
-import PantryView from './views/PantryView.vue'
-import PlanView from './views/PlanView.vue'
-import ProductsView from './views/ProductsView.vue'
-import RecipeEditView from './views/RecipeEditView.vue'
-import RecipesView from './views/RecipesView.vue'
-import SetupView from './views/SetupView.vue'
-import ShoppingView from './views/ShoppingView.vue'
 import TodayView from './views/TodayView.vue'
+
+// Rarely the first screen, so loaded on demand; Today and Login stay in the main bundle.
+const AccountView = () => import('./views/AccountView.vue')
+const ImportView = () => import('./views/ImportView.vue')
+const InviteAcceptView = () => import('./views/InviteAcceptView.vue')
+const MembersView = () => import('./views/MembersView.vue')
+const MealPrepView = () => import('./views/MealPrepView.vue')
+const PantryView = () => import('./views/PantryView.vue')
+const PlanView = () => import('./views/PlanView.vue')
+const ProductsView = () => import('./views/ProductsView.vue')
+const RecipeEditView = () => import('./views/RecipeEditView.vue')
+const RecipesView = () => import('./views/RecipesView.vue')
+const SetupView = () => import('./views/SetupView.vue')
+const ShoppingView = () => import('./views/ShoppingView.vue')
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -53,4 +56,25 @@ router.beforeEach(async (to) => {
     to.name as string | undefined,
     Boolean(to.meta.public),
   )
+})
+
+// A tab opened before a deploy still points at the old view chunks, which are gone now: load the
+// page again (once) so the browser picks up the new build.
+router.onError((err, to) => {
+  if (!isStaleChunk(err)) return
+  try {
+    if (sessionStorage.getItem('mealplan.reloaded') === to.fullPath) return
+    sessionStorage.setItem('mealplan.reloaded', to.fullPath)
+  } catch {
+    // storage blocked: reload anyway
+  }
+  window.location.assign(to.fullPath)
+})
+
+router.afterEach(() => {
+  try {
+    sessionStorage.removeItem('mealplan.reloaded')
+  } catch {
+    // ignore
+  }
 })

@@ -63,7 +63,7 @@ async function submit() {
 </script>
 
 <template>
-  <component :is="mdAndUp ? VDialog : VBottomSheet" :model-value="modelValue" max-width="480" @update:model-value="emit('update:modelValue', $event)">
+  <component :is="mdAndUp ? VDialog : VBottomSheet" :model-value="modelValue" max-width="480" :aria-label="t.pantryAddTitle" @update:model-value="emit('update:modelValue', $event)">
     <v-card>
       <v-card-title>{{ t.pantryAddTitle }}</v-card-title>
       <v-card-text>

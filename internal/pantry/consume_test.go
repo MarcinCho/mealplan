@@ -47,14 +47,45 @@ func TestDeductionsScaleAndUnits(t *testing.T) {
 		{ProductID: "p-jajko", Quantity: fp(6), Unit: "szt"},
 	}
 	ms := pantry.Deductions(testRecipe(), 2, nutrition.NewMatcher(testProducts), stock, "e1")
-	if len(ms) != 2 {
-		t.Fatalf("want 2 movements, got %+v", ms)
+	if len(ms) != 3 {
+		t.Fatalf("want 3 movements, got %+v", ms)
+	}
+	if m, _ := find(ms, "p-oliwa"); m.Amount != -15 || m.Unit != "ml" {
+		t.Fatalf("oliwa: 1 łyżka should come off the bottle as 15 ml, got %+v", m)
 	}
 	if m, _ := find(ms, "p-makaron"); m.Amount != -200 || m.Unit != "g" || m.EntryID != "e1" {
 		t.Fatalf("makaron: %+v", m)
 	}
 	if m, _ := find(ms, "p-jajko"); m.Amount != -1.5 || m.Unit != "szt" {
 		t.Fatalf("jajko: %+v", m)
+	}
+}
+
+func TestDeductionsConvertKitchenMeasures(t *testing.T) {
+	prods := []domain.Product{
+		{ID: "p-maka", Name: "mąka", NormalizedName: "mąka", DensityGPerML: fp(0.6)},
+		{ID: "p-cukier", Name: "cukier", NormalizedName: "cukier"},
+		{ID: "p-jajko", Name: "jajko", NormalizedName: "jajko", PieceGrams: fp(50)},
+	}
+	r := domain.Recipe{BaseServings: 1, Ingredients: []domain.Ingredient{
+		{Name: "mąka", Quantity: fp(2), Unit: "szklanki"},
+		{Name: "cukier", Quantity: fp(1), Unit: "szklanka"},
+		{Name: "jajko", Quantity: fp(2), Unit: "szt"},
+	}}
+	stock := []domain.PantryItem{
+		{ProductID: "p-maka", Quantity: fp(1000), Unit: "g"},
+		{ProductID: "p-cukier", Quantity: fp(1000), Unit: "g"},
+		{ProductID: "p-jajko", Quantity: fp(500), Unit: "g"},
+	}
+	ms := pantry.Deductions(r, 1, nutrition.NewMatcher(prods), stock, "e1")
+	if m, _ := find(ms, "p-maka"); m.Amount != -300 || m.Unit != "g" {
+		t.Fatalf("mąka: 2 szklanki at 0.6 g/ml = 300 g, got %+v", m)
+	}
+	if m, ok := find(ms, "p-cukier"); ok {
+		t.Fatalf("cukier has no density, nothing may be guessed: %+v", m)
+	}
+	if m, _ := find(ms, "p-jajko"); m.Amount != -100 || m.Unit != "g" {
+		t.Fatalf("jajko: 2 szt at 50 g = 100 g, got %+v", m)
 	}
 }
 

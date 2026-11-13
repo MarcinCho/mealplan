@@ -40,7 +40,7 @@ Na ekranie „Dziś" pojawia się przypomnienie „Czas na przegląd spiżarni",
 Generowanie listy (`POST /shopping/generate`):
 
 - pomija posiłki oznaczone „Zrobione" i wpisy tekstem wolnym;
-- odejmuje zapas **per produkt i jednostka bazowa**: potrzeba w `g` pomniejsza się o gramy tego samego produktu. Składnik bez jednostki liczy się jako `szt`;
+- odejmuje zapas **per produkt**: najpierw w tej samej jednostce bazowej (potrzeba w `g` pomniejsza się o gramy tego samego produktu), potem w innej jednostce zapasu, jeśli da się ją przeliczyć (patrz „Przeliczanie jednostek”). Składnik bez jednostki liczy się jako `szt`;
 - wiersz w pełni pokryty zapasem zostaje z ilością 0 jako „masz w domu: X"; pokryty częściowo pokazuje „kup X (masz Y)" (`haveQuantity` w API);
 - składniki produktów oznaczonych jako stały zapas są pomijane;
 - zapas **nie jest rezerwowany między tygodniami**: dwa tygodnie potrzebujące tej samej mąki odejmują od niej oba pełną ilość. Dlatego odpowiedź listy zawiera `previousWeekUndone` (posiłki z przepisem z poprzedniego tygodnia bez „Zrobione"), a widok zakupów ostrzega, że część zapasów może być już na nie potrzebna.
@@ -52,7 +52,7 @@ Przycisk „Przenieś kupione do spiżarni" (`POST /shopping/move-to-pantry`) do
 Oznaczenie posiłku z przepisu jako „Zrobione" (zapis wpisu planu z `done: true`) zdejmuje składniki ze spiżarni:
 
 - ilości są **przeskalowane do porcji wpisu**; składnik bez jednostki liczy się jako `szt`;
-- liczą się tylko składniki z ilością, dopasowane do produktu, który masz w spiżarni **w tej samej jednostce bazowej** (łyżka oleju nie odejmuje ml), i nie będące stałym zapasem;
+- liczą się tylko składniki z ilością, dopasowane do produktu, który masz w spiżarni w tej samej jednostce bazowej albo w jednostce, na którą da się je przeliczyć (łyżka oleju odejmuje 15 ml), i nie będące stałym zapasem;
 - stan **nie spada poniżej 0**;
 - zapisywane jest, ile faktycznie zdjęto; **cofnięcie** („Zrobione" wyłączone) zwraca dokładnie to;
 - operacja jest oparta na stanie wpisu: ponowny zapis wpisu, który już jest zrobiony, nie odejmuje drugi raz;
@@ -63,9 +63,20 @@ Jeśli posiłek zapisał się, ale aktualizacja spiżarni nie, API zwraca `500 p
 
 Znane zachowanie: posiłek zrobiony, zanim w spiżarni pojawiły się zapasy, może zdjąć je później przy kolejnym zapisie wpisu (nie ma jeszcze zapisanych zdjęć).
 
+### Przeliczanie jednostek
+
+Gdy składnik jest w innej jednostce niż zapas tego produktu, aplikacja przelicza go tylko wtedy, gdy wynik jest pewny:
+
+- łyżka = 15 ml, łyżeczka = 5 ml, szklanka = 250 ml: łyżki oliwy pomniejszają butelkę w `ml`;
+- objętość na gramy (i odwrotnie) tylko dla produktu z wpisaną gęstością (g/ml): 2 szklanki mąki przy 0,6 g/ml to 300 g z torby w `g`;
+- sztuki na gramy (i odwrotnie) tylko dla produktu z wpisaną wagą sztuki;
+- bez gęstości lub wagi sztuki nic nie jest zakładane: wiersz zostaje nieodjęty.
+
+Na liście zakupów wiersz zachowuje jednostkę z przepisu („kup 2 łyżki (masz 2)”), a przy „Zrobione” zapas schodzi w swojej jednostce.
+
 ## Czego nie robi
 
-- Nie przelicza łyżek, szklanek ani sztuk na gramy i mililitry: składnik w łyżkach nie pomniejsza zapasu w ml, ani odwrotnie.
+- Nie zgaduje gęstości ani wagi sztuki: bez nich objętość nie pomniejsza zapasu w gramach, a sztuki zapasu w gramach. Nie przelicza jednostek takich jak ząbek, puszka czy opakowanie.
 - Dwie nazwy tego samego produktu w przepisach (np. „cebula" i „cebule") bez wspólnego dopasowania zostają dwoma wierszami listy zakupów.
 - Dowolne jednostki są przyjmowane, ale nigdy nie są dopasowywane do składników.
 - Nie rezerwuje zapasu między tygodniami (patrz wyżej); ostrzega tylko liczbą niezrobionych posiłków z poprzedniego tygodnia.

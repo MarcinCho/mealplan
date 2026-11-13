@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { api } from '../api/client'
+import { api, ApiError } from '../api/client'
 import { prepErrorText } from '../messages'
 import { isoDate } from '../weeks'
 import type { FreezerItem, PrepDish, PrepSession } from '../api/types'
@@ -40,6 +40,18 @@ export const useMealPrepStore = defineStore('mealprep', {
         this.reloadError = prepErrorText(e)
       }
     },
+    // write runs a change and refreshes afterwards. A pantry_failed error means the change itself was
+    // saved, so the lists are refreshed then too before the error is passed on.
+    async write<T>(req: Promise<T>): Promise<T> {
+      try {
+        const res = await req
+        await this.refresh()
+        return res
+      } catch (e) {
+        if (e instanceof ApiError && e.code === 'pantry_failed') await this.refresh()
+        throw e
+      }
+    },
     async load() {
       const [, settings] = await Promise.all([this.reload(), api<{ portionsPerMeal: number }>('GET', '/household/settings')])
       this.portionsPerMeal = settings.portionsPerMeal
@@ -50,45 +62,35 @@ export const useMealPrepStore = defineStore('mealprep', {
       this.portionsPerMeal = res.portionsPerMeal
     },
     async createSession(input: { date: string; name: string; week?: string }) {
-      const s = await api<PrepSession>('POST', '/prep/sessions', input)
-      await this.refresh()
+      const s = await this.write(api<PrepSession>('POST', '/prep/sessions', input))
       return s
     },
     async updateSession(id: string, input: { date: string; name: string; week: string; cooked: boolean }) {
-      await api<PrepSession>('PUT', `/prep/sessions/${enc(id)}`, input)
-      await this.refresh()
+      await this.write(api<PrepSession>('PUT', `/prep/sessions/${enc(id)}`, input))
     },
     async removeSession(id: string) {
-      await api('DELETE', `/prep/sessions/${enc(id)}`)
-      await this.refresh()
+      await this.write(api('DELETE', `/prep/sessions/${enc(id)}`))
     },
     async addDish(sessionId: string, recipeId: string, portions: number) {
-      await api<PrepDish>('POST', `/prep/sessions/${enc(sessionId)}/dishes`, { recipeId, portions })
-      await this.refresh()
+      await this.write(api<PrepDish>('POST', `/prep/sessions/${enc(sessionId)}/dishes`, { recipeId, portions }))
     },
     async updateDish(id: string, portions: number, writtenOff: number) {
-      await api<PrepDish>('PUT', `/prep/dishes/${enc(id)}`, { portions, writtenOff })
-      await this.refresh()
+      await this.write(api<PrepDish>('PUT', `/prep/dishes/${enc(id)}`, { portions, writtenOff }))
     },
     async removeDish(id: string) {
-      await api('DELETE', `/prep/dishes/${enc(id)}`)
-      await this.refresh()
+      await this.write(api('DELETE', `/prep/dishes/${enc(id)}`))
     },
     async freeze(dishId: string, portions: number, frozenOn: string = isoDate(new Date())) {
-      await api<FreezerItem>('POST', `/prep/dishes/${enc(dishId)}/freeze`, { portions, frozenOn })
-      await this.refresh()
+      await this.write(api<FreezerItem>('POST', `/prep/dishes/${enc(dishId)}/freeze`, { portions, frozenOn }))
     },
     async addFreezer(input: FreezerInput) {
-      await api<FreezerItem>('POST', '/freezer', input)
-      await this.refresh()
+      await this.write(api<FreezerItem>('POST', '/freezer', input))
     },
     async updateFreezer(id: string, input: FreezerInput) {
-      await api<FreezerItem>('PUT', `/freezer/${enc(id)}`, input)
-      await this.refresh()
+      await this.write(api<FreezerItem>('PUT', `/freezer/${enc(id)}`, input))
     },
     async removeFreezer(id: string) {
-      await api('DELETE', `/freezer/${enc(id)}`)
-      await this.refresh()
+      await this.write(api('DELETE', `/freezer/${enc(id)}`))
     },
   },
 })

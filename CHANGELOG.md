@@ -2,19 +2,47 @@
 
 ## Unreleased
 
+### Wygląd i dostępność
+
+- Zapisanie przepisu zamyka formularz i wraca do listy z komunikatem „Zapisano przepis „…””; usunięcie pokazuje „Usunięto przepis „…””. Komunikaty pokazuje wspólny pasek aplikacji (`stores/notice.ts`), na telefonie pod górnym paskiem.
+- Edytor przepisu: „Dodaj produkt” przy składniku tworzy brakujący produkt w bazie (nazwa składnika jest już wpisana) i od razu go przypina, tak jak w spiżarni i dzienniku jedzenia.
+- Poprawna odmiana: „1 porcja", „2 porcje", „12 porcji", „5 łyżek", „2 ząbki" (`web/src/polish.ts`); daty w spiżarni po polsku („do 12 lis", „Po terminie: 8 lis"), a data ważna najwyżej 2 dni jest wyróżniona.
+- Kontrast: tekst drugorzędny i etykiety pól spełniają WCAG AA (4,5:1) we wszystkich paletach, pilnowane testem; gramy w podsumowaniach bez zbędnych ułamków („139 g", „4,5 g").
+- Plan: dzisiejszy dzień wyróżniony, puste dni bez „0 / 2200 kcal", „Ten tydzień" tylko poza bieżącym tygodniem, „Dodaj posiłek" zamiast „Dodaj".
+- Przepisy: wyszukiwanie po tytule i tagu (bez polskich znaków), tagi pod tytułem zamiast ucinać go na telefonie.
+- Spiżarnia: zwarte karty; stały zapas, data ważności i usuwanie pod ołówkiem przy pozycji.
+- Zakupy: nagłówek „Zakupy" z tygodniem pod spodem, sekcja „Masz w domu", „Przenieś kupione do spiżarni" widoczne tylko, gdy jest co przenieść.
+- Przyciski bez wersalików także w oknach dialogowych, większe przyciski na ekranach dotykowych, widoczny tor przełączników, pasek aplikacji z tłem (treść nie wchodzi pod logo), jednolite obramowane pola.
+- Czytniki ekranu: nazwy okien dialogowych, pasków postępu i przycisków „zrobione"/„dodaj", jedna nawigacja z etykietą, nagłówek na ekranie logowania.
+
+### Umiejętność Claude
+
+- Nazwy składników w liczbie pojedynczej (`jajko`, `pomidor`, `ziemniak`), poza słowami bez liczby pojedynczej; test pilnuje przykładów.
+- `mealplan-recipe-format` zawsze podaje wartości na porcję: ze źródła albo wyliczone ze składników (wagi łyżek, szklanek i sztuk, wartości referencyjne na 100 g, kontrola kcal z makroskładnikami), z krótkim wyliczeniem pod przepisem. Nowy przykład z wyliczonymi wartościami; przykłady sprawdza test importu.
+
+### Poprawki
+
+- „Nowy przepis" otwiera się znowu: pusty formularz nie miał pól wartości odżywczych i ekran wywracał się przy pierwszym renderze. Całkiem puste wiersze składników i puste kroki są przy zapisie pomijane zamiast blokować go błędem walidacji.
+
+### Wydajność
+
+- Serwer wysyła pliki aplikacji skompresowane (gzip, jeśli przeglądarka go przyjmuje) i z `ETag`, więc `index.html` i pliki bez skrótu w nazwie są tylko sprawdzane, a nie pobierane od nowa.
+- Ikony są rysowane jako SVG tylko z 39 używanych (`web/src/icons.ts`, pilnowane testem) zamiast całej czcionki Material Design Icons: znikają czcionka (~400 KB woff2, ~3 MB innych formatów w binarce) i ~300 KB CSS.
+- Widoki poza „Dziś” i logowaniem ładują się przy pierwszym wejściu. Karta otwarta przed wdrożeniem przeładowuje się raz, gdy nie znajdzie starego pliku widoku.
+
 ### Meal prep
 
 - Zakładka „Meal prep": sesje gotowania z daniami (przepis i liczba porcji), przydział porcji do wpisów planu („z meal prepu"), wspólna zamrażalka gospodarstwa („z zamrażalki", „❄ Zamroź", ręczne dodawanie) i odpis porcji zjedzonych lub wyrzuconych (`/prep/*`, `/freezer*`). Sesja należy do tygodnia, na który się gotuje: weekendowa do następnego, inne dni do bieżącego (do zmiany przy sesji).
-- „Ugotowane" na sesji zdejmuje ze spiżarni składniki wszystkich porcji dań naraz; późniejsza zmiana dań nie odejmuje drugi raz (poprawka w przeglądzie spiżarni). „Zrobione" na wpisach z meal prepu nigdy nie rusza spiżarni. Usunięcie sesji, dania lub pozycji zamrażalki z przydziałami jest odrzucane (`in_use`); kopiowanie tygodnia pomija wpisy z meal prepu. Lista zakupów liczy składniki na wszystkie porcje dań sesji.
+- „Ugotowane" na sesji zdejmuje ze spiżarni składniki wszystkich porcji dań naraz; późniejsze dodanie, usunięcie lub zmiana porcji dania przelicza spiżarnię, a usunięcie ugotowanej sesji oddaje zapasy. „Zrobione" na wpisach z meal prepu nigdy nie rusza spiżarni. Usunięcie sesji, dania lub pozycji zamrażalki z przydziałami jest odrzucane (`in_use`); kopiowanie tygodnia pomija wpisy z meal prepu. Lista zakupów liczy składniki na wszystkie porcje dań sesji.
 - Wpisy planu mają `kind` (`meal`, `prep`, `out`), `prepDishId`, `freezerItemId` i `outValues`; nowy rodzaj „Na mieście" z opcjonalnym opisem i wartościami na osobę, bez kucharza i bez zakupów.
 - Ustawienie gospodarstwa „Porcji na posiłek" (`/household/settings`, 1-20, domyślnie 2) na ekranie Domownicy; ekran „Dziś" przypomina o nieprzydzielonych porcjach sesji starszej niż 4 dni. Opis: `docs/mealprep.md`.
 
 ### Spiżarnia
 
 - Spiżarnia gospodarstwa (`/pantry`, `/pantry/review`): pozycje wskazują produkty (nazwa może rozwiązać się przez alias, nieznana tworzy produkt), ilości w jednostkach bazowych (kg jako g, l jako ml), ilość 0, stały zapas bez ilości, data ważności, przyciski +/- z opóźnionym, szeregowanym zapisem i miesięczny przegląd z przypomnieniem na ekranie „Dziś" po ponad 30 dniach.
-- „Zrobione" na posiłku z przepisu zdejmuje składniki przeskalowane do porcji, tylko w tej samej jednostce bazowej i nie poniżej 0; zapisuje, ile zdjęto, a cofnięcie zwraca dokładnie to. Ponowny zapis nie odejmuje drugi raz, a usunięcie zrobionego wpisu nie zwraca zapasu. Błąd `pantry_failed` oznacza zapisany posiłek bez aktualizacji spiżarni (ponowny zapis naprawia).
+- „Zrobione" na posiłku z przepisu zdejmuje składniki przeskalowane do porcji, w tej samej jednostce bazowej lub przeliczalnej (łyżka 15 ml, łyżeczka 5 ml, szklanka 250 ml; na gramy tylko z gęstością produktu, sztuki tylko z wagą sztuki) i nie poniżej 0; zapisuje, ile zdjęto, a cofnięcie zwraca dokładnie to. Ponowny zapis nie odejmuje drugi raz, a usunięcie zrobionego wpisu nie zwraca zapasu. Błąd `pantry_failed` oznacza zapisany posiłek bez aktualizacji spiżarni (ponowny zapis naprawia).
 - Lista zakupów pomija zrobione posiłki i odejmuje zapas per produkt i jednostka bazowa: pozycje `haveQuantity` („masz w domu", „kup X (masz Y)"), stałe zapasy są pomijane. „Przenieś kupione do spiżarni" (`POST /shopping/move-to-pantry`, pole `moved`) dodaje odhaczone pozycje raz. Opis: `docs/pantry.md`.
-- Ograniczenia: brak przeliczania łyżek i szklanek na g/ml, brak rezerwacji zapasu między tygodniami, dwie nazwy jednego produktu to dwa wiersze listy, dowolne jednostki nigdy nie są dopasowywane.
+- Ograniczenia: bez gęstości lub wagi sztuki produktu objętość i sztuki nie pomniejszają zapasu w gramach, brak rezerwacji zapasu między tygodniami, dwie nazwy jednego produktu to dwa wiersze listy, dowolne jednostki nigdy nie są dopasowywane.
 - Import: linia `Wartości na porcję` z „(w tym nasycone …)", „z czego" lub „of which" przy tłuszczu nie gubi już wartości tłuszczu (segment jest ucinany zamiast pomijany).
 
 ### Wygląd

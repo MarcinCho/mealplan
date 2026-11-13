@@ -279,6 +279,23 @@ func (s *Service) syncPantry(ctx context.Context, p domain.PrepSession) error {
 	return nil
 }
 
+// recook brings stock in line with a cooked session's current dishes after one was added, resized
+// or removed: it puts back what was taken and takes it again for the dishes as they are now. Both
+// steps are atomic and idempotent, so after a failure (ErrPantry) saving the session again converges.
+func (s *Service) recook(ctx context.Context, hh, sessionID string) error {
+	if s.hook == nil {
+		return nil
+	}
+	p, err := s.repo.PrepSessionByID(ctx, hh, sessionID)
+	if err != nil || !p.Cooked {
+		return err
+	}
+	if err := s.hook.SessionUncooked(ctx, hh, sessionID); err != nil {
+		return fmt.Errorf("%w: %w", ErrPantry, err)
+	}
+	return s.syncPantry(ctx, p)
+}
+
 // UpdateSession saves the session, then syncs the pantry with its Cooked flag. A pantry failure is
 // reported as ErrPantry with the new state kept.
 func (s *Service) UpdateSession(ctx context.Context, hh, id string, in SessionInput) (SessionView, error) {
@@ -301,9 +318,11 @@ func (s *Service) UpdateSession(ctx context.Context, hh, id string, in SessionIn
 	return s.Session(ctx, hh, id)
 }
 
-// DeleteSession refuses (store.ErrInUse) while any of its dishes is planned in meals.
+// DeleteSession refuses (store.ErrInUse) while any of its dishes is planned in meals. A cooked
+// session first puts its ingredients back into the pantry; if that fails nothing is deleted.
 func (s *Service) DeleteSession(ctx context.Context, hh, id string) error {
-	if _, err := s.repo.PrepSessionByID(ctx, hh, id); err != nil {
+	p, err := s.repo.PrepSessionByID(ctx, hh, id)
+	if err != nil {
 		return err
 	}
 	dishes, err := s.repo.PrepDishes(ctx, hh, []string{id})
@@ -317,6 +336,11 @@ func (s *Service) DeleteSession(ctx context.Context, hh, id string) error {
 	for _, d := range dishes {
 		if hasDish(allocs, d.ID) {
 			return store.ErrInUse
+		}
+	}
+	if p.Cooked && s.hook != nil {
+		if err := s.hook.SessionUncooked(ctx, hh, id); err != nil {
+			return fmt.Errorf("%w: %w", ErrPantry, err)
 		}
 	}
 	return s.repo.DeletePrepSession(ctx, hh, id)
@@ -374,6 +398,9 @@ func (s *Service) AddDish(ctx context.Context, hh, sessionID, recipeID string, p
 	if err != nil {
 		return DishView{}, err
 	}
+	if err := s.recook(ctx, hh, sessionID); err != nil {
+		return DishView{}, err
+	}
 	return s.dishView(ctx, hh, d)
 }
 
@@ -401,16 +428,24 @@ func (s *Service) UpdateDish(ctx context.Context, hh, id string, portions, writt
 	if portions < used+writtenOff {
 		return DishView{}, invalid("portions cannot be fewer than %d already planned, frozen or written off", used+writtenOff)
 	}
+	resized := d.Portions != portions
 	d.Portions, d.WrittenOff = portions, writtenOff
 	if err := s.repo.UpdatePrepDish(ctx, d); err != nil {
 		return DishView{}, err
 	}
+	if resized {
+		if err := s.recook(ctx, hh, d.SessionID); err != nil {
+			return DishView{}, err
+		}
+	}
 	return s.dishView(ctx, hh, d)
 }
 
-// DeleteDish refuses (store.ErrInUse) while meals are planned from it; frozen items stay.
+// DeleteDish refuses (store.ErrInUse) while meals are planned from it; frozen items stay. In a
+// cooked session the pantry is recounted without the dish.
 func (s *Service) DeleteDish(ctx context.Context, hh, id string) error {
-	if _, err := s.repo.PrepDishByID(ctx, hh, id); err != nil {
+	d, err := s.repo.PrepDishByID(ctx, hh, id)
+	if err != nil {
 		return err
 	}
 	allocs, err := s.repo.Allocations(ctx, hh)
@@ -420,7 +455,10 @@ func (s *Service) DeleteDish(ctx context.Context, hh, id string) error {
 	if hasDish(allocs, id) {
 		return store.ErrInUse
 	}
-	return s.repo.DeletePrepDish(ctx, hh, id)
+	if err := s.repo.DeletePrepDish(ctx, hh, id); err != nil {
+		return err
+	}
+	return s.recook(ctx, hh, d.SessionID)
 }
 
 func (s *Service) freezerView(ctx context.Context, hh string, f domain.FreezerItem, allocs []domain.PlanEntry, titles map[string]string) (FreezerView, error) {

@@ -31,10 +31,11 @@ async function submit() {
     <BrandLogo :height="50" class="mb-6" style="max-width: 70vw" />
     <v-card width="400" max-width="92vw" class="pa-4" elevation="2">
       <v-form @submit.prevent="submit">
+        <h1 class="text-h6 mb-4">{{ t.loginTitle }}</h1>
         <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
         <v-text-field v-model="login" :label="t.login" autocomplete="username" autofocus />
         <v-text-field v-model="password" :label="t.password" type="password" autocomplete="current-password" />
-        <v-btn type="submit" color="primary" block :loading="busy">{{ t.signIn }}</v-btn>
+        <v-btn type="submit" color="primary" size="large" block :loading="busy">{{ t.signIn }}</v-btn>
       </v-form>
     </v-card>
   </v-main>

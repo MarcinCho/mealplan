@@ -29,7 +29,7 @@ async function submit() {
   <v-main class="d-flex flex-column align-center justify-center">
     <BrandLogo :height="50" class="mb-6" style="max-width: 70vw" />
     <v-card width="440" max-width="92vw" class="pa-4" elevation="2">
-      <v-card-title>{{ t.setupTitle }}</v-card-title>
+      <v-card-title tag="h1">{{ t.setupTitle }}</v-card-title>
       <v-card-subtitle class="mb-4">{{ t.setupIntro }}</v-card-subtitle>
       <v-form @submit.prevent="submit">
         <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>

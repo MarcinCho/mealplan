@@ -24,6 +24,9 @@ function define(dark: boolean, colors: Record<string, string>): ThemeDefinition 
   return {
     dark,
     colors: { ...(dark ? statusDark : statusLight), accent: colors.primary, 'on-accent': colors['on-primary'], ...colors },
+    // Vuetify's light default (0.6) leaves secondary text and field labels near 3:1 on the tinted
+    // backgrounds; these keep them at WCAG AA (4.5:1) in every palette.
+    variables: dark ? { 'medium-emphasis-opacity': 0.74 } : { 'medium-emphasis-opacity': 0.8 },
   }
 }
 

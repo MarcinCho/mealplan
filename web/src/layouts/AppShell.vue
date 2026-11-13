@@ -2,6 +2,7 @@
 import { useDisplay, useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
 import { useSession } from '../stores/session'
+import { useNotice } from '../stores/notice'
 import { t } from '../messages'
 import { loadChoice, PALETTES, saveChoice, themeName, type Choice, type PaletteId } from '../theme'
 import { initial } from '../today'
@@ -11,6 +12,7 @@ import BrandLogo from '../components/BrandLogo.vue'
 const { mdAndUp } = useDisplay()
 const theme = useTheme()
 const session = useSession()
+const notice = useNotice()
 const router = useRouter()
 
 const items = [
@@ -50,7 +52,7 @@ async function logout() {
 </script>
 
 <template>
-  <v-app-bar flat color="transparent" class="shell-bar">
+  <v-app-bar color="background" scroll-behavior="elevate" scroll-threshold="8" class="shell-bar">
     <v-app-bar-title class="brand-title"><BrandLogo :icon="!mdAndUp" :height="28" /></v-app-bar-title>
     <span class="text-body-2 text-medium-emphasis mr-2 d-none d-sm-inline">{{ session.me?.household.name }}</span>
     <v-menu :close-on-content-click="false">
@@ -85,15 +87,15 @@ async function logout() {
     </v-menu>
   </v-app-bar>
 
-  <v-navigation-drawer v-if="mdAndUp" permanent width="88" color="bar" class="rail">
-    <nav class="rail-nav">
+  <v-navigation-drawer v-if="mdAndUp" permanent width="88" color="bar" class="rail" :aria-label="t.navMain">
+    <div class="rail-nav">
       <router-link v-for="i in items" :key="i.title" v-slot="{ href, navigate, isActive, isExactActive }" :to="i.to" custom>
         <a :href="href" class="nav-item" :class="{ on: i.to.name === 'home' ? isExactActive : isActive }" @click="navigate">
           <span class="pill"><v-icon :icon="(i.to.name === 'home' ? isExactActive : isActive) ? i.active : i.icon" /></span>
           {{ i.title }}
         </a>
       </router-link>
-    </nav>
+    </div>
   </v-navigation-drawer>
 
   <v-main>
@@ -104,7 +106,7 @@ async function logout() {
     </v-container>
   </v-main>
 
-  <v-bottom-navigation v-if="!mdAndUp" grow class="bottom-nav" height="72">
+  <v-bottom-navigation v-if="!mdAndUp" tag="nav" :aria-label="t.navMain" grow class="bottom-nav" height="72">
     <router-link v-for="i in items" :key="i.title" v-slot="{ href, navigate, isActive, isExactActive }" :to="i.to" custom>
       <a :href="href" class="nav-item" :class="{ on: i.to.name === 'home' ? isExactActive : isActive }" @click="navigate">
         <span class="pill"><v-icon :icon="(i.to.name === 'home' ? isExactActive : isActive) ? i.active : i.icon" /></span>
@@ -112,6 +114,22 @@ async function logout() {
       </a>
     </router-link>
   </v-bottom-navigation>
+
+  <v-snackbar
+    :key="notice.seq"
+    v-model="notice.open"
+    :timeout="4000"
+    color="secondary"
+    rounded="pill"
+    :location="mdAndUp ? 'bottom' : 'top'"
+    :class="{ 'notice-phone': !mdAndUp }"
+    role="status"
+  >
+    <span class="d-inline-flex align-center ga-2"><v-icon icon="mdi-check-circle" size="small" />{{ notice.text }}</span>
+    <template #actions>
+      <v-btn variant="text" :aria-label="t.close" icon="mdi-close" size="small" @click="notice.open = false" />
+    </template>
+  </v-snackbar>
 </template>
 
 <style scoped>
@@ -136,4 +154,9 @@ async function logout() {
 .page-enter-from { opacity: 0; transform: translateY(6px); }
 .page-leave-to { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .page-enter-active, .page-leave-active { transition: none; } }
+</style>
+
+<style>
+/* On phones the notice sits below the app bar, clear of the bottom navigation and quick add. */
+.notice-phone .v-snackbar__wrapper { margin-top: 72px; }
 </style>

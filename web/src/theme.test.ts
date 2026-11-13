@@ -106,6 +106,20 @@ describe('palettes', () => {
     }
   })
 
+  it('keeps secondary (medium-emphasis) text at WCAG AA on the background and on cards', () => {
+    const blend = (fg: string, bg: string, a: number) =>
+      '#' + [1, 3, 5].map((i) => Math.round(parseInt(fg.slice(i, i + 2), 16) * a + parseInt(bg.slice(i, i + 2), 16) * (1 - a)).toString(16).padStart(2, '0')).join('')
+    for (const [name, def] of Object.entries(VUETIFY_THEMES)) {
+      const c = def.colors as Record<string, string>
+      const a = Number((def.variables as Record<string, number>)['medium-emphasis-opacity'])
+      // Vuetify picks black or white text when a palette does not set it.
+      for (const [fgKey, bgKey] of [['on-background', 'background'], ['on-surface', 'surface']]) {
+        const fg = c[fgKey] ?? (def.dark ? '#FFFFFF' : '#000000')
+        expect(contrast(blend(fg, c[bgKey], a), c[bgKey]), `${name} ${fgKey}`).toBeGreaterThanOrEqual(4.5)
+      }
+    }
+  })
+
   it('offers the Mealplan brand palette first and four others, each with swatches for the picker', () => {
     expect(PALETTES.map((p) => p.id)).toEqual(['mealplan', 'classic', 'plum', 'earth', 'navy'])
     for (const p of PALETTES) expect(p.swatch).toHaveLength(4)
