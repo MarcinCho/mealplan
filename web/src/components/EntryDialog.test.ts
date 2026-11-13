@@ -69,6 +69,21 @@ describe('EntryDialog', () => {
     expect(w.emitted('save')?.[0][0]).toMatchObject({ kind: 'out', freeText: 'Pizza', outValues: { kcal: 900, protein: null, carbs: 100, fat: null } })
   })
 
+  it('starts a new meal with the household portions, not the recipe base', async () => {
+    open(null)
+    await flush()
+    const portions = [...document.querySelectorAll<HTMLInputElement>('input[type="number"]')]
+    expect(portions.map((i) => i.value)).toContain('2')
+  })
+
+  it('keeps the portions of an edited meal', async () => {
+    open(entry({ recipeId: 'r1', servings: 5 }))
+    await flush()
+    const portions = [...document.querySelectorAll<HTMLInputElement>('input[type="number"]')].map((i) => i.value)
+    expect(portions).toContain('5')
+    expect(portions).not.toContain('2')
+  })
+
   it('cannot save a new recipe meal without a recipe', async () => {
     open(null)
     await flush()

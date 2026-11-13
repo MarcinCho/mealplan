@@ -1,19 +1,19 @@
 import type { DaySummary, Macros } from './api/types'
+import { intl } from './i18n'
+import { t } from './messages'
 
 const KEYS: (keyof Macros)[] = ['kcal', 'protein', 'carbs', 'fat']
 
-const GRAMS: Record<string, string> = { protein: 'białka', carbs: 'węglowodanów', fat: 'tłuszczu' }
-const ABOUT: Record<string, string> = { kcal: 'kaloriach', protein: 'białku', carbs: 'węglowodanach', fat: 'tłuszczach' }
 
 export function formatNumber(v: number | null, unit: 'kcal' | 'g'): string {
   if (v === null || v === undefined) return '—'
   // Grams carry one decimal only below 10 g, where it still means something ("4,5 g", but "139 g").
   const digits = unit === 'kcal' || Math.abs(v) >= 10 ? 0 : 1
-  return v.toLocaleString('pl-PL', { maximumFractionDigits: digits })
+  return v.toLocaleString(intl, { maximumFractionDigits: digits })
 }
 
 function amount(k: keyof Macros, v: number): string {
-  return k === 'kcal' ? `${formatNumber(v, 'kcal')} kcal` : `${formatNumber(v, 'g')} g ${GRAMS[k]}`
+  return k === 'kcal' ? `${formatNumber(v, 'kcal')} kcal` : `${formatNumber(v, 'g')} g ${t.gramsOf[k]}`
 }
 
 export function formatMacros(m: Macros): string {
@@ -32,20 +32,20 @@ export function formatRemaining(d: DaySummary): string {
     anyGoal = true
     const total = d.total[k]
     if (total === null || total === undefined) {
-      other.push(`brak danych o ${ABOUT[k]}`)
+      other.push(t.noDataAbout(t.aboutOf[k]))
     } else if (d.incomplete[k]) {
       if (total < goal) atLeast.push(amount(k, goal - total))
-      else other.push(`dane o ${ABOUT[k]} niepełne`)
+      else other.push(t.incompleteAbout(t.aboutOf[k]))
     } else if (total < goal) {
       precise.push(amount(k, goal - total))
     }
   }
-  if (!anyGoal) return 'brak celu'
+  if (!anyGoal) return t.noGoal
   const out: string[] = []
-  if (precise.length) out.push(`brakuje ${precise.join(' · ')}`)
-  if (atLeast.length) out.push(`brakuje co najmniej ${atLeast.join(' · ')}`)
+  if (precise.length) out.push(t.missing(precise.join(' · ')))
+  if (atLeast.length) out.push(t.missingAtLeast(atLeast.join(' · ')))
   out.push(...other)
-  return out.length ? out.join(' · ') : 'cel osiągnięty'
+  return out.length ? out.join(' · ') : t.goalReached
 }
 
 // Share of the goal reached, for a progress bar: 0..100, null when there is no goal.
@@ -65,9 +65,9 @@ export function plural(n: number, one: string, few: string, many: string): strin
 // Warnings that tell the user the day's total is not the whole truth.
 export function dayWarnings(d: DaySummary): string[] {
   const out: string[] = []
-  if (d.missingMeals > 0) out.push(`${d.missingMeals} ${plural(d.missingMeals, 'posiłek', 'posiłki', 'posiłków')} bez wartości`)
-  if (d.missingLog > 0) out.push(`${d.missingLog} ${plural(d.missingLog, 'pozycja', 'pozycje', 'pozycji')} bez wartości`)
-  if (d.approximate) out.push('wartości przybliżone')
+  if (d.missingMeals > 0) out.push(t.mealsWithoutValues(d.missingMeals))
+  if (d.missingLog > 0) out.push(t.logWithoutValues(d.missingLog))
+  if (d.approximate) out.push(t.valuesApprox)
   return out
 }
 
@@ -84,5 +84,5 @@ export function dayLine(d: DaySummary): string {
     return v === null || v === undefined ? '—' : `${d.incomplete[k] ? '≥' : ''}${formatNumber(v, unit)}`
   }
   const goal = d.goal.kcal !== null && d.goal.kcal !== undefined ? ` / ${formatNumber(d.goal.kcal, 'kcal')}` : ''
-  return `${val('kcal', 'kcal')}${goal} kcal · białko ${val('protein', 'g')} g`
+  return `${val('kcal', 'kcal')}${goal} kcal · ${t.proteinWord} ${val('protein', 'g')} g`
 }

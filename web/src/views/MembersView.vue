@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { intl } from '../i18n'
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api/client'
 import { copyText } from '../clipboard'
@@ -190,7 +191,7 @@ onMounted(() => {
     </v-alert>
     <p v-if="!invites.length" class="text-medium-emphasis">{{ t.noInvites }}</p>
     <v-list v-else lines="one" border rounded>
-      <v-list-item v-for="i in invites" :key="i.id" :title="i.role === 'admin' ? t.admin : t.member" :subtitle="`${t.expires} ${new Date(i.expiresAt).toLocaleString('pl-PL')}`">
+      <v-list-item v-for="i in invites" :key="i.id" :title="i.role === 'admin' ? t.admin : t.member" :subtitle="`${t.expires} ${new Date(i.expiresAt).toLocaleString(intl)}`">
         <template #append><v-btn size="small" variant="text" color="error" @click="revoke(i.id)">{{ t.revoke }}</v-btn></template>
       </v-list-item>
     </v-list>

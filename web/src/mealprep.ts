@@ -1,4 +1,5 @@
 import type { FreezerItem, PlanEntry, PrepAllocation, PrepSession } from './api/types'
+import { intl } from './i18n'
 import { t } from './messages'
 import { SLOTS } from './weeks'
 
@@ -36,11 +37,10 @@ export function staleSessions(sessions: PrepSession[], today: string): PrepSessi
   return sessions.filter((s) => s.remaining > 0 && Math.round((t - parse(s.date).getTime()) / 86400000) > STALE_DAYS)
 }
 
-const DAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So']
 
 export function allocationLabel(a: Pick<PrepAllocation, 'date' | 'slot' | 'servings'>): string {
-  const slot = (SLOTS.find((s) => s.value === a.slot)?.title ?? a.slot).toLocaleLowerCase('pl-PL')
-  return `${DAYS[parse(a.date).getDay()]} ${slot} ×${a.servings}`
+  const slot = (SLOTS.find((s) => s.value === a.slot)?.title ?? a.slot).toLocaleLowerCase(intl)
+  return `${t.weekdaysShortSun[parse(a.date).getDay()]} ${slot} ×${a.servings}`
 }
 
 // Small badge for entries that do not come from a recipe or free text.

@@ -65,6 +65,5 @@ Na ekranie „Dziś" pojawia się ostrzeżenie „Masz nieprzydzielone porcje z 
 
 - Nie planuje sesji ani nie podpowiada dań.
 - Nie pilnuje terminu przydatności zamrożonych porcji.
-- Nie koryguje spiżarni po zmianie dań w ugotowanej sesji (patrz wyżej).
 
 API: [api.md](api.md).

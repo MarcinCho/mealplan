@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Wersja angielska
+
+- Interfejs po angielsku: przełącznik „Język / Language” na stronie logowania i na stronie Konto, zapamiętywany w przeglądarce (domyślnie polski). Tłumaczone są wszystkie teksty, komunikaty błędów, daty i liczby (`en-GB`), odmiana porcji i jednostek kuchennych (łyżka → tbsp); także wbudowane teksty Vuetify. Przepisy, nazwy produktów i dokumentacja zostają po polsku.
+- Teksty są w `web/src/locales/pl.ts` i `en.ts`; TypeScript pilnuje, żeby angielski miał każdy klucz polskiego, a test, żeby nie zawierał polskich liter.
+
+### Drobne poprawki
+
+- „Dodaj posiłek” podpowiada zwykłą liczbę porcji gospodarstwa zamiast liczby porcji z przepisu.
+- Produkt startowy „ziemniaki” nazywa się teraz „ziemniak” (liczba pojedyncza, „ziemniaki” zostaje aliasem); migracja poprawia istniejące gospodarstwa.
+
 ### Asystent produktów
 
 - Opcjonalny klucz OpenRouter gospodarstwa (ekran Domownicy; ustawia i usuwa tylko administrator). Klucz leży jawnie w bazie, API zwraca tylko ostatnie 4 znaki, a kopie zapasowe go zawierają. Domyślny model `google/gemini-3.1-flash-lite` można zmienić.

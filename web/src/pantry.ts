@@ -1,4 +1,5 @@
 import type { PantryItem, ShoppingItem } from './api/types'
+import { intl } from './i18n'
 import { formatQuantity } from './stores/recipes'
 import { t } from './messages'
 import { isoDate } from './weeks'
@@ -18,7 +19,7 @@ export function stepFor(unit: string): number {
   return unit === 'g' || unit === 'ml' ? 50 : 1
 }
 
-const num = (n: number) => n.toLocaleString('pl-PL', { maximumFractionDigits: 2 })
+const num = (n: number) => n.toLocaleString(intl, { maximumFractionDigits: 2 })
 
 export function formatAmount(quantity: number, unit: string): string {
   if (quantity >= 1000 && unit === 'g') return `${num(quantity / 1000)} kg`

@@ -122,3 +122,65 @@ func TestMigration0008SplitsRedOnion(t *testing.T) {
 		t.Fatalf("openrouter columns: %q %q %v", key, model, err)
 	}
 }
+
+func TestMigration0009SingularPotato(t *testing.T) {
+	ctx := context.Background()
+	db := storetest.OpenRaw(t)
+	if err := db.MigrateTo(ctx, "0008_assistant"); err != nil {
+		t.Fatal(err)
+	}
+	ex := func(q string, args ...any) {
+		t.Helper()
+		if _, err := db.ExecContext(ctx, db.Rebind(q), args...); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+	// h1 has the old seed product: plural name, singular alias.
+	ex(`INSERT INTO household (id, name, created_at, products_seeded) VALUES ('h1', 'Dom', 1, 1)`)
+	ex(`INSERT INTO product (id, household_id, name, normalized_name, created_at, updated_at) VALUES ('z1', 'h1', 'ziemniaki', 'ziemniaki', 1, 1)`)
+	for _, a := range []string{"ziemniak", "ziemniaków", "kartofle"} {
+		ex(`INSERT INTO product_alias (household_id, product_id, alias) VALUES ('h1', 'z1', ?)`, a)
+	}
+	// h2 already has a separate "ziemniak" product: nothing may change.
+	ex(`INSERT INTO household (id, name, created_at, products_seeded) VALUES ('h2', 'Dom2', 1, 1)`)
+	ex(`INSERT INTO product (id, household_id, name, normalized_name, created_at, updated_at) VALUES ('z2', 'h2', 'ziemniaki', 'ziemniaki', 1, 1)`)
+	ex(`INSERT INTO product (id, household_id, name, normalized_name, created_at, updated_at) VALUES ('z3', 'h2', 'ziemniak', 'ziemniak', 1, 1)`)
+
+	if err := db.Migrate(ctx); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	name := func(id string) string {
+		t.Helper()
+		var n string
+		if err := db.QueryRowContext(ctx, db.Rebind(`SELECT normalized_name FROM product WHERE id = ?`), id).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	aliases := func(id string) map[string]bool {
+		t.Helper()
+		rows, err := db.QueryContext(ctx, db.Rebind(`SELECT alias FROM product_alias WHERE product_id = ?`), id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		out := map[string]bool{}
+		for rows.Next() {
+			var a string
+			if err := rows.Scan(&a); err != nil {
+				t.Fatal(err)
+			}
+			out[a] = true
+		}
+		return out
+	}
+	if got := name("z1"); got != "ziemniak" {
+		t.Fatalf("h1 product name = %q, want ziemniak", got)
+	}
+	if a := aliases("z1"); !a["ziemniaki"] || a["ziemniak"] || !a["kartofle"] || !a["ziemniaków"] {
+		t.Fatalf("h1 aliases = %v", a)
+	}
+	if name("z2") != "ziemniaki" || name("z3") != "ziemniak" {
+		t.Fatal("h2 products must stay as they were")
+	}
+}
