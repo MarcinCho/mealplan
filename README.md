@@ -53,6 +53,7 @@ Dla programistów:
 - [Kodeks postępowania](CODE_OF_CONDUCT.md)
 - [Polityka bezpieczeństwa](SECURITY.md)
 - [Lista zmian](CHANGELOG.md)
+- [Roadmapa](docs/roadmap.md)
 
 ## Licencja
 
