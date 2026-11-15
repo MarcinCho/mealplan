@@ -9,6 +9,8 @@ export const en: Messages = {
   passwordHint: 'At least 12 characters',
   displayName: 'Name',
   householdName: 'Household name',
+  householdSettings: 'Household settings',
+  householdNameAdminOnly: 'Only an administrator can rename the household.',
   signIn: 'Sign in',
   loginTitle: 'Sign in',
   signOut: 'Sign out',

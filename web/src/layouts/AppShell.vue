@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useDisplay, useTheme } from 'vuetify'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSession } from '../stores/session'
 import { useNotice } from '../stores/notice'
 import { t } from '../messages'
 import { loadChoice, PALETTES, saveChoice, themeName, type Choice, type PaletteId } from '../theme'
 import { initial } from '../today'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import BrandLogo from '../components/BrandLogo.vue'
 
 const { mdAndUp } = useDisplay()
@@ -14,6 +14,10 @@ const theme = useTheme()
 const session = useSession()
 const notice = useNotice()
 const router = useRouter()
+const route = useRoute()
+// The account menu stays open while picking colours, but closes once one of its links opens a page.
+const menuOpen = ref(false)
+watch(() => route.fullPath, () => (menuOpen.value = false))
 
 const items = [
   { title: t.navToday, icon: 'mdi-home-variant-outline', active: 'mdi-home-variant', to: { name: 'home' } },
@@ -55,7 +59,7 @@ async function logout() {
   <v-app-bar color="background" scroll-behavior="elevate" scroll-threshold="8" class="shell-bar">
     <v-app-bar-title class="brand-title"><BrandLogo :icon="!mdAndUp" :height="28" /></v-app-bar-title>
     <span class="text-body-2 text-medium-emphasis mr-2 d-none d-sm-inline">{{ session.me?.household.name }}</span>
-    <v-menu :close-on-content-click="false">
+    <v-menu v-model="menuOpen" :close-on-content-click="false">
       <template #activator="{ props }">
         <v-btn v-bind="props" icon variant="text" :title="t.account" class="mr-2">
           <span class="avatar-btn">{{ initial(session.me?.user.displayName ?? '') }}</span>
@@ -81,6 +85,7 @@ async function logout() {
         <v-list-item prepend-icon="mdi-theme-light-dark" :title="t.theme" rounded="lg" @click="toggleTheme" />
         <v-list-item prepend-icon="mdi-account-cog-outline" :title="t.accountTitle" :to="{ name: 'account' }" rounded="lg" />
         <v-list-item prepend-icon="mdi-food-apple-outline" :title="t.navProducts" :to="{ name: 'products' }" rounded="lg" />
+        <v-list-item prepend-icon="mdi-home-edit-outline" :title="t.householdSettings" :to="{ name: 'household' }" rounded="lg" />
         <v-list-item prepend-icon="mdi-account-group-outline" :title="t.navMembers" :to="{ name: 'members' }" rounded="lg" />
         <v-list-item prepend-icon="mdi-logout" :title="t.signOut" rounded="lg" @click="logout" />
       </v-list>

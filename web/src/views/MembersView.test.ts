@@ -4,7 +4,6 @@ import MembersView from './MembersView.vue'
 import { buttonByText, fakeApi, flush, mountWith, type Routes } from '../test/mount'
 import { t } from '../messages'
 import { useSession } from '../stores/session'
-import { useMealPrepStore } from '../stores/mealprep'
 
 const api = vi.hoisted(() => ({ current: (async () => ({})) as (m: string, p: string, b?: unknown) => Promise<unknown> }))
 vi.mock('../api/client', () => ({ api: (m: string, p: string, b?: unknown) => api.current(m, p, b), ApiError: class extends Error {} }))
@@ -18,8 +17,6 @@ function routes(extra: Routes = {}): Routes {
   return {
     'GET /household/members': () => members,
     'GET /auth/invites': () => [],
-    'GET /household/settings': () => ({ portionsPerMeal: 3 }),
-    'PUT /household/settings': (b) => b,
     'DELETE /household/members/u2': () => null,
     ...extra,
   }
@@ -47,27 +44,11 @@ afterEach(() => {
 })
 
 describe('MembersView', () => {
-  it('loads the household portions and saves a new value', async () => {
+  it('keeps household settings off the members page', async () => {
     const { w, calls } = await show('admin')
-    const input = w.find('input[type="number"]').element as HTMLInputElement
-    expect(input.value).toBe('3')
-    await typeInto(input, '4')
-    buttonByText(t.save).click()
-    await flush()
-    await flush()
-    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ portionsPerMeal: 4 })
-    expect(useMealPrepStore().portionsPerMeal).toBe(4)
-    expect(buttonByText(t.settingSaved)).toBeTruthy()
-  })
-
-  it('refuses portions outside 1-20', async () => {
-    const { w, calls } = await show('admin')
-    const input = w.find('input[type="number"]').element as HTMLInputElement
-    for (const v of ['0', '21', '2.5']) {
-      await typeInto(input, v)
-      expect(buttonByText(t.save).disabled).toBe(true)
-    }
-    expect(calls.some((c) => c.method === 'PUT')).toBe(false)
+    expect(w.text()).not.toContain(t.portionsPerMeal)
+    expect(w.text()).not.toContain(t.assistantTitle)
+    expect(calls.some((c) => c.path === '/household/settings')).toBe(false)
   })
 
   it('asks for a second click before removing a member', async () => {

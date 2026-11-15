@@ -3,8 +3,6 @@ import { intl } from '../i18n'
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api/client'
 import { copyText } from '../clipboard'
-import AssistantSettings from '../components/AssistantSettings.vue'
-import { useMealPrepStore } from '../stores/mealprep'
 import { useSession } from '../stores/session'
 import { errorText, t } from '../messages'
 
@@ -12,22 +10,6 @@ interface Member { id: string; login: string; displayName: string; role: 'admin'
 interface Invite { id: string; role: 'admin' | 'member'; expiresAt: string }
 
 const session = useSession()
-const prep = useMealPrepStore()
-const portions = ref<number | string>(1)
-const portionsSaved = ref(false)
-const portionsOk = computed(() => Number.isInteger(Number(portions.value)) && Number(portions.value) >= 1 && Number(portions.value) <= 20)
-
-async function savePortions() {
-  if (!portionsOk.value) return
-  error.value = ''
-  portionsSaved.value = false
-  try {
-    await prep.savePortionsPerMeal(Number(portions.value))
-    portionsSaved.value = true
-  } catch (e) {
-    error.value = errorText(e)
-  }
-}
 const members = ref<Member[]>([])
 const invites = ref<Invite[]>([])
 const newRole = ref<'admin' | 'member'>('member')
@@ -44,16 +26,6 @@ async function load() {
   try {
     members.value = await api<Member[]>('GET', '/household/members')
     if (session.isAdmin) invites.value = await api<Invite[]>('GET', '/auth/invites')
-  } catch (e) {
-    error.value = errorText(e)
-  }
-}
-
-async function loadPortions() {
-  try {
-    const res = await api<{ portionsPerMeal: number }>('GET', '/household/settings')
-    prep.portionsPerMeal = res.portionsPerMeal
-    portions.value = res.portionsPerMeal
   } catch (e) {
     error.value = errorText(e)
   }
@@ -119,7 +91,6 @@ async function copy() {
 
 onMounted(() => {
   void load()
-  void loadPortions()
 })
 </script>
 
@@ -158,25 +129,6 @@ onMounted(() => {
       </template>
     </v-list-item>
   </v-list>
-
-  <div class="d-flex flex-wrap ga-3 align-start mb-8">
-    <v-text-field
-      v-model="portions"
-      type="number"
-      min="1"
-      max="20"
-      :label="t.portionsPerMeal"
-      :hint="t.portionsPerMealHint"
-      persistent-hint
-      style="max-width: 260px"
-      :error="!portionsOk"
-      @update:model-value="portionsSaved = false"
-      @keydown.enter="savePortions"
-    />
-    <v-btn color="primary" class="mt-1" :disabled="!portionsOk" @click="savePortions">{{ portionsSaved ? t.settingSaved : t.save }}</v-btn>
-  </div>
-
-  <AssistantSettings />
 
   <template v-if="session.isAdmin">
     <h2 class="text-h6 mb-2">{{ t.invites }}</h2>

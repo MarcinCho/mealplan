@@ -8,6 +8,8 @@ export const pl = {
   passwordHint: 'Co najmniej 12 znaków',
   displayName: 'Imię',
   householdName: 'Nazwa gospodarstwa',
+  householdSettings: 'Ustawienia gospodarstwa',
+  householdNameAdminOnly: 'Nazwę gospodarstwa zmienia administrator.',
   signIn: 'Zaloguj',
   loginTitle: 'Zaloguj się',
   signOut: 'Wyloguj',

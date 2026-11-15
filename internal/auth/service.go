@@ -123,9 +123,9 @@ func (s *Service) Setup(ctx context.Context, in SetupInput) (SessionGrant, error
 	if err := validateProfile(login, in.DisplayName); err != nil {
 		return SessionGrant{}, err
 	}
-	name := strings.TrimSpace(in.HouseholdName)
-	if n := utf8.RuneCountInString(name); n < 1 || n > 100 {
-		return SessionGrant{}, fmt.Errorf("%w: household name must be 1 to 100 characters", ErrInvalidInput)
+	name, err := householdName(in.HouseholdName)
+	if err != nil {
+		return SessionGrant{}, err
 	}
 	if err := ValidatePassword(in.Password); err != nil {
 		return SessionGrant{}, err
@@ -426,6 +426,30 @@ func (s *Service) verifyPassword(ctx context.Context, password, encoded string) 
 }
 
 var ErrLastAdmin = errors.New("auth: last admin")
+
+// householdName trims the name and checks its length (1 to 100 characters).
+func householdName(raw string) (string, error) {
+	name := strings.TrimSpace(raw)
+	if n := utf8.RuneCountInString(name); n < 1 || n > 100 {
+		return "", fmt.Errorf("%w: household name must be 1 to 100 characters", ErrInvalidInput)
+	}
+	return name, nil
+}
+
+// RenameHousehold changes the household's name; only an administrator may do it.
+func (s *Service) RenameHousehold(ctx context.Context, p Principal, raw string) (string, error) {
+	if err := requireAdmin(p); err != nil {
+		return "", err
+	}
+	name, err := householdName(raw)
+	if err != nil {
+		return "", err
+	}
+	if err := s.st.SetHouseholdName(ctx, p.HouseholdID, name); err != nil {
+		return "", err
+	}
+	return name, nil
+}
 
 func (s *Service) ChangeRole(ctx context.Context, p Principal, userID string, role domain.Role) error {
 	if err := requireAdmin(p); err != nil {
