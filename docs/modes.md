@@ -33,4 +33,4 @@ flowchart TD
 
 Czasy podajemy w formacie Go (`168h`, `30m`).
 
-Klucz OpenRouter dla asystenta produktów nie jest zmienną środowiskową: administrator ustawia go w aplikacji (Domownicy → „Asystent produktów (OpenRouter)”), osobno dla każdego gospodarstwa. Zobacz [Bezpieczeństwo](security.md).
+Klucz OpenRouter dla asystenta produktów nie jest zmienną środowiskową: administrator ustawia go w aplikacji (menu konta → Ustawienia gospodarstwa → „Asystent produktów (OpenRouter)”), osobno dla każdego gospodarstwa. Zobacz [Bezpieczeństwo](security.md).

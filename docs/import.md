@@ -128,7 +128,7 @@ Po analizie edytor porównuje szkic z listą przepisów. Za duplikat uważany je
 
 ## Podpowiedzi produktów (asystent)
 
-Opcjonalnie gospodarstwo może podać klucz OpenRouter (ekran Domownicy, sekcja asystenta; ustawia i usuwa go tylko administrator). Bez klucza import działa jak dotąd.
+Opcjonalnie gospodarstwo może podać klucz OpenRouter (menu konta → Ustawienia gospodarstwa, sekcja asystenta; ustawia i usuwa go tylko administrator). Bez klucza import działa jak dotąd.
 
 Z kluczem edytor po analizie wysyła składniki bez dopasowanego produktu do modelu i pokazuje przy nich propozycję: istniejący produkt albo nowy produkt (z wartościami na 100 g). Nic nie jest zapisywane, dopóki nie klikniesz „Zatwierdź"; „Odrzuć" zostawia składnik bez produktu (decyzje zapadają osobno przy każdym składniku). Gdy model jest niedostępny (zły klucz, brak środków, błąd sieci), edytor pokazuje informację „Podpowiedzi produktów są teraz niedostępne…" i można zapisać przepis normalnie.
 

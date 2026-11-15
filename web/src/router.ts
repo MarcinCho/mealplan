@@ -11,6 +11,7 @@ const AccountView = () => import('./views/AccountView.vue')
 const ImportView = () => import('./views/ImportView.vue')
 const InviteAcceptView = () => import('./views/InviteAcceptView.vue')
 const MembersView = () => import('./views/MembersView.vue')
+const HouseholdView = () => import('./views/HouseholdView.vue')
 const MealPrepView = () => import('./views/MealPrepView.vue')
 const PantryView = () => import('./views/PantryView.vue')
 const PlanView = () => import('./views/PlanView.vue')
@@ -46,6 +47,7 @@ export const router = createRouter({
         { path: 'products', name: 'products', component: ProductsView },
         { path: 'products/check', name: 'product-check', component: ProductCheckView },
         { path: 'members', name: 'members', component: MembersView },
+        { path: 'household', name: 'household', component: HouseholdView },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },

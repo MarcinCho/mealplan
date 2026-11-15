@@ -250,25 +250,53 @@ func (s *Server) handleDeleteFreezer(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// householdSettingsJSON is the household-wide settings: the name and the default meal prep portions.
+type householdSettingsJSON struct {
+	Name            string `json:"name"`
+	PortionsPerMeal int    `json:"portionsPerMeal"`
+}
+
 func (s *Server) handleGetHouseholdSettings(w http.ResponseWriter, r *http.Request) {
-	n, err := s.deps.MealPrep.PortionsPerMeal(r.Context(), principalFrom(r).HouseholdID)
+	p := principalFrom(r)
+	n, err := s.deps.MealPrep.PortionsPerMeal(r.Context(), p.HouseholdID)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]int{"portionsPerMeal": n})
+	writeJSON(w, http.StatusOK, householdSettingsJSON{Name: p.HouseholdName, PortionsPerMeal: n})
 }
 
+// handlePutHouseholdSettings changes the fields that are sent: any member sets the portions, only an
+// administrator renames the household.
 func (s *Server) handlePutHouseholdSettings(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		PortionsPerMeal int `json:"portionsPerMeal"`
+		Name            *string `json:"name"`
+		PortionsPerMeal *int    `json:"portionsPerMeal"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	if err := s.deps.MealPrep.SetPortionsPerMeal(r.Context(), principalFrom(r).HouseholdID, in.PortionsPerMeal); err != nil {
+	p := principalFrom(r)
+	out := householdSettingsJSON{Name: p.HouseholdName}
+	if in.Name != nil {
+		name, err := s.auth.RenameHousehold(r.Context(), p, *in.Name)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		out.Name = name
+	}
+	if in.PortionsPerMeal != nil {
+		if err := s.deps.MealPrep.SetPortionsPerMeal(r.Context(), p.HouseholdID, *in.PortionsPerMeal); err != nil {
+			s.fail(w, r, err)
+			return
+		}
+	}
+	n, err := s.deps.MealPrep.PortionsPerMeal(r.Context(), p.HouseholdID)
+	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]int{"portionsPerMeal": in.PortionsPerMeal})
+	out.PortionsPerMeal = n
+	writeJSON(w, http.StatusOK, out)
 }

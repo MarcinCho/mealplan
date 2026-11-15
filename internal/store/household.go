@@ -42,3 +42,15 @@ func (s *Store) SetAssistantSettings(ctx context.Context, householdID, key, mode
 	}
 	return nil
 }
+
+// SetHouseholdName renames the household; an unknown household is ErrNotFound.
+func (s *Store) SetHouseholdName(ctx context.Context, householdID, name string) error {
+	res, err := s.db.ExecContext(ctx, s.db.Rebind(`UPDATE household SET name = ? WHERE id = ?`), name, householdID)
+	if err != nil {
+		return mapErr(err)
+	}
+	if c, _ := res.RowsAffected(); c == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

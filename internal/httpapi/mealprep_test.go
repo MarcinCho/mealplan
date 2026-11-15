@@ -272,6 +272,43 @@ func TestHouseholdSettings(t *testing.T) {
 	}
 }
 
+func TestHouseholdRename(t *testing.T) {
+	e := newEnv(t)
+	admin := e.client(t)
+	setup(t, admin)
+	member, _ := inviteMember(t, e, admin, "mia")
+	var s struct {
+		Name            string `json:"name"`
+		PortionsPerMeal int    `json:"portionsPerMeal"`
+	}
+	rec := admin.do("PUT", "/api/v1/household/settings", map[string]any{"name": "  Dom nad jeziorem  "})
+	decode(t, rec, &s)
+	if rec.Code != 200 || s.Name != "Dom nad jeziorem" || s.PortionsPerMeal != 2 {
+		t.Fatalf("rename: %d %s", rec.Code, rec.Body)
+	}
+	var me struct {
+		Household struct{ Name string } `json:"household"`
+	}
+	decode(t, member.do("GET", "/api/v1/auth/me", nil), &me)
+	if me.Household.Name != "Dom nad jeziorem" {
+		t.Fatalf("me after rename: %+v", me)
+	}
+	if rec := member.do("PUT", "/api/v1/household/settings", map[string]any{"name": "Mój dom"}); rec.Code != 403 {
+		t.Fatalf("member rename: %d %s", rec.Code, rec.Body)
+	}
+	// A member still sets the portions, and a portions-only PUT keeps the name.
+	rec = member.do("PUT", "/api/v1/household/settings", map[string]any{"portionsPerMeal": 4})
+	decode(t, rec, &s)
+	if rec.Code != 200 || s.PortionsPerMeal != 4 || s.Name != "Dom nad jeziorem" {
+		t.Fatalf("member portions: %d %s", rec.Code, rec.Body)
+	}
+	for _, n := range []string{"", "   ", strings.Repeat("x", 101)} {
+		if rec := admin.do("PUT", "/api/v1/household/settings", map[string]any{"name": n}); rec.Code != 422 {
+			t.Errorf("name %q: %d", n, rec.Code)
+		}
+	}
+}
+
 func TestOutEntryJSON(t *testing.T) {
 	e := newEnv(t)
 	c := e.client(t)

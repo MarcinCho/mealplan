@@ -57,7 +57,7 @@ Wszystkie trasy wymagają sesji, a metody modyfikujące także `X-CSRF-Token`. W
 | `POST /prep/dishes/{id}/freeze` | `{"portions", "frozenOn"}` (`frozenOn` opcjonalne, `RRRR-MM-DD`, domyślnie dziś na serwerze; aplikacja wysyła lokalną datę przeglądarki): przenosi pozostałe porcje do zamrażalki; zwraca pozycję zamrażalki |
 | `GET /freezer`, `POST /freezer` | pozycje zamrażalki (`{"items"}`) i dodanie ręczne: `portions`, opcjonalnie `recipeId`, `label` (domyślnie tytuł przepisu), `frozenOn` (domyślnie dziś) |
 | `PUT/DELETE /freezer/{id}` | zamiana i usunięcie pozycji; usunięcie pozycji z przydziałami daje `409 in_use` |
-| `GET/PUT /household/settings` | ustawienia gospodarstwa: `{"portionsPerMeal"}` (1-20, domyślnie 2) |
+| `GET/PUT /household/settings` | ustawienia gospodarstwa: `{"name", "portionsPerMeal"}`; `PUT` zmienia tylko przesłane pola. `portionsPerMeal` (1-20, domyślnie 2) ustawia każdy członek, `name` (1-100 znaków) tylko administrator (`403 forbidden`) |
 | `POST /products/{id}/assign` | `{"name", "recipeIds"}`: wiąże składniki o tej nazwie w podanych przepisach z produktem i zapamiętuje nazwę jako alias; zwraca `{"updated", "aliasAdded", "aliasConflict"}` (`aliasConflict` to nazwa produktu, który już ma ten alias, albo pusty tekst) |
 | `GET /products/{id}/usage` | `{"recipes", "pantry", "foodLog", "shopping"}`: liczba odwołań do produktu |
 | `POST /products/{id}/merge` | `{"absorbIds"}` (1-20): scala wskazane produkty w ten bez gubienia danych; zwraca `{"repointed": {"recipes", "pantry", "foodLog", "shopping"}, "skippedAliases"}`; nieznany albo już scalony produkt daje `404 not_found` |

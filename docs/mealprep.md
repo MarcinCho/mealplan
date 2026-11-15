@@ -29,7 +29,7 @@ Gospodarstwo robi zakupy w sobotę na niedzielne gotowanie i cały następny tyd
 
 ## Przydział do planu
 
-- „Przydziel" (albo rodzaj wpisu „Z meal prepu" w oknie dodawania posiłku) tworzy wpis planu oznaczony „z meal prepu" i zabiera porcje z dania. Domyślna liczba porcji to ustawienie gospodarstwa **„Porcji na posiłek"** (ekran Domownicy, od 1 do 20, domyślnie 2), ale przy konkretnym przydziale można ją zmienić.
+- „Przydziel" (albo rodzaj wpisu „Z meal prepu" w oknie dodawania posiłku) tworzy wpis planu oznaczony „z meal prepu" i zabiera porcje z dania. Domyślna liczba porcji to ustawienie gospodarstwa **„Porcji na posiłek"** (menu konta → Ustawienia gospodarstwa, od 1 do 20, domyślnie 2), ale przy konkretnym przydziale można ją zmienić.
 - Nie da się przydzielić więcej porcji, niż zostało.
 - Wpis z meal prepu widać na ekranie „Dziś" i w tygodniu jak inne posiłki; liczy się w podsumowaniu wartości odżywczych. Kucharza nie ma, bo posiłek jest już ugotowany.
 - Usunięcie wpisu oddaje porcje do miejsca, z którego pochodziły (danie albo zamrażalka).

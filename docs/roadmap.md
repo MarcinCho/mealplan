@@ -13,13 +13,13 @@ flowchart LR
 
 | # | Funkcja | Wielkość | Zależy od |
 |---|---|---|---|
-| 1 | Ustawienia gospodarstwa (w tym klucz OpenRouter) | S | — |
+| 1 | Ustawienia gospodarstwa (w tym klucz OpenRouter) — **zrobione** | S | — |
 | 2 | Widok przepisu do czytania i przeliczanie porcji | M | — |
 | 3 | Zdjęcia przepisów | M–L | 2 (zdjęcie pokazuje widok przepisu) |
 | 4 | Rozbudowany profil domownika | M | 1 (rozdzielenie ustawień gospodarstwa od osobistych) |
 | 5 | Porządki UX/UI | ciągłe | robione przy każdym punkcie, plus osobna lista |
 
-## 1. Ustawienia gospodarstwa
+## 1. Ustawienia gospodarstwa (zrobione)
 
 **Dziś:** liczba porcji na posiłek i klucz OpenRouter są na stronie Domownicy, razem z listą osób i zaproszeniami. Nie da się zmienić nazwy gospodarstwa.
 

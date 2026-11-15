@@ -135,10 +135,11 @@ Logi: `docker logs -f mealplan` (albo `docker compose logs -f`). Program loguje 
 
 - **Język:** przełącznik „Język / Language” jest pod formularzem logowania i na stronie Konto. Wybór zapamiętuje przeglądarka, domyślnie jest polski.
 - **Przepisy:** dodaj je w zakładce Przepisy, ręcznie albo przez Importuj (link lub wklejony tekst). Jeśli używasz Claude, pobierz tam umiejętność SKILL.md ([Import przepisów](import.md)).
-- **Plan:** zaplanuj tydzień w zakładce Plan. Wybierz, kto gotuje które danie i na ile porcji. Domyślną liczbę porcji na posiłek ustawisz w Domownikach.
+- **Plan:** zaplanuj tydzień w zakładce Plan. Wybierz, kto gotuje które danie i na ile porcji. Domyślną liczbę porcji na posiłek ustawisz w Ustawieniach gospodarstwa (menu konta).
 - **Spiżarnia:** wpisz, co masz w domu. Lista zakupów to odejmie ([Spiżarnia](pantry.md)).
 - **Zakupy:** wygeneruj listę w zakładce Zakupy, a po zakupach przenieś odhaczone pozycje do spiżarni.
 - **Meal prep:** jeśli gotujesz kilka dań naraz, zaplanuj sesję w zakładce Meal prep ([Meal prep](mealprep.md)).
 - **Kalorie:** włącz śledzenie i ustaw dzienny cel na stronie Konto ([Wartości odżywcze](nutrition.md)).
-- **Asystent produktów (opcjonalnie):** administrator wkleja klucz OpenRouter w Domownicy → „Asystent produktów (OpenRouter)” i klika „Sprawdź połączenie”. Klucz utworzysz na openrouter.ai w Settings → Keys. Bez klucza aplikacja działa normalnie.
+- **Asystent produktów (opcjonalnie):** administrator wkleja klucz OpenRouter w menu konta → Ustawienia gospodarstwa → „Asystent produktów (OpenRouter)” i klika „Sprawdź połączenie”. Klucz utworzysz na openrouter.ai w Settings → Keys. Bez klucza aplikacja działa normalnie.
+- **Ustawienia gospodarstwa:** nazwa gospodarstwa (zmienia administrator), porcje na posiłek i asystent produktów.
 - **Domownicy:** zaproś resztę rodziny.

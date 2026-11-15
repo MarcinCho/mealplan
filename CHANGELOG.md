@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Ustawienia gospodarstwa
+
+- Nowa strona „Ustawienia gospodarstwa” w menu konta: nazwa gospodarstwa (zmienia tylko administrator), porcje na posiłek i asystent produktów (klucz OpenRouter). Strona Domownicy zostaje tylko dla osób, ról i zaproszeń.
+- Menu konta zamyka się po przejściu na inną stronę (wcześniej zostawało otwarte i zasłaniało Konto, Produkty i Domowników).
+- `PUT /household/settings` zmienia tylko przesłane pola i przyjmuje `name` (1–100 znaków, `403` dla nie-administratora); `GET` zwraca też nazwę.
+
 ### Wersja angielska
 
 - Interfejs po angielsku: przełącznik „Język / Language” na stronie logowania i na stronie Konto, zapamiętywany w przeglądarce (domyślnie polski). Tłumaczone są wszystkie teksty, komunikaty błędów, daty i liczby (`en-GB`), odmiana porcji i jednostek kuchennych (łyżka → tbsp); także wbudowane teksty Vuetify. Przepisy, nazwy produktów i dokumentacja zostają po polsku.
