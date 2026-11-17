@@ -14,6 +14,9 @@ export interface Palette {
   dark: ThemeDefinition
 }
 
+export const FONT_TEXT = "'Red Hat Text', ui-sans-serif, system-ui, sans-serif"
+export const FONT_DISPLAY = "'Red Hat Display', 'Red Hat Text', ui-sans-serif, sans-serif"
+
 const STORAGE_KEY = 'mealplan.theme'
 
 const statusLight = { error: '#B3261E', info: '#1565C0', success: '#2E7D32', warning: '#9A5B00' }
@@ -23,10 +26,21 @@ function define(dark: boolean, colors: Record<string, string>): ThemeDefinition 
   // accent defaults to the primary pair so every palette defines it (progress bars, highlights).
   return {
     dark,
-    colors: { ...(dark ? statusDark : statusLight), accent: colors.primary, 'on-accent': colors['on-primary'], ...colors },
+    colors: {
+      ...(dark ? statusDark : statusLight),
+      accent: colors.primary,
+      'on-accent': colors['on-primary'],
+      // Vuetify merges into its built-in theme, which would leave on-surface-variant at #EEEEEE (light) / #000000 (dark).
+      'on-surface-variant': colors['on-surface'] ?? (dark ? '#FFFFFF' : '#000000'),
+      ...colors,
+    },
     // Vuetify's light default (0.6) leaves secondary text and field labels near 3:1 on the tinted
     // backgrounds; these keep them at WCAG AA (4.5:1) in every palette.
-    variables: dark ? { 'medium-emphasis-opacity': 0.74 } : { 'medium-emphasis-opacity': 0.8 },
+    variables: {
+      'medium-emphasis-opacity': dark ? 0.74 : 0.8,
+      'font-text': FONT_TEXT,
+      'font-display': FONT_DISPLAY,
+    },
   }
 }
 
@@ -45,6 +59,8 @@ export const PALETTES: Palette[] = [
       bar: '#233831', 'on-bar': '#EEF4EC',
       accent: '#7B9A68', 'on-accent': '#233831',
       'on-background': '#233831', 'on-surface': '#233831',
+      // note: notebook card header band, always set apart from the card.
+      note: '#233831', 'on-note': '#EEF4EC',
     }),
     dark: define(true, {
       background: '#141A17', surface: '#1E2622', 'surface-variant': '#2A3530',
@@ -53,22 +69,25 @@ export const PALETTES: Palette[] = [
       bar: '#1E2622', 'on-bar': '#EAEFE9',
       accent: '#9DC289', 'on-accent': '#141A17',
       'on-background': '#EAEFE9', 'on-surface': '#EAEFE9',
+      note: '#C9DCBE', 'on-note': '#141A17',
     }),
   },
   {
     id: 'classic',
     swatch: ['#2E7D32', '#546E7A', '#81C784', '#FFFFFF'],
     light: define(false, {
-      background: '#FFFFFF', surface: '#FFFFFF',
+      background: '#FFFFFF', surface: '#FFFFFF', 'surface-variant': '#ECEFF1',
       primary: '#2E7D32', 'on-primary': '#FFFFFF',
       secondary: '#546E7A', 'on-secondary': '#FFFFFF',
       bar: '#FFFFFF', 'on-bar': '#1F1F1F',
+      note: '#37474F', 'on-note': '#FFFFFF',
     }),
     dark: define(true, {
-      background: '#121212', surface: '#212121',
+      background: '#121212', surface: '#212121', 'surface-variant': '#2C2C2C',
       primary: '#81C784', 'on-primary': '#0B2A0D',
       secondary: '#90A4AE', 'on-secondary': '#10181C',
       bar: '#212121', 'on-bar': '#EDEDED',
+      note: '#CFD8DC', 'on-note': '#1A2327',
     }),
   },
   {
@@ -79,12 +98,14 @@ export const PALETTES: Palette[] = [
       primary: '#500071', 'on-primary': '#FFFFFF',
       secondary: '#8A2A78', 'on-secondary': '#FFFFFF',
       bar: '#290044', 'on-bar': '#EEE3B0',
+      note: '#290044', 'on-note': '#EEE3B0',
     }),
     dark: define(true, {
       background: '#1A0030', surface: '#290044', 'surface-variant': '#3A0A5A',
       primary: '#EEE3B0', 'on-primary': '#290044',
       secondary: '#D08BC3', 'on-secondary': '#2B0A26',
       bar: '#22003A', 'on-bar': '#EEE3B0',
+      note: '#EEE3B0', 'on-note': '#290044',
     }),
   },
   {
@@ -95,12 +116,14 @@ export const PALETTES: Palette[] = [
       primary: '#A55704', 'on-primary': '#FFFFFF',
       secondary: '#09251C', 'on-secondary': '#F8EADC',
       bar: '#09251C', 'on-bar': '#F3D2AF',
+      note: '#09251C', 'on-note': '#F3D2AF',
     }),
     dark: define(true, {
       background: '#06180F', surface: '#0F3326', 'surface-variant': '#1A4636',
       primary: '#F3D2AF', 'on-primary': '#09251C',
       secondary: '#E0913F', 'on-secondary': '#2A1600',
       bar: '#09251C', 'on-bar': '#F3D2AF',
+      note: '#F3D2AF', 'on-note': '#09251C',
     }),
   },
   {
@@ -111,12 +134,14 @@ export const PALETTES: Palette[] = [
       primary: '#27374D', 'on-primary': '#FFFFFF',
       secondary: '#526D82', 'on-secondary': '#FFFFFF',
       bar: '#27374D', 'on-bar': '#DDE6ED',
+      note: '#27374D', 'on-note': '#DDE6ED',
     }),
     dark: define(true, {
       background: '#17202C', surface: '#27374D', 'surface-variant': '#33475F',
       primary: '#9DB2BF', 'on-primary': '#14202E',
       secondary: '#7FA0B8', 'on-secondary': '#0E1A26',
       bar: '#1F2D41', 'on-bar': '#DDE6ED',
+      note: '#DDE6ED', 'on-note': '#27374D',
     }),
   },
 ]

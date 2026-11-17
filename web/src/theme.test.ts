@@ -120,8 +120,74 @@ describe('palettes', () => {
     }
   })
 
+  const fg = (c: Record<string, string>, key: string, dark: boolean) => c[key] ?? (dark ? '#FFFFFF' : '#000000')
+  const hex = /^#[0-9A-Fa-f]{6}$/
+
+  it('registers ten themes', () => {
+    expect(Object.keys(VUETIFY_THEMES)).toHaveLength(10)
+  })
+
+  it('defines the notebook colors in every theme', () => {
+    for (const [name, def] of Object.entries(VUETIFY_THEMES)) {
+      const c = def.colors as Record<string, string>
+      for (const key of ['surface-variant', 'on-surface-variant', 'note', 'on-note']) {
+        expect(c[key], `${name}.${key}`).toMatch(hex)
+      }
+    }
+  })
+
+  it('gives classic its own surface-variant', () => {
+    expect((VUETIFY_THEMES.light.colors as Record<string, string>)['surface-variant']).not.toBe('#424242')
+    expect((VUETIFY_THEMES.dark.colors as Record<string, string>)['surface-variant']).not.toBe('#c8c8c8')
+  })
+
+  it('keeps the Mealplan note header dark green', () => {
+    expect((VUETIFY_THEMES['mealplan-light'].colors as Record<string, string>).note).toBe('#233831')
+  })
+
+  it('keeps notebook text readable (WCAG AA)', () => {
+    for (const [name, def] of Object.entries(VUETIFY_THEMES)) {
+      const c = def.colors as Record<string, string>
+      const onSurface = fg(c, 'on-surface', !!def.dark)
+      expect(contrast(onSurface, c.surface), `${name} on-surface/surface`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(onSurface, c.background), `${name} on-surface/background`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(onSurface, c['surface-variant']), `${name} on-surface/surface-variant`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(c['on-surface-variant'], c['surface-variant']), `${name} on-surface-variant`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(c['on-note'], c.note), `${name} on-note`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(c['on-primary'], c.primary), `${name} on-primary`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('sets interface elements apart (3:1)', () => {
+    for (const [name, def] of Object.entries(VUETIFY_THEMES)) {
+      const c = def.colors as Record<string, string>
+      expect(contrast(c.note, c.surface), `${name} note`).toBeGreaterThanOrEqual(3)
+      expect(contrast(c.success, c.surface), `${name} success`).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('keeps the grid tint visible but quiet', () => {
+    for (const [name, def] of Object.entries(VUETIFY_THEMES)) {
+      const c = def.colors as Record<string, string>
+      const r = contrast(c['surface-variant'], c.surface)
+      expect(r, `${name} grid`).toBeGreaterThanOrEqual(1.1)
+      expect(r, `${name} grid`).toBeLessThanOrEqual(1.6)
+    }
+  })
+
   it('offers the Mealplan brand palette first and four others, each with swatches for the picker', () => {
     expect(PALETTES.map((p) => p.id)).toEqual(['mealplan', 'classic', 'plum', 'earth', 'navy'])
     for (const p of PALETTES) expect(p.swatch).toHaveLength(4)
+  })
+})
+
+describe('fonts', () => {
+  it('uses Red Hat Text for body text and Red Hat Display for headings in every theme', () => {
+    for (const p of PALETTES) {
+      for (const def of [p.light, p.dark]) {
+        expect(String(def.variables?.['font-text'])).toMatch(/^'Red Hat Text',/)
+        expect(String(def.variables?.['font-display'])).toMatch(/^'Red Hat Display',/)
+      }
+    }
   })
 })

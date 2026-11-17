@@ -21,7 +21,7 @@ flowchart LR
 | 3 | Zdjęcia przepisów | M–L | 2 i 6 (zdjęcie pokazuje widok przepisu w nowym wyglądzie) |
 | 4 | Rozbudowany profil domownika (najpierw reset hasła przez administratora) | M | 1 (rozdzielenie ustawień gospodarstwa od osobistych) |
 | 5 | Porządki UX/UI | ciągłe | robione przy każdym punkcie, plus osobna lista |
-| 6 | Nowy wygląd („notes” w kolorach Mealplana) | L | 9 (decyzja o Vuetify 4) |
+| 6 | Nowy wygląd („notes” w kolorach Mealplana) — **zrobione** | L | 9 (decyzja o Vuetify 4) |
 | 7 | Dodatki: składniki przepisu do zakupów, zakupy na żywo, sekcja „Inne” | 3 × S | 2 |
 | 8 | Mealplan poza przeglądarką: aplikacja na ekranie telefonu, przypomnienia, plan w kalendarzu | M | najlepiej po 6 |
 | 9 | Porządki techniczne: końce linii, zależności, Vuetify 4 | S | — |
@@ -94,7 +94,7 @@ Robione przy każdym z punktów powyżej, a do tego osobna lista znanych niedoci
 - **Historia przeglądarki w edytorze:** po „Anuluj” przycisk „wstecz” otwiera znowu formularz. Zapis już tego nie robi; „Anuluj” i „Usuń” powinny działać tak samo.
 - **Lista do uzupełnienia:** zebranie Twoich uwag z codziennego używania, najlepiej ze zrzutami ekranu.
 
-## 6. Nowy wygląd
+## 6. Nowy wygląd (zrobione)
 
 **Dziś:** Vuetify w stylu Material 3 (pigułkowe przyciski, karty z ramką, duże zaokrąglenia), czcionka systemowa, pięć palet do wyboru.
 
@@ -107,8 +107,8 @@ Robione przy każdym z punktów powyżej, a do tego osobna lista znanych niedoci
 - stany ładowania i błędu dla nowych układów, których makiety nie rysują.
 
 **Do decyzji:**
-- Czy zostaje wersja ciemna i cztery zapasowe palety, czy nowy wygląd zastępuje wybór palet?
-- Czy przed tym punktem przechodzimy na Vuetify 4 (punkt 9)?
+- Czy zostaje wersja ciemna i cztery zapasowe palety, czy nowy wygląd zastępuje wybór palet? **Zostają** (wersja ciemna i cztery zapasowe palety).
+- Czy przed tym punktem przechodzimy na Vuetify 4 (punkt 9)? **Zostajemy na Vuetify 3**; Vuetify 4 to dalej punkt 9.
 
 ## 7. Dodatki: zakupy i przepisy
 

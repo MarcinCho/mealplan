@@ -5,12 +5,12 @@
 </template>
 
 <style>
-/* Material 3 buttons use sentence case, not Vuetify's shouting caps. Dialogs live outside .v-application,
+/* Buttons use sentence case, not Vuetify's shouting caps. Dialogs live outside .v-application,
    and the doubled class outranks Vuetify's rule whichever stylesheet loads last. */
 .v-btn.v-btn {
   text-transform: none;
   letter-spacing: 0;
-  font-weight: 600;
+  font-weight: 500;
 }
 /* An "off" switch keeps a visible track, so it reads as a control on light cards. */
 .v-switch .v-selection-control:not(.v-selection-control--dirty) .v-switch__track {
