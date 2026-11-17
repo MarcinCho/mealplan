@@ -1,6 +1,6 @@
 # Mealplan: nowy wygląd „notes” w aplikacji
 
-Data: 2026-11-17 · Status: do przeglądu · Punkt 6 z `docs/roadmap.md` · Wzorzec: `docs/design/2026-11-redesign/`
+Data: 2026-11-17 · Status: zatwierdzony i wdrożony (2026-11-17) · Punkt 6 z `docs/roadmap.md` · Wzorzec: `docs/design/2026-11-redesign/`
 
 ## 1. Po co
 

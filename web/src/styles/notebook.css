@@ -49,30 +49,31 @@ h1, h2, h3 {
 }
 
 /* ---------- shapes ---------- */
+/* The :root prefix outranks each Vuetify component stylesheet, which the built bundle loads after this file. */
 /* Buttons inside a group keep Vuetify's square inner corners; only the group's outer corners round. */
-.v-btn:not(.v-btn--icon):not(.v-btn-group .v-btn),
-.v-btn-group {
+:root .v-btn:not(.v-btn--icon):not(.v-btn-group .v-btn),
+:root .v-btn-group {
   border-radius: var(--mp-radius-control);
 }
-.v-card {
+:root .v-card {
   border-radius: var(--mp-radius-card);
 }
-.v-field,
-.v-chip,
-.v-alert {
+:root .v-field,
+:root .v-chip,
+:root .v-alert {
   border-radius: var(--mp-radius-control);
 }
-.v-menu > .v-overlay__content,
-.v-snackbar__wrapper,
-.v-dialog > .v-overlay__content,
-.v-menu > .v-overlay__content > .v-card,
-.v-dialog > .v-overlay__content > .v-card {
+:root .v-menu > .v-overlay__content,
+:root .v-snackbar__wrapper,
+:root .v-dialog > .v-overlay__content,
+:root .v-menu > .v-overlay__content > .v-card,
+:root .v-dialog > .v-overlay__content > .v-card {
   border-radius: var(--mp-radius-card);
 }
-.v-list {
+:root .v-list {
   border-radius: 0;
 }
-.v-main .v-list:not(.v-card .v-list) > .v-list-item + .v-list-item {
+:root .v-main .v-list:not(.v-card .v-list) > .v-list-item + .v-list-item {
   border-top: 1px solid var(--mp-line);
 }
 

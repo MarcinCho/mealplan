@@ -233,14 +233,13 @@ async function removeEntry() {
             </div>
             <template #action>
               <v-btn
-                :icon="e.done ? 'mdi-check' : undefined"
                 :color="e.done ? 'success' : undefined"
                 :variant="e.done ? 'flat' : 'outlined'"
                 :title="e.done ? t.markUndone : t.markDone"
                 :aria-label="`${e.done ? t.markUndone : t.markDone}: ${label(e)}`"
                 class="done-btn"
                 @click.stop="toggleDone(e)"
-              />
+              ><v-icon v-if="e.done" icon="mdi-check" /></v-btn>
             </template>
           </NoteRow>
           <NoteRow v-for="s in free" :key="s" :label="slotTitle(s)">
@@ -308,7 +307,7 @@ async function removeEntry() {
 .today-main { min-width: 0; padding-bottom: 80px; }
 .hero-title { overflow-wrap: anywhere; }
 .hero-facts { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--mp-rule); margin: -16px -16px 0; background: rgb(var(--v-theme-surface)); }
-.hero-fact { flex: 1 1 50%; display: flex; align-items: center; gap: 8px; padding: 12px 16px; min-height: 56px; border-right: 1px solid var(--mp-rule); }
+.hero-fact { flex: 1 1 50%; display: flex; align-items: center; gap: 8px; padding: 12px 16px; min-height: 56px; border-right: 1px solid var(--mp-line); }
 .hero-fact:last-child { border-right: 0; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 16px; }
 .hero-done { flex: 1 1 0; }
@@ -335,9 +334,9 @@ async function removeEntry() {
   font-family: var(--v-font-display); font-size: 1.125rem; font-weight: 600; line-height: 1.3;
 }
 .meal-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 4px; font-size: 0.8125rem; opacity: 0.85; }
-.done-btn { width: 44px; height: 44px; min-width: 44px; padding: 0; }
+.done-btn { width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: var(--mp-radius-control); }
 .free-btn {
-  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: transparent; color: inherit; font: inherit;
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; min-height: 44px; background: transparent; color: inherit; font: inherit;
   border: 1px dashed rgba(var(--v-theme-on-surface), 0.55); border-radius: var(--mp-radius-control); cursor: pointer;
 }
 .free-hint { margin-top: 4px; font-size: 0.8125rem; opacity: 0.7; }

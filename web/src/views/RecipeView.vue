@@ -121,7 +121,7 @@ onMounted(async () => {
             </template>
             <ul v-if="ingredients.length" class="list-plain">
               <li v-for="(i, n) in ingredients" :key="n" class="ingredient">
-                <span v-if="i.amount" class="ingredient__qty mp-num">{{ i.amount }}</span>{{ ' ' }}<span class="ingredient__name">{{ i.name }}<span v-if="i.note" class="ingredient__note text-medium-emphasis">{{ i.note }}</span></span>
+                <span class="ingredient__qty mp-num" :aria-hidden="i.amount ? undefined : 'true'">{{ i.amount }}</span>{{ ' ' }}<span class="ingredient__name">{{ i.name }}<template v-if="i.note">{{ ' ' }}<span class="ingredient__note text-medium-emphasis">{{ i.note }}</span></template></span>
               </li>
             </ul>
           </NoteCard>
@@ -130,7 +130,7 @@ onMounted(async () => {
         <div class="recipe-view__main">
           <template v-if="recipe.steps.length">
             <h2 class="text-h5 mb-2">{{ t.steps }}</h2>
-            <ol class="steps">
+            <ol class="steps" role="list">
               <li v-for="(s, n) in recipe.steps" :key="n">{{ s }}</li>
             </ol>
           </template>
@@ -159,17 +159,20 @@ onMounted(async () => {
   top: var(--aside-top);
   max-height: calc(100vh - var(--aside-top) - 16px);
   overflow-y: auto;
+  /* Room for the note card shadow, which the scroll container would otherwise clip. */
+  padding: 4px 8px 12px 4px;
+  margin: -4px -8px -12px -4px;
 }
 .stepper { display: flex; align-items: center; gap: 8px; }
 .step-btn { min-width: 44px; min-height: 44px; }
 .servings { min-width: 2ch; text-align: center; }
 .list-plain { list-style: none; padding: 0; margin: 0; }
-.ingredient { display: flex; gap: 0 12px; padding: 8px 0; border-bottom: 1px solid var(--mp-rule); }
+.ingredient { display: flex; gap: 0 12px; padding: 8px 0; border-bottom: 1px solid var(--mp-line); }
 .ingredient:last-child { border-bottom: 0; }
 .ingredient__qty { flex: 0 0 5.5em; text-align: right; font-weight: 500; white-space: nowrap; }
 .ingredient__name { flex: 1 1 auto; min-width: 0; font-size: 1.125rem; line-height: 1.3; }
 .ingredient__note { display: block; font-size: 0.875rem; }
-.steps { list-style: none; padding: 0; margin: 0; counter-reset: step; border-top: 1px solid var(--mp-line); }
-.steps > li { counter-increment: step; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--mp-rule); font-size: 1.125rem; line-height: 1.5; }
+.steps { list-style: none; padding: 0; margin: 0; counter-reset: step; border-top: 1px solid var(--mp-rule); }
+.steps > li { counter-increment: step; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--mp-line); font-size: 1.125rem; line-height: 1.5; }
 .steps > li::before { content: counter(step); font-size: 1.75rem; line-height: 1.1; font-variant-numeric: tabular-nums; font-family: var(--v-font-display); }
 </style>

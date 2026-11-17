@@ -19,13 +19,17 @@ describe('notebook.css', () => {
   it('defines the notebook shapes', () => {
     expect(css).toContain('--mp-radius-control: 6px')
     expect(css).toContain('--mp-radius-card: 10px')
-    for (const sel of ['.v-btn', '.v-card', '.v-field', '.v-chip', '.v-alert', '.v-menu > .v-overlay__content', '.v-snackbar__wrapper', '.v-dialog > .v-overlay__content']) {
+    // The :root prefix keeps the rules above Vuetify's component CSS, which the built bundle loads later.
+    for (const sel of [':root .v-btn:not', ':root .v-card', ':root .v-field', ':root .v-chip', ':root .v-alert', ':root .v-btn-group', ':root .v-menu > .v-overlay__content', ':root .v-snackbar__wrapper', ':root .v-dialog > .v-overlay__content', ':root .v-dialog > .v-overlay__content > .v-card', ':root .v-list']) {
       expect(css).toContain(sel)
     }
+    const shapeBlock = css.slice(css.indexOf('/* ---------- shapes'), css.indexOf('/* A plain flat button'))
+    const selectors = shapeBlock.replace(/\/\*[\s\S]*?\*\//g, '').split('{').slice(0, -1).flatMap((chunk) => chunk.split('}').pop()!.split(','))
+    for (const s of selectors) expect(s.trim()).toMatch(/^:root /)
   })
 
   it('leaves buttons inside a group square so only the group rounds its outer corners', () => {
-    expect(css).toContain('.v-btn:not(.v-btn--icon):not(.v-btn-group .v-btn)')
+    expect(css).toContain(':root .v-btn:not(.v-btn--icon):not(.v-btn-group .v-btn)')
   })
 
   it('bundles the fonts and never loads them from another server', () => {

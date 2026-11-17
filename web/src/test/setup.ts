@@ -1,3 +1,8 @@
+import { afterEach } from 'vitest'
+import { enableAutoUnmount } from '@vue/test-utils'
+
+enableAutoUnmount(afterEach)
+
 // jsdom lacks a few browser APIs Vuetify uses while mounting.
 class ResizeObserverStub {
   observe() {}
