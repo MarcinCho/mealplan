@@ -14,7 +14,7 @@ flowchart LR
 | # | Funkcja | Wielkość | Zależy od |
 |---|---|---|---|
 | 1 | Ustawienia gospodarstwa (w tym klucz OpenRouter) — **zrobione** | S | — |
-| 2 | Widok przepisu do czytania i przeliczanie porcji | M | — |
+| 2 | Widok przepisu do czytania i przeliczanie porcji — **zrobione** | M | — |
 | 3 | Zdjęcia przepisów | M–L | 2 (zdjęcie pokazuje widok przepisu) |
 | 4 | Rozbudowany profil domownika | M | 1 (rozdzielenie ustawień gospodarstwa od osobistych) |
 | 5 | Porządki UX/UI | ciągłe | robione przy każdym punkcie, plus osobna lista |
@@ -31,7 +31,7 @@ flowchart LR
 
 **Poza zakresem:** wiele gospodarstw na jedno konto.
 
-## 2. Widok przepisu do czytania i przeliczanie porcji
+## 2. Widok przepisu do czytania i przeliczanie porcji (zrobione)
 
 **Dziś:** kliknięcie przepisu otwiera od razu pełny formularz edycji ze wszystkimi polami: składnikami w kilku wierszach każdy, produktami i wartościami. Do gotowania to za dużo.
 
@@ -42,7 +42,7 @@ flowchart LR
 - Opcjonalnie: odhaczanie kroków i składników podczas gotowania oraz ekran, który nie gaśnie.
 
 **Do decyzji:**
-- Czy przeliczona liczba porcji ma się dać zapisać jako nowe „porcje bazowe” przepisu?
+- Czy przeliczona liczba porcji ma się dać zapisać jako nowe „porcje bazowe” przepisu? Nie: przeliczona liczba porcji się nie zapisuje, a porcje bazowe zmienia się w „Edytuj”.
 
 ## 3. Zdjęcia przepisów
 

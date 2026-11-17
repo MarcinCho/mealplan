@@ -197,7 +197,7 @@ async function removeEntry() {
                 variant="outlined"
                 size="large"
                 class="hero-ghost"
-                :to="{ name: 'recipe-edit', params: { id: hero.entry.recipeId } }"
+                :to="{ name: 'recipe', params: { id: hero.entry.recipeId }, query: { servings: String(hero.entry.servings) } }"
               >{{ t.openRecipe }}</v-btn>
             </div>
           </template>

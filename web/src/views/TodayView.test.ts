@@ -12,7 +12,7 @@ vi.mock('../api/client', () => ({ api: (m: string, p: string, b?: unknown) => ap
 
 const today = '2026-11-11' // a Wednesday; the week starts on 2026-11-09
 const entries: PlanEntry[] = [
-  { id: 'e1', date: today, slot: 'lunch', recipeId: 'r1', freeText: '', servings: 2, cookUserId: null, done: false, kind: 'meal' },
+  { id: 'e1', date: today, slot: 'lunch', recipeId: 'r1', freeText: '', servings: 4, cookUserId: null, done: false, kind: 'meal' },
   { id: 'e2', date: today, slot: 'dinner', recipeId: 'r1', freeText: '', servings: 2, cookUserId: null, done: false, kind: 'prep', prepDishId: 'd1' },
   { id: 'e3', date: today, slot: 'breakfast', recipeId: null, freeText: '', servings: 2, cookUserId: null, done: true, kind: 'out' },
 ]
@@ -41,7 +41,7 @@ async function show(r: Routes) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useSession().$patch({ me: { user: { id: 'u1', login: 'marc', displayName: 'Marc' }, household: { id: 'h1', name: 'Dom' }, role: 'admin' } as never, loaded: true })
-  const router = createRouter({ history: createMemoryHistory(), routes: ['setup','login','invite','home','plan','prep','recipes','recipe-import','recipe-new','recipe-edit','shopping','pantry','account','products','members'].map((name) => ({ name, path: `/${name}/:id?`, component: { template: '<div/>' } })) })
+  const router = createRouter({ history: createMemoryHistory(), routes: ['setup','login','invite','home','plan','prep','recipes','recipe-import','recipe-new','recipe','recipe-edit','shopping','pantry','account','products','members'].map((name) => ({ name, path: `/${name}/:id?`, component: { template: '<div/>' } })) })
   const w = mountWith(TodayView, { global: { plugins: [router] } }, pinia)
   for (let i = 0; i < 5; i++) await flush()
   return { w, calls: f.calls }
@@ -71,7 +71,14 @@ describe('TodayView', () => {
     for (let i = 0; i < 3; i++) await flush()
     const put = calls.find((c) => c.method === 'PUT')
     expect(put?.path).toBe('/plan/2026-11-09/entries/e1')
-    expect(put?.body).toMatchObject({ done: true, recipeId: 'r1', servings: 2, kind: 'meal' })
+    expect(put?.body).toMatchObject({ done: true, recipeId: 'r1', servings: 4, kind: 'meal' })
+  })
+
+  it('opens the recipe reading view at the planned servings', async () => {
+    await show(routes())
+    const link = [...document.querySelectorAll('a')].find((a) => a.textContent?.trim() === t.openRecipe)
+    expect(link?.getAttribute('href')).toContain('/recipe/r1')
+    expect(link?.getAttribute('href')).toContain('servings=4')
   })
 
   it('reminds about the pantry review and leftover portions when they are due', async () => {

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Widok przepisu
+
+- Kliknięcie przepisu otwiera widok do czytania: składniki w jednej linii, ponumerowane kroki, kalorie na porcję i link do źródła.
+- Liczbę porcji zmieniają przyciski − i +: ilości składników przeliczają się z kuchennym zaokrąglaniem, a sam przepis się nie zmienia.
+- „Przepis” na ekranie Dziś otwiera widok od razu na liczbie porcji z planu.
+- Edycja jest pod `/recipes/{id}/edit` (przycisk „Edytuj”), a zapis wraca do widoku przepisu.
+
 ### Ustawienia gospodarstwa
 
 - Nowa strona „Ustawienia gospodarstwa” w menu konta: nazwa gospodarstwa (zmienia tylko administrator), porcje na posiłek i asystent produktów (klucz OpenRouter). Strona Domownicy zostaje tylko dla osób, ról i zaproszeń.

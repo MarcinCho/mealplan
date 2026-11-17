@@ -174,9 +174,9 @@ async function submit() {
   try {
     const saved = await recipes.save(recipe.value)
     imports.clear()
-    // Saving closes the form: back to the list, with a confirmation that names the recipe.
+    // Saving closes the form: on to the reading view, with a confirmation that names the recipe.
     notice.show(recipeSavedText(saved.title || recipe.value.title))
-    await router.push({ name: 'recipes' })
+    await router.push({ name: 'recipe', params: { id: saved.id } })
   } catch (e) {
     error.value = errorText(e)
   } finally {
@@ -276,7 +276,7 @@ async function remove() {
 
     <div class="d-flex ga-3">
       <v-btn type="submit" color="primary" :loading="busy">{{ t.save }}</v-btn>
-      <v-btn variant="text" :to="{ name: 'recipes' }">{{ t.cancel }}</v-btn>
+      <v-btn variant="text" :to="isNew ? { name: 'recipes' } : { name: 'recipe', params: { id: route.params.id } }">{{ t.cancel }}</v-btn>
       <v-spacer />
       <template v-if="!isNew">
         <v-btn v-if="!confirming" color="error" variant="text" @click="confirming = true">{{ t.delete }}</v-btn>
