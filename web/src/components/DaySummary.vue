@@ -33,7 +33,7 @@ const itemValue = (v: Macros) => (v.kcal === null ? '—' : `${formatNumber(v.kc
 </script>
 
 <template>
-  <v-card class="pa-4 mb-4 day-summary">
+  <section class="day-summary mb-4">
     <div class="d-flex align-center mb-3">
       <h3 class="text-subtitle-1 font-weight-bold flex-grow-1">{{ t.daySummary }}</h3>
       <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-plus" @click="emit('add')">{{ t.logAdd }}</v-btn>
@@ -43,7 +43,7 @@ const itemValue = (v: Macros) => (v.kcal === null ? '—' : `${formatNumber(v.kc
       <div class="d-flex justify-space-between text-body-2">
         <span>{{ r.label }}</span>
         <span>
-          <b>{{ r.text }}</b>{{ r.goalText }} {{ r.unit === 'kcal' ? 'kcal' : 'g' }}
+          <b class="mp-num">{{ r.text }}</b>{{ r.goalText }} {{ r.unit === 'kcal' ? 'kcal' : 'g' }}
         </span>
       </div>
       <v-progress-linear
@@ -66,14 +66,15 @@ const itemValue = (v: Macros) => (v.kcal === null ? '—' : `${formatNumber(v.kc
     <div v-for="l in day.log" :key="l.id" class="d-flex align-center ga-2 log-row">
       <div class="flex-grow-1" style="min-width: 0">
         <div class="log-name">{{ l.name }}</div>
-        <div class="text-body-2 text-medium-emphasis">{{ formatNumber(l.quantity, 'g') }} {{ l.unit }} · {{ itemValue(l.values) }}</div>
+        <div class="text-body-2 text-medium-emphasis mp-num">{{ formatNumber(l.quantity, 'g') }} {{ l.unit }} · {{ itemValue(l.values) }}</div>
       </div>
       <v-btn icon="mdi-delete-outline" variant="text" size="small" :title="t.logRemove" @click="emit('remove', l.id)" />
     </div>
-  </v-card>
+  </section>
 </template>
 
 <style scoped>
+.day-summary { border-top: 2px solid var(--mp-rule); padding-top: 12px; }
 .section-label { font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); margin-bottom: 4px; }
 .log-name { overflow-wrap: anywhere; }
 </style>

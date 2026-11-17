@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import TodayView from './TodayView.vue'
 import { buttonByText, clickable, fakeApi, flush, mountWith, openDialog, setViewportWidth, type Routes } from '../test/mount'
 import { t } from '../messages'
+import { portions } from '../polish'
 import { useSession } from '../stores/session'
 import type { DaySummary, PlanEntry, PrepSession, Recipe } from '../api/types'
 
@@ -248,5 +249,44 @@ describe('TodayView', () => {
     const narrow = await show(routes())
     expect(narrow.w.text()).not.toContain(t.cooksThisWeek)
     expect([...document.querySelectorAll('a')].some((a) => a.textContent?.trim() === t.openShopping)).toBe(false)
+  })
+
+  it('shows the next meal in a note card', async () => {
+    const { w } = await show(routes())
+    const card = w.find('.note-card')
+    expect(card.find('.note-card__label').text()).toBe(`${t.todayOn} ${t.slotOn.lunch}`)
+    expect(card.find('.hero-title').text()).toBe('Gulasz')
+    expect(card.text()).toContain(portions(4))
+    expect(card.findAll('button').some((b) => b.text() === t.markDone)).toBe(true)
+    expect(card.findAll('a').some((a) => a.text() === t.openRecipe)).toBe(true)
+  })
+
+  it('lists the day as ruled rows with the meal time on the left', async () => {
+    // freeSlots offers the main meals only (snacks stay optional), so the free row here is the dinner.
+    const { w } = await show(routes({ entries: entries.filter((e) => e.slot !== 'dinner') }))
+    const rows = w.findAll('.note-row').filter((r) => r.find('.meal-title').exists())
+    expect(rows.map((r) => r.find('.note-row__label').text())).toEqual([t.slotNames.breakfast, t.slotNames.lunch])
+    const free = w.findAll('.note-row').find((r) => r.find('.note-row__label').text() === t.slotNames.dinner)
+    expect(free?.findAll('button').some((b) => b.text().includes(t.addMeal))).toBe(true)
+    expect(w.find('.meal-title').element.tagName).toBe('BUTTON')
+  })
+
+  it('shows this week as rows with today highlighted', async () => {
+    setViewportWidth(1280)
+    const { w } = await show(routes())
+    expect(w.findAll('aside .note-row')).toHaveLength(7)
+    const hot = w.findAll('aside .note-row--highlighted')
+    expect(hot).toHaveLength(1)
+    expect(hot[0].attributes('aria-current')).toBe('date')
+    expect(hot[0].text()).toContain(t.dayNames[2])
+    expect(hot[0].text()).toContain('11')
+    expect(hot[0].text()).toContain('Gulasz')
+  })
+
+  it('has no side panel on a phone', async () => {
+    setViewportWidth(390)
+    const { w } = await show(routes())
+    expect(w.find('aside').exists()).toBe(false)
+    expect(w.findAll('button[aria-pressed]')).toHaveLength(7)
   })
 })

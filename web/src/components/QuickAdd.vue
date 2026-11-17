@@ -90,9 +90,8 @@ const dayLabel = (d: string) => t.dayNames[props.dates.indexOf(d)]
 <style scoped>
 .quick {
   background: rgb(var(--v-theme-surface));
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
-  border-radius: 28px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.4);
+  border-radius: var(--mp-radius-control);
 }
 .quick-field {
   display: flex;

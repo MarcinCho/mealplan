@@ -10,6 +10,9 @@ import EntryDialog from '../components/EntryDialog.vue'
 import FoodLogDialog from '../components/FoodLogDialog.vue'
 import MealNutritionDialog from '../components/MealNutritionDialog.vue'
 import QuickAdd from '../components/QuickAdd.vue'
+import CookBadge from '../components/notebook/CookBadge.vue'
+import NoteCard from '../components/notebook/NoteCard.vue'
+import NoteRow from '../components/notebook/NoteRow.vue'
 import { errorText, t } from '../messages'
 import { useMembers } from '../stores/members'
 import { usePantry } from '../stores/pantry'
@@ -20,7 +23,7 @@ import { useNutrition, type LogInput } from '../stores/nutrition'
 import { usePlan, type EntryInput } from '../stores/plan'
 import { useRecipes } from '../stores/recipes'
 import { useSession } from '../stores/session'
-import { avatarColor, entriesOfDay, freeSlots, greeting, heroOf, initial, SLOT_ACCUSATIVE, SLOT_ICON } from '../today'
+import { avatarColor, entriesOfDay, freeSlots, greeting, heroOf, SLOT_ACCUSATIVE } from '../today'
 import { formatNumber } from '../nutrition'
 import { isoDate, mondayOf, SLOTS, weekDates } from '../weeks'
 
@@ -89,6 +92,8 @@ function label(e: PlanEntry): string {
   return entryTitle(e, e.recipeId ? (recipeTitle.value[e.recipeId] ?? '…') : null)
 }
 const color = (id: string) => avatarColor(id, members.ids)
+// An entry whose cook is no longer a household member shows no badge.
+const cookName = (e: PlanEntry) => (e.cookUserId ? members.name(e.cookUserId) : '')
 
 async function init() {
   error.value = ''
@@ -172,42 +177,11 @@ async function removeEntry() {
       </v-alert>
       <v-progress-linear v-if="!ready_ && !error" indeterminate class="mb-4" />
       <div v-if="needsReview || staleCooking" class="d-flex flex-wrap ga-2 mb-4">
-      <v-chip v-if="needsReview" :to="{ name: 'pantry' }" color="warning" variant="tonal" prepend-icon="mdi-fridge-outline">{{ t.pantryReviewDue }}</v-chip>
-
-      <v-chip v-if="staleCooking" :to="{ name: 'prep' }" color="warning" variant="tonal" prepend-icon="mdi-pot-steam-outline" style="height: auto; white-space: normal">{{ t.prepStaleToday }}</v-chip>
+        <v-chip v-if="needsReview" :to="{ name: 'pantry' }" color="warning" variant="tonal" prepend-icon="mdi-fridge-outline">{{ t.pantryReviewDue }}</v-chip>
+        <v-chip v-if="staleCooking" :to="{ name: 'prep' }" color="warning" variant="tonal" prepend-icon="mdi-pot-steam-outline" style="height: auto; white-space: normal">{{ t.prepStaleToday }}</v-chip>
       </div>
 
       <template v-if="ready_">
-        <section class="hero mb-5">
-          <template v-if="hero.kind === 'next'">
-            <div class="hero-tag">{{ isToday ? t.todayOn : `${dayTitle} · ${t.dayOn}` }} {{ SLOT_ACCUSATIVE[hero.entry.slot] }}</div>
-            <h2 class="hero-title">{{ label(hero.entry) }}</h2>
-            <div class="d-flex flex-wrap ga-2 mb-5">
-              <span v-if="hero.entry.cookUserId" class="hero-chip">
-                <span class="avatar avatar-sm" :style="{ background: color(hero.entry.cookUserId) }">{{ initial(members.name(hero.entry.cookUserId)) }}</span>
-                {{ t.cooks }} {{ members.name(hero.entry.cookUserId) }}
-              </span>
-              <span class="hero-chip">{{ portions(hero.entry.servings) }}</span>
-              <span v-if="entryChip(hero.entry)" class="hero-chip">{{ entryChip(hero.entry) }}</span>
-            </div>
-            <div class="d-flex flex-wrap ga-2">
-              <v-btn class="hero-btn" size="large" prepend-icon="mdi-check" @click="toggleDone(hero.entry)">{{ t.markDone }}</v-btn>
-              <v-btn
-                v-if="hero.entry.recipeId"
-                variant="outlined"
-                size="large"
-                class="hero-ghost"
-                :to="{ name: 'recipe', params: { id: hero.entry.recipeId }, query: { servings: String(hero.entry.servings) } }"
-              >{{ t.openRecipe }}</v-btn>
-            </div>
-          </template>
-          <template v-else>
-            <div class="hero-tag">{{ isToday ? t.today : dayTitle }}</div>
-            <h2 class="hero-title">{{ hero.kind === 'finished' ? t.allCooked : t.nothingPlanned }}</h2>
-            <div v-if="hero.kind === 'empty'" class="text-body-2" style="opacity: 0.8">{{ t.nothingPlannedHint }}</div>
-          </template>
-        </section>
-
         <div class="strip mb-4">
           <button
             v-for="(d, i) in dates"
@@ -218,40 +192,64 @@ async function removeEntry() {
             @click="selected = d"
           >
             <span>{{ t.dayNames[i] }}</span>
-            <b>{{ Number(d.slice(8)) }}</b>
+            <b class="mp-num">{{ Number(d.slice(8)) }}</b>
             <i :class="{ off: !plan.entries.some((e) => e.date === d) }" />
           </button>
         </div>
 
-        <div class="section-label">{{ dayTitle }}</div>
-        <v-card v-for="e in dayEntries" :key="e.id" class="meal mb-2" :class="{ done: e.done }" @click="openEdit(e)">
-          <div class="d-flex align-center ga-3 pa-3">
-            <span class="tile"><v-icon :icon="SLOT_ICON[e.slot]" /></span>
-            <div class="flex-grow-1" style="min-width: 0">
-              <div class="font-weight-bold meal-title">{{ label(e) }}</div>
-              <div class="text-body-2 text-medium-emphasis">{{ slotTitle(e.slot) }} · {{ portions(e.servings) }}<template v-if="entryChip(e)"> · {{ entryChip(e) }}</template></div>
+        <NoteCard v-if="hero.kind === 'next'" class="mb-5">
+          <template #label>{{ isToday ? t.todayOn : `${dayTitle} · ${t.dayOn}` }} {{ SLOT_ACCUSATIVE[hero.entry.slot] }}</template>
+          <template #title><span class="hero-title">{{ label(hero.entry) }}</span></template>
+          <div class="hero-facts">
+            <div v-if="cookName(hero.entry)" class="hero-fact">
+              {{ t.cooks }} <CookBadge :name="cookName(hero.entry)" :color="color(hero.entry.cookUserId!)" />
             </div>
-            <v-chip v-if="tracking && mealOf(e)" size="small" variant="tonal" class="flex-shrink-0" :title="t.mealNutritionTitle" @click.stop="openMeal(e)">{{ chipText(e) }}</v-chip>
-            <span v-if="e.cookUserId" class="avatar" :style="{ background: color(e.cookUserId) }" :title="members.name(e.cookUserId)">
-              {{ initial(members.name(e.cookUserId)) }}
-            </span>
-            <v-btn
-              :icon="e.done ? 'mdi-check-circle' : 'mdi-circle-outline'"
-              variant="text"
-              :color="e.done ? 'success' : undefined"
-              :title="e.done ? t.markUndone : t.markDone"
-              :aria-label="`${e.done ? t.markUndone : t.markDone}: ${label(e)}`"
-              @click.stop="toggleDone(e)"
-            />
+            <div class="hero-fact mp-num">{{ portions(hero.entry.servings) }}</div>
+            <div v-if="entryChip(hero.entry)" class="hero-fact">{{ entryChip(hero.entry) }}</div>
           </div>
-        </v-card>
-        <button v-for="s in free" :key="s" class="free" @click="openNew(selected, s)">
-          <span class="tile free-tile"><v-icon icon="mdi-plus" /></span>
-          <span class="text-start">
-            <b>{{ t.addMeal }}: {{ slotTitle(s).toLowerCase() }}</b>
-            <span class="d-block text-body-2">{{ t.whoCooks }}</span>
-          </span>
-        </button>
+          <div class="hero-actions">
+            <v-btn color="primary" variant="flat" size="large" prepend-icon="mdi-check" class="hero-done" @click="toggleDone(hero.entry)">{{ t.markDone }}</v-btn>
+            <v-btn
+              v-if="hero.entry.recipeId"
+              size="large"
+              :to="{ name: 'recipe', params: { id: hero.entry.recipeId }, query: { servings: String(hero.entry.servings) } }"
+            >{{ t.openRecipe }}</v-btn>
+          </div>
+        </NoteCard>
+        <NoteCard v-else class="mb-5" :label="isToday ? t.today : dayTitle">
+          <template #title><span class="hero-title">{{ hero.kind === 'finished' ? t.allCooked : t.nothingPlanned }}</span></template>
+          <div v-if="hero.kind === 'empty'" class="hero-facts"><div class="hero-fact">{{ t.nothingPlannedHint }}</div></div>
+        </NoteCard>
+
+        <div class="section-label">{{ dayTitle }}</div>
+        <div class="day-rows">
+          <NoteRow v-for="e in dayEntries" :key="e.id" :label="slotTitle(e.slot)" class="meal" :class="{ done: e.done }" @click="openEdit(e)">
+            <button type="button" class="meal-title">{{ label(e) }}</button>
+            <div class="meal-meta">
+              <CookBadge v-if="cookName(e)" :name="cookName(e)" :color="color(e.cookUserId!)" />
+              <span class="mp-num">{{ portions(e.servings) }}</span>
+              <v-chip v-if="tracking && mealOf(e)" size="small" variant="tonal" class="mp-num" :title="t.mealNutritionTitle" @click.stop="openMeal(e)">{{ chipText(e) }}</v-chip>
+              <span v-if="entryChip(e)">{{ entryChip(e) }}</span>
+            </div>
+            <template #action>
+              <v-btn
+                :icon="e.done ? 'mdi-check' : undefined"
+                :color="e.done ? 'success' : undefined"
+                :variant="e.done ? 'flat' : 'outlined'"
+                :title="e.done ? t.markUndone : t.markDone"
+                :aria-label="`${e.done ? t.markUndone : t.markDone}: ${label(e)}`"
+                class="done-btn"
+                @click.stop="toggleDone(e)"
+              />
+            </template>
+          </NoteRow>
+          <NoteRow v-for="s in free" :key="s" :label="slotTitle(s)">
+            <button type="button" class="free-btn" @click="openNew(selected, s)">
+              <v-icon icon="mdi-plus" size="small" />{{ t.addMeal }}: {{ slotTitle(s).toLowerCase() }}
+            </button>
+            <div class="free-hint">{{ t.whoCooks }}</div>
+          </NoteRow>
+        </div>
 
         <DaySummaryCard v-if="tracking && daySummary" class="mt-4" :day="daySummary" @add="logDialog = true" @remove="removeLog" />
 
@@ -266,24 +264,27 @@ async function removeEntry() {
     </div>
 
     <aside v-if="mdAndUp && ready_" class="today-side">
-      <v-card class="pa-5 mb-4">
-        <h3 class="text-subtitle-1 font-weight-bold mb-3">{{ t.thisWeekTitle }}</h3>
-        <div class="mini">
-          <div v-for="(d, i) in dates" :key="d" :class="{ f: plan.entries.some((e) => e.date === d), t: d === todayDate }">
-            {{ t.dayNames[i] }}<i />
-          </div>
-        </div>
-      </v-card>
-      <v-card class="pa-5 mb-4">
-        <h3 class="text-subtitle-1 font-weight-bold mb-3">{{ t.cooksThisWeek }}</h3>
-        <div v-if="!cookCount.length" class="text-body-2 text-medium-emphasis">—</div>
-        <div v-for="m in cookCount" :key="m.id" class="d-flex align-center ga-3 py-1">
-          <span class="avatar avatar-sm" :style="{ background: color(m.id) }">{{ initial(m.displayName) }}</span>
-          <span class="flex-grow-1">{{ m.displayName }}</span>
-          <b>{{ m.n }}</b>
-        </div>
-      </v-card>
-      <v-btn block variant="tonal" color="primary" size="large" :to="{ name: 'shopping' }" prepend-icon="mdi-cart">{{ t.openShopping }}</v-btn>
+      <h3 class="side-title">{{ t.thisWeekTitle }}</h3>
+      <div class="week-rows">
+        <NoteRow
+          v-for="(d, i) in dates"
+          :key="d"
+          class="week-row"
+          :highlighted="d === todayDate"
+          :aria-current="d === todayDate ? 'date' : undefined"
+        >
+          <template #label><span>{{ t.dayNames[i] }}</span><b class="mp-num week-num">{{ Number(d.slice(8)) }}</b></template>
+          <span class="week-meals">{{ entriesOfDay(plan.entries, d).map(label).join(', ') }}</span>
+        </NoteRow>
+      </div>
+
+      <h3 class="side-title mt-6">{{ t.cooksThisWeek }}</h3>
+      <div v-if="!cookCount.length" class="text-body-2 text-medium-emphasis py-2">—</div>
+      <div v-for="m in cookCount" :key="m.id" class="cook-row mp-ruled">
+        <CookBadge :name="m.displayName" :color="color(m.id)" />
+        <b class="mp-num">{{ m.n }}</b>
+      </div>
+      <v-btn block variant="outlined" size="large" class="mt-5" :to="{ name: 'shopping' }">{{ t.openShopping }}</v-btn>
     </aside>
   </div>
 
@@ -305,58 +306,46 @@ async function removeEntry() {
 .today-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
 @media (min-width: 960px) { .today-layout { grid-template-columns: minmax(0, 640px) 340px; justify-content: center; } }
 .today-main { min-width: 0; padding-bottom: 80px; }
-.hero {
-  position: relative; overflow: hidden; border-radius: 32px; padding: 22px;
-  background: rgb(var(--v-theme-bar)); color: rgb(var(--v-theme-on-bar));
-}
-.hero::after {
-  content: ''; position: absolute; right: -50px; top: -50px; width: 190px; height: 190px; border-radius: 50%;
-  background: rgb(var(--v-theme-primary)); opacity: 0.3; pointer-events: none;
-}
-.hero > * { position: relative; z-index: 1; }
-.hero-tag { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: 0.75; font-weight: 600; }
-.hero-title { font-size: 1.75rem; line-height: 1.15; letter-spacing: -0.5px; margin: 8px 0 14px; max-width: 90%; overflow-wrap: anywhere; }
-.hero-chip {
-  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 12px; font-size: 13px;
-  background: rgba(var(--v-theme-on-bar), 0.14);
-}
-.hero-btn { background: rgb(var(--v-theme-on-bar)) !important; color: rgb(var(--v-theme-bar)) !important; }
-.hero-ghost { border-color: rgba(var(--v-theme-on-bar), 0.45) !important; color: rgb(var(--v-theme-on-bar)) !important; }
-.avatar {
-  width: 32px; height: 32px; border-radius: 50%; display: inline-grid; place-items: center; flex: none;
-  font-weight: 700; font-size: 13px; color: #fff;
-}
-.avatar-sm { width: 22px; height: 22px; font-size: 11px; }
-.strip { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: 0 -2px; }
+.hero-title { overflow-wrap: anywhere; }
+.hero-facts { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--mp-rule); margin: -16px -16px 0; background: rgb(var(--v-theme-surface)); }
+.hero-fact { flex: 1 1 50%; display: flex; align-items: center; gap: 8px; padding: 12px 16px; min-height: 56px; border-right: 1px solid var(--mp-rule); }
+.hero-fact:last-child { border-right: 0; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 16px; }
+.hero-done { flex: 1 1 0; }
+.strip { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: 0 -2px; }
 .day {
-  flex: 1 0 52px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0 12px;
-  border-radius: 20px; background: rgb(var(--v-theme-surface)); border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  flex: 1 0 44px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0;
+  border-radius: var(--mp-radius-control); background: transparent; border: 1px solid transparent;
   font: inherit; color: inherit; cursor: pointer;
 }
 .day span { font-size: 12px; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
 .day b { font-size: 18px; }
-.day i { width: 6px; height: 6px; border-radius: 50%; background: rgb(var(--v-theme-primary)); }
+.day i { width: 18px; height: 2px; background: rgb(var(--v-theme-on-surface)); }
 .day i.off { background: transparent; }
 .day.today:not(.on) { border-color: rgb(var(--v-theme-primary)); }
 .day.on { background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); border-color: rgb(var(--v-theme-primary)); }
 .day.on i { background: rgb(var(--v-theme-on-primary)); }
 .day.on span { color: rgba(var(--v-theme-on-primary), 0.85); }
-.section-label { font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); margin: 8px 4px 10px; }
+.section-label { font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); margin: 8px 0; }
+.day-rows { border-top: 1px solid var(--mp-rule); }
 .meal { cursor: pointer; }
 .meal.done .meal-title { text-decoration: line-through; opacity: 0.6; }
-.tile {
-  width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; flex: none;
-  background: rgb(var(--v-theme-surface-variant)); color: rgb(var(--v-theme-on-surface-variant, var(--v-theme-on-surface)));
+.meal-title {
+  display: block; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; text-align: start;
+  font-family: var(--v-font-display); font-size: 1.125rem; font-weight: 600; line-height: 1.3;
 }
-.free {
-  width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 8px; border-radius: 24px;
-  border: 1.5px dashed rgba(var(--v-theme-on-surface), 0.3); background: transparent; color: inherit; font: inherit; cursor: pointer; opacity: 0.8;
+.meal-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 4px; font-size: 0.8125rem; opacity: 0.85; }
+.done-btn { width: 44px; height: 44px; min-width: 44px; padding: 0; }
+.free-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: transparent; color: inherit; font: inherit;
+  border: 1px dashed rgba(var(--v-theme-on-surface), 0.55); border-radius: var(--mp-radius-control); cursor: pointer;
 }
-.free-tile { background: transparent; border: 1.5px dashed rgba(var(--v-theme-on-surface), 0.3); }
-.quick-dock { position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 3; }
+.free-hint { margin-top: 4px; font-size: 0.8125rem; opacity: 0.7; }
+.quick-dock { position: sticky; bottom: calc(72px + 4px + env(safe-area-inset-bottom)); z-index: 3; }
 @media (min-width: 960px) { .quick-dock { bottom: 24px; } }
-.mini { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; font-size: 12px; opacity: 0.9; }
-.mini i { display: block; height: 44px; border-radius: 12px; margin-top: 4px; background: rgba(var(--v-theme-on-surface), 0.07); }
-.mini .f i { background: rgb(var(--v-theme-surface-variant)); }
-.mini .t i { background: rgb(var(--v-theme-primary)); }
+.side-title { font-size: 1.125rem; padding-bottom: 6px; border-bottom: 1px solid var(--mp-rule); }
+.week-row :deep(.note-row__label) { flex-basis: 72px; gap: 10px; }
+.week-num { font-size: 1rem; }
+.week-meals { font-size: 0.8125rem; opacity: 0.85; }
+.cook-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
 </style>
