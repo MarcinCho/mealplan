@@ -24,6 +24,10 @@ describe('notebook.css', () => {
     }
   })
 
+  it('leaves buttons inside a group square so only the group rounds its outer corners', () => {
+    expect(css).toContain('.v-btn:not(.v-btn--icon):not(.v-btn-group .v-btn)')
+  })
+
   it('bundles the fonts and never loads them from another server', () => {
     expect(FONT_IMPORTS).toHaveLength(10)
     for (const f of FONT_IMPORTS) expect(main).toContain(f)

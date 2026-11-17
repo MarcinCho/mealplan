@@ -49,7 +49,8 @@ h1, h2, h3 {
 }
 
 /* ---------- shapes ---------- */
-.v-btn:not(.v-btn--icon),
+/* Buttons inside a group keep Vuetify's square inner corners; only the group's outer corners round. */
+.v-btn:not(.v-btn--icon):not(.v-btn-group .v-btn),
 .v-btn-group {
   border-radius: var(--mp-radius-control);
 }
