@@ -243,6 +243,13 @@ describe('RecipeView', () => {
   })
 
   describe('notebook layout', () => {
+    it('labels the source link', async () => {
+      const { w } = await show('/recipes/r1')
+      const line = w.find('.source-line')
+      expect(line.text()).toBe(`${t.source}: example.com`)
+      expect(line.find('a[href="https://example.com/zupa"]').exists()).toBe(true)
+    })
+
     it('puts the ingredients and the servings stepper in a note card', async () => {
       const { w } = await show('/recipes/r1')
       expect(w.find('.note-card .note-card__header [role="group"]').exists()).toBe(true)

@@ -80,7 +80,7 @@ onMounted(async () => {
           <v-chip v-for="tag in recipe.tags" :key="tag" size="small">{{ tag }}</v-chip>
         </div>
         <div class="recipe-acts">
-          <a v-if="recipe.sourceUrl" :href="recipe.sourceUrl" target="_blank" rel="noopener noreferrer" class="source">{{ sourceHost }}</a>
+          <span v-if="recipe.sourceUrl" class="source-line">{{ t.source }}: <a :href="recipe.sourceUrl" target="_blank" rel="noopener noreferrer" class="source">{{ sourceHost }}</a></span>
           <v-btn variant="outlined" prepend-icon="mdi-pencil-outline" :to="{ name: 'recipe-edit', params: { id: recipe.id } }">{{ t.editButton }}</v-btn>
         </div>
         <p v-if="nutritionLine" class="text-body-2 text-medium-emphasis nutrition">{{ nutritionLine }}</p>
@@ -151,7 +151,14 @@ onMounted(async () => {
 .recipe-view--columns .recipe-head .nutrition { grid-column: 1; }
 .recipe-body { display: grid; gap: 32px; margin-top: 24px; }
 .recipe-view--columns .recipe-body { grid-template-columns: minmax(0, 450px) minmax(0, 1fr); align-items: start; gap: 48px; }
-.recipe-view--columns .recipe-view__aside { position: sticky; top: 16px; }
+.recipe-view--columns .recipe-view__aside {
+  /* Stick below the fixed app bar (v-main exposes its height) and scroll inside when the list is taller than the viewport. */
+  --aside-top: calc(var(--v-layout-top, 64px) + 16px);
+  position: sticky;
+  top: var(--aside-top);
+  max-height: calc(100vh - var(--aside-top) - 16px);
+  overflow-y: auto;
+}
 .stepper { display: flex; align-items: center; gap: 8px; }
 .step-btn { min-width: 44px; min-height: 44px; }
 .servings { min-width: 2ch; text-align: center; }
