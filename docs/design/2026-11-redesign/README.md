@@ -1,6 +1,6 @@
 # Nowy wygląd: „spokojnie jak notes” w kolorach Mealplana
 
-Wybrany kierunek wyglądu (listopad 2026), wzorzec dla punktu 6 roadmapy („Nowy wygląd”). To statyczne makiety HTML/CSS trzech głównych ekranów, a nie kod aplikacji: wdrożenie w Vue i Vuetify to osobny etap.
+Wybrany kierunek wyglądu (listopad 2026), wzorzec dla punktu 6 roadmapy („Nowy wygląd”). Wygląd jest wdrożony w aplikacji (listopad 2026), a makiety zostają jako wzorzec. To statyczne makiety HTML/CSS trzech głównych ekranów, a nie kod aplikacji.
 
 Mealplan prowadzony jak kuchenny notes. Na ekranie Dziś jest jedna karta z tym, co gotujemy teraz, kto gotuje i ile porcji, a pod nią duży przycisk „Zrobione”; wszystko inne to spokojne, liniowane strony. Plan tygodnia to jedna linijka na dzień (na telefonie blok na dzień), a przepis czyta się z daleka: składniki w karcie z licznikiem porcji, kroki dużą czcionką.
 

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Nowy wygląd
+
+- Czcionki Red Hat dołączone do aplikacji (bez zewnętrznych serwerów); prostokątne przyciski, karty bez ramek, liniowane wiersze.
+- Na komputerze górny pasek z linkami (w tym Meal prep) zamiast bocznego; nazwa gospodarstwa w menu konta na węższych ekranach.
+- Ekran Dziś z kartą „co teraz gotujemy” i listą pór; przepis ze składnikami w karcie z licznikiem porcji i krokami obok; plan z wierszem na dzień (na telefonie blok na dzień).
+- 5 palet i tryb ciemny zostają, nowy kolor nagłówka karty w każdej palecie.
+
 ### Widok przepisu
 
 - Kliknięcie przepisu otwiera widok do czytania: składniki w jednej linii, ponumerowane kroki, kalorie na porcję i link do źródła.
