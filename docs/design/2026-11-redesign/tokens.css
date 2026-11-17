@@ -1,0 +1,23 @@
+:root {
+  color-scheme: light;
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px; --space-4xl: 144px;
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem;
+  --text-display-s: 1.44rem; --text-display: 1.728rem; --text-section: 1.2rem; --text-title: 1rem; --text-lead: 1rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.7, 0, 0.84, 0); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
+  --color-error: #B3261E; --color-success: #2E7D32;
+  --container: 1440px; --gutter: 64px; --gap-columns: 32px; --section-gap-s: 120px; --section-gap: 144px; --section-gap-l: 176px;
+  --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
+  --color-paper: #F8F9F7; --color-paper-2: #FEFFFE; --color-paper-3: #EEF4EC;
+  --color-ink: #233831; --color-ink-2: #34493F; --color-muted: #55665F; --color-rule: #D3DDD0;
+  --color-accent: #4F6B3F; --color-accent-ink: #FEFFFE; --color-accent-soft: #E1EBD8; --color-focus: #4F6B3F;
+  --color-green: #2E7D32; --color-green-soft: #DDEFDD;
+  --color-contour: #7B9A68; --color-water: #9EBA8D; --color-hedge: #4F6B3F;
+  --color-grid: #E4EAE2; --color-grid-strong: #D3DDD0; --color-sheet: #FCFDFC;
+  --font-display: "Red Hat Display", "Red Hat Text", ui-sans-serif, sans-serif; --font-body: "Red Hat Text", ui-sans-serif, system-ui, sans-serif;
+  --font-outlier: "Red Hat Mono", ui-monospace, monospace;
+  --radius-card: 10px; --radius-entry: 14px; --radius-pill: 6px; --rule-hair: 1px;
+  --shadow-card: 0 1px 2px rgb(35 56 49 / 0.08), 0 14px 28px -16px rgb(35 56 49 / 0.28);
+  --shadow-lift: 0 1px 1px rgb(35 56 49 / 0.1), 0 2px 4px -1px rgb(35 56 49 / 0.1), 0 24px 44px -20px rgb(35 56 49 / 0.42);
+  --tracking-display: -0.035em; --display-weight: 600;
+}
