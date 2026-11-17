@@ -6,10 +6,10 @@ import { useNotice } from '../stores/notice'
 import { t } from '../messages'
 import { loadChoice, PALETTES, saveChoice, themeName, type Choice, type PaletteId } from '../theme'
 import { initial } from '../today'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import BrandLogo from '../components/BrandLogo.vue'
 
-const { mdAndUp } = useDisplay()
+const { mdAndUp, lgAndUp } = useDisplay()
 const theme = useTheme()
 const session = useSession()
 const notice = useNotice()
@@ -27,6 +27,9 @@ const items = [
   { title: t.navPantry, icon: 'mdi-fridge-outline', active: 'mdi-fridge', to: { name: 'pantry' } },
   { title: t.navShopping, icon: 'mdi-cart-outline', active: 'mdi-cart', to: { name: 'shopping' } },
 ]
+
+// The full name goes in the title attribute; the bar only truncates it visually.
+const householdName = computed(() => session.me?.household.name ?? '')
 
 const choice = ref<Choice>(loadChoice())
 
@@ -56,54 +59,58 @@ async function logout() {
 </script>
 
 <template>
-  <v-app-bar color="background" scroll-behavior="elevate" scroll-threshold="8" class="shell-bar">
-    <v-app-bar-title class="brand-title"><BrandLogo :icon="!mdAndUp" :height="28" /></v-app-bar-title>
-    <span class="text-body-2 text-medium-emphasis mr-2 d-none d-sm-inline">{{ session.me?.household.name }}</span>
-    <v-menu v-model="menuOpen" :close-on-content-click="false">
-      <template #activator="{ props }">
-        <v-btn v-bind="props" icon variant="text" :title="t.account" class="mr-2">
-          <span class="avatar-btn">{{ initial(session.me?.user.displayName ?? '') }}</span>
-        </v-btn>
-      </template>
-      <v-list min-width="240" class="pa-2">
-        <v-list-subheader>{{ t.palette }}</v-list-subheader>
-        <v-list-item
-          v-for="p in PALETTES"
-          :key="p.id"
-          :active="p.id === choice.palette"
-          :title="t.paletteNames[p.id]"
-          @click="pickPalette(p.id)"
-        >
-          <template #append>
-            <span class="d-flex ga-1">
-              <span v-for="c in p.swatch" :key="c" class="swatch" :style="{ backgroundColor: c }" />
-            </span>
-          </template>
-        </v-list-item>
-        <v-divider class="my-2" />
-        <v-list-item prepend-icon="mdi-theme-light-dark" :title="t.theme" @click="toggleTheme" />
-        <v-list-item prepend-icon="mdi-account-cog-outline" :title="t.accountTitle" :to="{ name: 'account' }" />
-        <v-list-item prepend-icon="mdi-food-apple-outline" :title="t.navProducts" :to="{ name: 'products' }" />
-        <v-list-item prepend-icon="mdi-home-edit-outline" :title="t.householdSettings" :to="{ name: 'household' }" />
-        <v-list-item prepend-icon="mdi-account-group-outline" :title="t.navMembers" :to="{ name: 'members' }" />
-        <v-list-item prepend-icon="mdi-logout" :title="t.signOut" @click="logout" />
-      </v-list>
-    </v-menu>
+  <v-app-bar color="background" flat class="shell-bar">
+    <div class="bar-inner">
+      <BrandLogo :icon="!mdAndUp" :height="28" class="brand" />
+      <nav v-if="mdAndUp" :aria-label="t.navMain" class="top-nav">
+        <router-link v-for="i in items" :key="i.title" v-slot="{ href, navigate, isActive, isExactActive }" :to="i.to" custom>
+          <a
+            :href="href"
+            class="nav-link"
+            :class="{ on: i.to.name === 'home' ? isExactActive : isActive }"
+            :aria-current="(i.to.name === 'home' ? isExactActive : isActive) ? 'page' : undefined"
+            @click="navigate"
+          >{{ i.title }}</a>
+        </router-link>
+      </nav>
+      <v-spacer />
+      <span v-if="lgAndUp" class="household-name text-body-2 text-medium-emphasis mr-3" :title="householdName">{{ householdName }}</span>
+      <v-menu v-model="menuOpen" :close-on-content-click="false">
+        <template #activator="{ props }">
+          <v-btn v-bind="props" icon variant="text" :title="t.account">
+            <span class="avatar-btn">{{ initial(session.me?.user.displayName ?? '') }}</span>
+          </v-btn>
+        </template>
+        <v-list min-width="240" class="pa-2">
+          <v-list-subheader v-if="!lgAndUp" class="household-name" :title="householdName">{{ householdName }}</v-list-subheader>
+          <v-list-subheader>{{ t.palette }}</v-list-subheader>
+          <v-list-item
+            v-for="p in PALETTES"
+            :key="p.id"
+            :active="p.id === choice.palette"
+            :title="t.paletteNames[p.id]"
+            @click="pickPalette(p.id)"
+          >
+            <template #append>
+              <span class="d-flex ga-1">
+                <span v-for="c in p.swatch" :key="c" class="swatch" :style="{ backgroundColor: c }" />
+              </span>
+            </template>
+          </v-list-item>
+          <v-divider class="my-2" />
+          <v-list-item prepend-icon="mdi-theme-light-dark" :title="t.theme" @click="toggleTheme" />
+          <v-list-item prepend-icon="mdi-account-cog-outline" :title="t.accountTitle" :to="{ name: 'account' }" />
+          <v-list-item prepend-icon="mdi-food-apple-outline" :title="t.navProducts" :to="{ name: 'products' }" />
+          <v-list-item prepend-icon="mdi-home-edit-outline" :title="t.householdSettings" :to="{ name: 'household' }" />
+          <v-list-item prepend-icon="mdi-account-group-outline" :title="t.navMembers" :to="{ name: 'members' }" />
+          <v-list-item prepend-icon="mdi-logout" :title="t.signOut" @click="logout" />
+        </v-list>
+      </v-menu>
+    </div>
   </v-app-bar>
 
-  <v-navigation-drawer v-if="mdAndUp" permanent width="88" color="bar" class="rail" :aria-label="t.navMain">
-    <div class="rail-nav">
-      <router-link v-for="i in items" :key="i.title" v-slot="{ href, navigate, isActive, isExactActive }" :to="i.to" custom>
-        <a :href="href" class="nav-item" :class="{ on: i.to.name === 'home' ? isExactActive : isActive }" @click="navigate">
-          <span class="pill"><v-icon :icon="(i.to.name === 'home' ? isExactActive : isActive) ? i.active : i.icon" /></span>
-          {{ i.title }}
-        </a>
-      </router-link>
-    </div>
-  </v-navigation-drawer>
-
   <v-main>
-    <v-container class="py-4" style="max-width: 1200px">
+    <v-container class="py-4 content">
       <router-view v-slot="{ Component }">
         <transition name="page" mode="out-in"><component :is="Component" /></transition>
       </router-view>
@@ -112,8 +119,14 @@ async function logout() {
 
   <v-bottom-navigation v-if="!mdAndUp" tag="nav" :aria-label="t.navMain" grow class="bottom-nav" height="72">
     <router-link v-for="i in items" :key="i.title" v-slot="{ href, navigate, isActive, isExactActive }" :to="i.to" custom>
-      <a :href="href" class="nav-item" :class="{ on: i.to.name === 'home' ? isExactActive : isActive }" @click="navigate">
-        <span class="pill"><v-icon :icon="(i.to.name === 'home' ? isExactActive : isActive) ? i.active : i.icon" /></span>
+      <a
+        :href="href"
+        class="nav-item"
+        :class="{ on: i.to.name === 'home' ? isExactActive : isActive }"
+        :aria-current="(i.to.name === 'home' ? isExactActive : isActive) ? 'page' : undefined"
+        @click="navigate"
+      >
+        <v-icon :icon="(i.to.name === 'home' ? isExactActive : isActive) ? i.active : i.icon" />
         {{ i.title }}
       </a>
     </router-link>
@@ -141,18 +154,25 @@ async function logout() {
   width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-weight: 700;
   background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary));
 }
-.rail-nav { display: flex; flex-direction: column; gap: 22px; padding: 28px 0; align-items: center; }
-.nav-item {
-  display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 500;
-  text-decoration: none; color: rgba(var(--v-theme-on-bar), 0.7); flex: 1;
+.shell-bar { border-bottom: 1px solid var(--mp-line); }
+.bar-inner { display: flex; align-items: center; gap: 24px; width: 100%; max-width: var(--mp-content-max); margin: 0 auto; padding: 0 16px; }
+.brand { flex: none; }
+.top-nav { display: flex; align-items: center; gap: 4px; }
+.nav-link {
+  padding: 8px 14px; border-radius: var(--mp-radius-control); font-size: 16px; font-weight: 500;
+  text-decoration: none; color: rgb(var(--v-theme-on-surface));
 }
-.nav-item .pill { width: 56px; height: 32px; border-radius: 16px; display: grid; place-items: center; transition: background 0.2s; }
-.nav-item.on { color: rgb(var(--v-theme-on-bar)); font-weight: 700; }
-.nav-item.on .pill { background: rgba(var(--v-theme-on-bar), 0.18); }
-.bottom-nav { background: rgb(var(--v-theme-surface-variant)) !important; }
-.bottom-nav .nav-item { color: rgba(var(--v-theme-on-surface), 0.7); justify-content: center; min-width: 0; font-size: 11px; }
-.bottom-nav .nav-item.on { color: rgb(var(--v-theme-on-surface)); }
-.bottom-nav .nav-item.on .pill { background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); }
+.nav-link:hover { background: rgba(var(--v-theme-on-surface), 0.06); }
+.nav-link.on { background: rgb(var(--v-theme-surface-variant)); font-weight: 700; }
+.household-name { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.content { max-width: var(--mp-content-max); margin-inline: auto; }
+.bottom-nav { background: rgb(var(--v-theme-surface)) !important; border-top: 1px solid var(--mp-line); }
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; flex: 1; min-width: 0;
+  margin: 8px 2px; border-radius: var(--mp-radius-control); font-size: 11px; font-weight: 500;
+  text-decoration: none; color: rgba(var(--v-theme-on-surface), 0.7);
+}
+.nav-item.on { background: rgb(var(--v-theme-surface-variant)); color: rgb(var(--v-theme-on-surface)); font-weight: 700; }
 .page-enter-active, .page-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
 .page-enter-from { opacity: 0; transform: translateY(6px); }
 .page-leave-to { opacity: 0; }
