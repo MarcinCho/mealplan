@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { defineComponent } from 'vue'
 import RecipeView from './RecipeView.vue'
-import { fakeApi, flush, mountWith, type Routes } from '../test/mount'
+import { fakeApi, flush, mountWith, setViewportWidth, type Routes } from '../test/mount'
 import { errorText, t } from '../messages'
 import { ApiError } from '../api/client'
 
@@ -69,6 +69,7 @@ const btn = (label: string) => document.querySelector(`button[aria-label="${labe
 
 afterEach(() => {
   document.body.innerHTML = ''
+  setViewportWidth(1024)
 })
 
 describe('RecipeView', () => {
@@ -239,6 +240,44 @@ describe('RecipeView', () => {
     const a = w.find('a[href="/recipes/r1/edit"]')
     expect(a.exists()).toBe(true)
     expect(a.text()).toContain(t.editButton)
+  })
+
+  describe('notebook layout', () => {
+    it('puts the ingredients and the servings stepper in a note card', async () => {
+      const { w } = await show('/recipes/r1')
+      expect(w.find('.note-card .note-card__header [role="group"]').exists()).toBe(true)
+      expect(w.find('.note-card__title').text()).toBe(t.ingredients)
+      expect(w.findAll('.note-card li.ingredient')).toHaveLength(4)
+    })
+
+    it('shows the scaling note under the card header', async () => {
+      const { w } = await show('/recipes/r1?servings=4')
+      const sub = w.find('.note-card__subheader')
+      expect(sub.text()).toContain(t.scaledFrom(2))
+      expect(sub.find('.restore').exists()).toBe(true)
+      const plain = await show('/recipes/r1')
+      expect(plain.w.find('.note-card__subheader').exists()).toBe(false)
+    })
+
+    it('keeps the stepper when there are no ingredients', async () => {
+      const { w } = await show('/recipes/r1', { ingredients: [] })
+      expect(w.find('[role="group"]').exists()).toBe(true)
+      expect(w.find('.note-card__title').exists()).toBe(false)
+      expect(w.text()).not.toContain(t.ingredients)
+    })
+
+    it('uses two columns on desktop and one on a phone', async () => {
+      setViewportWidth(1280)
+      const desktop = await show('/recipes/r1')
+      expect(desktop.w.find('.recipe-view--columns').exists()).toBe(true)
+      expect(desktop.w.find('.recipe-view__aside .note-card').exists()).toBe(true)
+      expect(desktop.w.find('.recipe-view__main ol.steps').exists()).toBe(true)
+      document.body.innerHTML = ''
+      setViewportWidth(390)
+      const phone = await show('/recipes/r1')
+      expect(phone.w.find('.recipe-view--columns').exists()).toBe(false)
+      expect(phone.w.findAll('ol.steps > li')).toHaveLength(2)
+    })
   })
 
   describe('errors', () => {

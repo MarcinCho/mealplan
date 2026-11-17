@@ -36,7 +36,7 @@ withDefaults(defineProps<{ label?: string; title?: string; titleTag?: 'h1' | 'h2
   opacity: 0.8;
 }
 .note-card__title {
-  flex: 1 1 0;
+  flex: 1 1 12rem;
   min-width: 0;
   margin: 0;
   font-size: 1.5rem;
