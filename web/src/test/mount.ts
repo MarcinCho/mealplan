@@ -36,3 +36,20 @@ export function fakeApi(routes: Routes) {
   }
   return { fn, calls }
 }
+
+// setViewportWidth sets the width Vuetify's useDisplay sees; mountWith creates a fresh Vuetify per mount,
+// so call it before mounting. Files using it restore setViewportWidth(1024) (the jsdom default) in afterEach.
+export function setViewportWidth(px: number): void {
+  Object.defineProperty(window, 'innerWidth', { value: px, configurable: true, writable: true })
+}
+
+// clickable returns the innermost button, link or tabindex element whose text contains `text`, so tests
+// do not depend on the markup that renders it (chip, list item, plain button).
+export function clickable(text: string): HTMLElement {
+  const hits = [...document.querySelectorAll<HTMLElement>('button, a, [tabindex]')].filter((x) => x.textContent?.includes(text))
+  const inner = hits.filter((x) => !hits.some((o) => o !== x && x.contains(o)))
+  if (!inner.length) throw new Error(`nothing clickable contains "${text}"`)
+  return inner[0]
+}
+
+export const openDialog = (): HTMLElement | null => document.querySelector<HTMLElement>('.v-overlay--active')
