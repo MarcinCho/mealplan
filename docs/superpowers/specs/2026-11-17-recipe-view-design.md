@@ -1,6 +1,6 @@
 # Mealplan: widok przepisu i przeliczanie porcji
 
-Data: 2026-11-17 · Status: do przeglądu · Punkt 2 z `docs/roadmap.md`
+Data: 2026-11-17 · Status: zatwierdzony (2026-11-17) · Punkt 2 z `docs/roadmap.md`
 
 ## 1. Po co
 

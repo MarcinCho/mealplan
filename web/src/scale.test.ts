@@ -36,6 +36,12 @@ describe('scaleAmount', () => {
     ['unknown unit 0.1', 3, 'cm', 0.33, 1, 'cm'],
     ['unknown unit minimum', 0.1, 'cm', 0.1, 0.1, 'cm'],
     ['unknown unit whole', 7, 'cm', 2, 14, 'cm'],
+    ['g 10 stays g', 10, 'g', 1.0001, 10, 'g'],
+    ['g 999 rolls to kg', 999, 'g', 1.0001, 1, 'kg'],
+    ['g 1000 is kg', 1000, 'g', 1.0001, 1, 'kg'],
+    ['kg 0.99 drops to g', 0.99, 'kg', 1.0001, 990, 'g'],
+    ['g 99.5 rounds to 100', 99.5, 'g', 1.0001, 100, 'g'],
+    ['unit named like an Object.prototype key', 1000, 'constructor', 2, 2000, 'constructor'],
   ]
   it.each(cases)('%s', (_name, q, unit, f, quantity, outUnit) => {
     expect(scaleAmount(q, unit, f)).toEqual({ quantity, unit: outUnit })

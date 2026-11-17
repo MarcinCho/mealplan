@@ -72,6 +72,7 @@ export const en: Messages = {
   moreServings: 'More servings',
   scaledFrom: (n: number) => `Scaled from ${n} ${n === 1 ? 'serving' : 'servings'}`,
   restoreServings: 'Reset',
+  restoreServingsLabel: (n: number) => `Restore ${n} ${n === 1 ? 'serving' : 'servings'}`,
   perPortion: 'per serving',
   approxPrefix: 'approx.',
   source: 'Source',

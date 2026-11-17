@@ -143,6 +143,29 @@ describe('RecipeView', () => {
     }
   })
 
+  it('base servings in the query shows no scaling note', async () => {
+    const { w } = await show('/recipes/r1?servings=2')
+    expect(lines(w)[0]).toBe('300 g ziemniak')
+    expect(lines(w)[1]).toContain('3 ogórki kiszone')
+    expect(lines(w)[2]).toBe('1 łyżka masło')
+    expect(w.text()).not.toContain('Przeliczone')
+  })
+
+  it('an array servings query falls back to base servings', async () => {
+    const { w } = await show('/recipes/r1?servings=3&servings=5')
+    expect(lines(w)[0]).toBe('300 g ziemniak')
+    expect(w.text()).not.toContain('Przeliczone')
+  })
+
+  it('names what the restore button restores and groups the stepper', async () => {
+    const { w } = await show('/recipes/r1?servings=4')
+    expect((document.querySelector('.restore') as HTMLButtonElement).getAttribute('aria-label')).toBe('Przywróć 2 porcje')
+    const group = w.find('[role="group"]')
+    expect(w.find(`#${group.attributes('aria-labelledby')}`).text()).toBe(t.servingsLabel)
+    expect(t.restoreServingsLabel(1)).toBe('Przywróć 1 porcję')
+    expect(t.restoreServingsLabel(5)).toBe('Przywróć 5 porcji')
+  })
+
   it('uses replace for servings changes', async () => {
     const { router } = await show('/recipes/r1', {}, {}, '/recipes')
     btn(t.moreServings).click()
@@ -156,10 +179,17 @@ describe('RecipeView', () => {
   describe('nutrition line', () => {
     it('shows kcal and macros', async () => {
       const { w } = await show('/recipes/r1')
-      expect(w.text()).toContain('ok. 320 kcal na porcję')
+      expect(w.find('.nutrition').text()).toContain('ok. 320 kcal')
+      expect(w.find('.nutrition').text()).toContain('na porcję')
       expect(w.text()).toContain('12 g')
       expect(w.text()).toContain('30 g')
       expect(w.text()).toContain('15 g')
+    })
+
+    it('qualifies a macros-only line as per portion and approximate', async () => {
+      const nutritionPerPortion = { values: { kcal: null, protein: 12, carbs: 30, fat: null }, sources: {}, approximate: true }
+      const { w } = await show('/recipes/r1', { nutritionPerPortion })
+      expect(w.find('.nutrition').text()).toBe('ok. 12 g białka · 30 g węglowodanów na porcję')
     })
 
     it('is hidden when tracking is off', async () => {
@@ -182,6 +212,12 @@ describe('RecipeView', () => {
       expect(w.find('h1').text()).toBe('Zupa ogórkowa')
       expect(w.text()).not.toContain('kcal')
     })
+  })
+
+  it('hides the ingredients section when there are none', async () => {
+    const { w } = await show('/recipes/r1', { ingredients: [] })
+    expect(w.text()).not.toContain(t.ingredients)
+    expect(w.find('li.ingredient').exists()).toBe(false)
   })
 
   it('hides empty sections', async () => {

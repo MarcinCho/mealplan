@@ -2,10 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ApiError } from '../api/client'
-import type { Macros, Recipe } from '../api/types'
+import type { Recipe } from '../api/types'
 import { useRecipes, formatQuantity } from '../stores/recipes'
 import { useNutrition } from '../stores/nutrition'
-import { formatNumber } from '../nutrition'
+import { formatMacros } from '../nutrition'
 import { MAX_SERVINGS, parseServings, scaleAmount } from '../scale'
 import { errorText, t } from '../messages'
 
@@ -41,15 +41,9 @@ const nutritionLine = computed(() => {
   const n = recipe.value?.nutritionPerPortion
   if (nutrition.settings?.enabled !== true || !n) return ''
   const v = n.values
-  const known = (k: keyof Macros) => v[k] !== null && v[k] !== undefined
-  const parts: string[] = []
-  if (known('kcal')) {
-    parts.push(`${n.approximate ? t.approxPrefix + ' ' : ''}${formatNumber(v.kcal, 'kcal')} kcal ${t.perPortion}`)
-  }
-  for (const k of ['protein', 'carbs', 'fat'] as const) {
-    if (known(k)) parts.push(`${formatNumber(v[k], 'g')} g ${t.gramsOf[k]}`)
-  }
-  return parts.join(' · ')
+  if (![v.kcal, v.protein, v.carbs, v.fat].some((x) => x !== null && x !== undefined)) return ''
+  // The qualifiers describe the whole line: approximate and per portion, whichever values it shows.
+  return `${n.approximate ? t.approxPrefix + ' ' : ''}${formatMacros(v)} ${t.perPortion}`
 })
 
 const sourceHost = computed(() => {
@@ -86,8 +80,8 @@ onMounted(async () => {
       </div>
       <p v-if="nutritionLine" class="text-body-2 text-medium-emphasis mt-2 nutrition">{{ nutritionLine }}</p>
 
-      <div class="d-flex align-center ga-2 mt-4">
-        <span class="text-subtitle-1">{{ t.servingsLabel }}</span>
+      <div class="d-flex align-center ga-2 mt-4" role="group" aria-labelledby="servings-label">
+        <span id="servings-label" class="text-subtitle-1">{{ t.servingsLabel }}</span>
         <v-btn
           icon="mdi-minus"
           variant="tonal"
@@ -108,16 +102,18 @@ onMounted(async () => {
       </div>
       <div v-if="scaled" class="text-body-2 text-medium-emphasis mt-1">
         {{ t.scaledFrom(base) }} ·
-        <v-btn variant="text" size="small" class="restore" @click="setServings(base)">{{ t.restoreServings }}</v-btn>
+        <v-btn variant="text" size="small" class="restore" :aria-label="t.restoreServingsLabel(base)" @click="setServings(base)">{{ t.restoreServings }}</v-btn>
       </div>
 
-      <h2 class="text-h6 mt-6 mb-2">{{ t.ingredients }}</h2>
-      <ul class="list-plain">
-        <li v-for="(i, n) in ingredients" :key="n" class="ingredient py-1">
-          <span>{{ i.amount ? `${i.amount} ${i.name}` : i.name }}</span>
-          <span v-if="i.note" class="text-medium-emphasis ms-2">{{ i.note }}</span>
-        </li>
-      </ul>
+      <template v-if="ingredients.length">
+        <h2 class="text-h6 mt-6 mb-2">{{ t.ingredients }}</h2>
+        <ul class="list-plain">
+          <li v-for="(i, n) in ingredients" :key="n" class="ingredient py-1">
+            <span>{{ i.amount ? `${i.amount} ${i.name}` : i.name }}</span>
+            <span v-if="i.note" class="text-medium-emphasis ms-2">{{ i.note }}</span>
+          </li>
+        </ul>
+      </template>
 
       <template v-if="recipe.steps.length">
         <h2 class="text-h6 mt-6 mb-2">{{ t.steps }}</h2>

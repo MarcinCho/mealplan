@@ -176,7 +176,7 @@ async function submit() {
     imports.clear()
     // Saving closes the form: on to the reading view, with a confirmation that names the recipe.
     notice.show(recipeSavedText(saved.title || recipe.value.title))
-    await router.push({ name: 'recipe', params: { id: saved.id } })
+    await router.replace({ name: 'recipe', params: { id: saved.id } })
   } catch (e) {
     error.value = errorText(e)
   } finally {

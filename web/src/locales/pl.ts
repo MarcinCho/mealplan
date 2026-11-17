@@ -71,6 +71,7 @@ export const pl = {
   moreServings: 'Więcej porcji',
   scaledFrom: (n: number) => `Przeliczone z ${n} porcji`,
   restoreServings: 'Przywróć',
+  restoreServingsLabel: (n: number) => `Przywróć ${n} ${n === 1 ? 'porcję' : form(n, ['porcja', 'porcje', 'porcji', 'porcji'])}`,
   perPortion: 'na porcję',
   approxPrefix: 'ok.',
   source: 'Źródło',

@@ -23,12 +23,12 @@ function step(v: number, s: number): number {
 }
 
 function roundAmount(v: number, unit: string): { quantity: number; unit: string } {
-  if (unit in SMALL) {
+  if (Object.hasOwn(SMALL, unit)) {
     if (v >= 1000) return roundAmount(v / 1000, SMALL[unit])
     const r = v < 10 ? Math.max(step(v, 0.5), 0.5) : v < 100 ? step(v, 1) : step(v, 10)
     return r >= 1000 ? { quantity: r / 1000, unit: SMALL[unit] } : { quantity: r, unit }
   }
-  if (unit in BIG) {
+  if (Object.hasOwn(BIG, unit)) {
     if (v < 1) return roundAmount(v * 1000, BIG[unit])
     return { quantity: step(v, 0.05), unit }
   }
