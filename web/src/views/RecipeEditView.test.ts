@@ -35,6 +35,10 @@ function draftWith(name: string): RecipeDraft {
   }
 }
 
+function cancelHref() {
+  return [...document.querySelectorAll('a')].find((a) => a.textContent?.trim() === t.cancel)?.getAttribute('href')
+}
+
 async function show(path: string, r: Routes, draft?: RecipeDraft) {
   const f = fakeApi(r)
   api.current = f.fn
@@ -46,7 +50,8 @@ async function show(path: string, r: Routes, draft?: RecipeDraft) {
     routes: [
       { path: '/recipes', name: 'recipes', component: Stub },
       { path: '/recipes/new', name: 'recipe-new', component: RecipeEditView },
-      { path: '/recipes/:id', name: 'recipe-edit', component: RecipeEditView },
+      { path: '/recipes/:id', name: 'recipe', component: Stub },
+      { path: '/recipes/:id/edit', name: 'recipe-edit', component: RecipeEditView },
     ],
   })
   await router.push(path)
@@ -79,14 +84,15 @@ describe('RecipeEditView', () => {
     const post = calls.find((c) => c.method === 'POST' && c.path === '/recipes')
     expect(post).toBeTruthy()
     expect((post!.body as { title: string }).title).toBe('Zupa')
-    expect(router.currentRoute.value.name).toBe('recipes')
+    expect(router.currentRoute.value.name).toBe('recipe')
+    expect(router.currentRoute.value.params.id).toBe('r1')
     expect(useNotice().open).toBe(true)
     expect(useNotice().text).toBe('Zapisano przepis „Zupa”')
   })
 
   it('closes the form after editing and names the saved recipe', async () => {
     const leczo = { id: 'r2', title: 'Leczo', baseServings: 4, sourceUrl: '', tags: [], ingredients: [], steps: [] }
-    const { calls, router } = await show('/recipes/r2', {
+    const { calls, router } = await show('/recipes/r2/edit', {
       'GET /products': () => [],
       'GET /recipes/r2': () => leczo,
       'PUT /recipes/r2': (b) => ({ ...leczo, ...(b as object) }),
@@ -94,8 +100,19 @@ describe('RecipeEditView', () => {
     buttonByText(t.save).click()
     for (let i = 0; i < 4; i++) await flush()
     expect(calls.some((c) => c.method === 'PUT' && c.path === '/recipes/r2')).toBe(true)
-    expect(router.currentRoute.value.name).toBe('recipes')
+    expect(router.currentRoute.value.name).toBe('recipe')
+    expect(router.currentRoute.value.params.id).toBe('r2')
     expect(useNotice().text).toBe('Zapisano przepis „Leczo”')
+  })
+
+  it('cancels back to the recipe when editing and to the list when new', async () => {
+    const leczo = { id: 'r2', title: 'Leczo', baseServings: 4, sourceUrl: '', tags: [], ingredients: [], steps: [] }
+    const { w } = await show('/recipes/r2/edit', { 'GET /products': () => [], 'GET /recipes/r2': () => leczo })
+    expect(cancelHref()).toBe('/recipes/r2')
+    w.unmount()
+    document.body.innerHTML = ''
+    await show('/recipes/new', { 'GET /products': () => [] })
+    expect(cancelHref()).toBe('/recipes')
   })
 
   it('stays on the form and shows the error when saving fails', async () => {
@@ -117,7 +134,7 @@ describe('RecipeEditView', () => {
 
   it('lets an ingredient add a missing product, prefilled with its name', async () => {
     const leczo = { id: 'r2', title: 'Leczo', baseServings: 4, sourceUrl: '', tags: [], ingredients: [{ name: 'papryka', quantity: 2, unit: '', note: '', productId: null }], steps: [] }
-    const { w } = await show('/recipes/r2', { 'GET /products': () => [], 'GET /recipes/r2': () => leczo })
+    const { w } = await show('/recipes/r2/edit', { 'GET /products': () => [], 'GET /recipes/r2': () => leczo })
     expect(w.findComponent(ProductPicker).props('allowCreate')).toBe(true)
     expect(w.findComponent(ProductDialog).props('initialName')).toBe('papryka')
   })
@@ -198,7 +215,7 @@ describe('RecipeEditView', () => {
       buttonByText(t.save).click()
       for (let i = 0; i < 4; i++) await flush()
       expect(calls.some((c) => c.method === 'POST' && c.path === '/recipes')).toBe(true)
-      expect(router.currentRoute.value.name).toBe('recipes')
+      expect(router.currentRoute.value.name).toBe('recipe')
     })
 
     it('does not call the assistant when it is not configured', async () => {

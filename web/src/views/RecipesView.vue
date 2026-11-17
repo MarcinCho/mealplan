@@ -53,7 +53,7 @@ onMounted(async () => {
     <div v-if="query && !shown.length" class="text-body-2 text-medium-emphasis pa-4">{{ t.noRecipesFound }}</div>
     <v-card v-else>
       <v-list lines="two" role="none">
-        <v-list-item v-for="r in shown" :key="r.id" :to="{ name: 'recipe-edit', params: { id: r.id } }" :title="r.title">
+        <v-list-item v-for="r in shown" :key="r.id" :to="{ name: 'recipe', params: { id: r.id } }" :title="r.title">
           <v-list-item-subtitle class="d-flex flex-wrap align-center ga-1 mt-1">
             <span class="mr-1">{{ portions(r.baseServings) }}</span>
             <v-chip v-for="tag in r.tags" :key="tag" size="x-small" variant="tonal">{{ tag }}</v-chip>

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Widok przepisu
+
+- Kliknięcie przepisu otwiera widok do czytania: składniki w jednej linii, ponumerowane kroki, kalorie na porcję i link do źródła.
+- Liczbę porcji zmieniają przyciski − i +: ilości składników przeliczają się z kuchennym zaokrąglaniem, a sam przepis się nie zmienia.
+- „Przepis” na ekranie Dziś otwiera widok od razu na liczbie porcji z planu.
+- Edycja jest pod `/recipes/{id}/edit` (przycisk „Edytuj”), a zapis wraca do widoku przepisu.
+
 ### Ustawienia gospodarstwa
 
 - Nowa strona „Ustawienia gospodarstwa” w menu konta: nazwa gospodarstwa (zmienia tylko administrator), porcje na posiłek i asystent produktów (klucz OpenRouter). Strona Domownicy zostaje tylko dla osób, ról i zaproszeń.
@@ -29,7 +36,7 @@
 
 ### Wygląd i dostępność
 
-- Zapisanie przepisu zamyka formularz i wraca do listy z komunikatem „Zapisano przepis „…””; usunięcie pokazuje „Usunięto przepis „…””. Komunikaty pokazuje wspólny pasek aplikacji (`stores/notice.ts`), na telefonie pod górnym paskiem.
+- Zapisanie przepisu zamyka formularz z komunikatem „Zapisano przepis „…”” (dokąd wraca, opisuje „Widok przepisu” wyżej); usunięcie pokazuje „Usunięto przepis „…””. Komunikaty pokazuje wspólny pasek aplikacji (`stores/notice.ts`), na telefonie pod górnym paskiem.
 - Edytor przepisu: „Dodaj produkt” przy składniku tworzy brakujący produkt w bazie (nazwa składnika jest już wpisana) i od razu go przypina, tak jak w spiżarni i dzienniku jedzenia.
 - Poprawna odmiana: „1 porcja", „2 porcje", „12 porcji", „5 łyżek", „2 ząbki" (`web/src/polish.ts`); daty w spiżarni po polsku („do 12 lis", „Po terminie: 8 lis"), a data ważna najwyżej 2 dni jest wyróżniona.
 - Kontrast: tekst drugorzędny i etykiety pól spełniają WCAG AA (4,5:1) we wszystkich paletach, pilnowane testem; gramy w podsumowaniach bez zbędnych ułamków („139 g", „4,5 g").
