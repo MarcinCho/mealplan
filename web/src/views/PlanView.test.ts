@@ -6,6 +6,7 @@ import { buttonByText, clickable, fakeApi, flush, mountWith, openDialog, setView
 import { errorText, t } from '../messages'
 import { dayLine } from '../nutrition'
 import { formatDay, SLOTS } from '../weeks'
+import { portions } from '../polish'
 import { useSession } from '../stores/session'
 import type { DaySummary, PlanEntry } from '../api/types'
 
@@ -206,5 +207,58 @@ describe.each([['desktop', 1280], ['phone', 390]])('PlanView on %s', (_name, wid
     expect(bodyText()).toContain(dayLine(day0911))
     expect(bodyText()).not.toContain(dayLine(day1011))
     expect(document.querySelector(`[aria-label="${t.mealsWithoutValues(1)}"]`)).not.toBeNull()
+  })
+  it('makes entries keyboard buttons', async () => {
+    await show(routes())
+    expect(clickable('Gulasz').tagName).toBe('BUTTON')
+  })
+
+  it('shows two entries of the same meal time', async () => {
+    const extra: PlanEntry = { id: 'p4', date: '2026-11-09', slot: 'dinner', recipeId: null, freeText: 'Sałatka', servings: 2, cookUserId: null, done: false, kind: 'meal' }
+    await show(routes({ 'GET /plan/2026-11-09': () => ({ week: '2026-11-09', entries: [...entries, extra] }) }))
+    expect(bodyText()).toContain('Gulasz')
+    expect(bodyText()).toContain('Sałatka')
+    clickable('Sałatka').click()
+    await settle()
+    expect(openDialog()?.textContent).toContain(t.editEntryTitle)
+  })
+
+  it('skips an unknown cook', async () => {
+    const gone = entries.map((e) => (e.id === 'p1' ? { ...e, cookUserId: 'gone' } : e))
+    await show(routes({ 'GET /plan/2026-11-09': () => ({ week: '2026-11-09', entries: gone }) }))
+    expect(bodyText()).not.toContain('undefined')
+    expect(document.querySelector('.cook-badge')).toBeNull()
+  })
+})
+
+describe('PlanView desktop layout', () => {
+  beforeEach(() => setViewportWidth(1280))
+
+  it('shows a table with a row per day on desktop', async () => {
+    await show(routes())
+    expect([...document.querySelectorAll('thead th')].map((th) => th.textContent?.trim())).toEqual([t.planDayColumn, ...SLOTS.map((s) => s.title)])
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(7)
+    const rows = document.querySelectorAll('tr.plan-row--today')
+    expect(rows).toHaveLength(1)
+    expect(rows[0].getAttribute('aria-current')).toBe('date')
+    expect(rows[0].textContent).toContain(formatDay('2026-11-11'))
+    const gulasz = clickable('Gulasz')
+    expect(gulasz.textContent).toContain(portions(4))
+    expect(gulasz.textContent).toContain('Marc')
+  })
+})
+
+describe('PlanView phone layout', () => {
+  beforeEach(() => setViewportWidth(390))
+
+  it('shows a block per day with ruled rows on a phone', async () => {
+    await show(routes())
+    expect(document.querySelectorAll('section.plan-day')).toHaveLength(7)
+    expect(document.querySelectorAll('.plan-day--today')).toHaveLength(1)
+    const mon = [...document.querySelectorAll('section.plan-day')].find((x) => x.textContent?.includes(formatDay('2026-11-09')))
+    expect(mon?.querySelector('.note-row__label')?.textContent?.trim()).toBe(t.slotNames.dinner)
+    for (const d of ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15']) {
+      expect(document.querySelector(`[aria-label="${t.addEntryTitle}: ${formatDay(d)}"]`)).not.toBeNull()
+    }
   })
 })

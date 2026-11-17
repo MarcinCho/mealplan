@@ -5,12 +5,15 @@ import { useDisplay } from 'vuetify'
 import { api } from '../api/client'
 import type { PlanEntry, Slot } from '../api/types'
 import EntryDialog from '../components/EntryDialog.vue'
+import CookBadge from '../components/notebook/CookBadge.vue'
+import NoteRow from '../components/notebook/NoteRow.vue'
 import { errorText, t } from '../messages'
 import { entryChip, entryTitle } from '../mealprep'
 import { dayLine, dayWarnings } from '../nutrition'
 import { useNutrition } from '../stores/nutrition'
 import { usePlan, type EntryInput } from '../stores/plan'
 import { useRecipes } from '../stores/recipes'
+import { avatarColor } from '../today'
 import { formatDay, isoDate, mondayOf, shiftWeek, SLOTS, weekDates } from '../weeks'
 
 interface Member { id: string; displayName: string }
@@ -47,6 +50,9 @@ async function refreshDays() {
   }
 }
 const memberName = computed(() => Object.fromEntries(members.value.map((m) => [m.id, m.displayName])))
+// An unknown cook (left the household) shows no badge rather than "undefined".
+const cookName = (e: PlanEntry) => (e.cookUserId ? (memberName.value[e.cookUserId] ?? '') : '')
+const color = (id: string) => avatarColor(id, members.value.map((m) => m.id))
 
 async function load() {
   error.value = ''
@@ -151,12 +157,12 @@ async function copyPrev() {
 
 <template>
   <div class="d-flex align-center flex-wrap ga-2 mb-4">
-    <v-btn icon="mdi-chevron-left" variant="text" :title="t.prevWeek" @click="go(-1)" />
-    <h1 class="text-h6">{{ formatDay(dates[0]) }} – {{ formatDay(dates[6]) }}</h1>
-    <v-btn icon="mdi-chevron-right" variant="text" :title="t.nextWeek" @click="go(1)" />
+    <v-btn icon="mdi-chevron-left" variant="text" :title="t.prevWeek" :aria-label="t.prevWeek" @click="go(-1)" />
+    <h1 class="mp-display text-h6">{{ formatDay(dates[0]) }} – {{ formatDay(dates[6]) }}</h1>
+    <v-btn icon="mdi-chevron-right" variant="text" :title="t.nextWeek" :aria-label="t.nextWeek" @click="go(1)" />
     <v-btn v-if="!isCurrentWeek" variant="tonal" @click="today">{{ t.thisWeek }}</v-btn>
     <v-spacer />
-    <v-btn variant="tonal" prepend-icon="mdi-content-copy" :disabled="!editable" @click="copyPrev">{{ t.copyPrevWeek }}</v-btn>
+    <v-btn variant="outlined" prepend-icon="mdi-content-copy" :disabled="!editable" @click="copyPrev">{{ t.copyPrevWeek }}</v-btn>
   </div>
   <v-alert v-if="error" type="error" variant="tonal" class="mb-4">
     {{ error }}
@@ -167,66 +173,82 @@ async function copyPrev() {
   <v-progress-linear v-if="!editable && !error" indeterminate class="mb-4" />
 
   <template v-if="editable">
-  <v-table v-if="mdAndUp" class="plan-grid">
-    <thead>
-      <tr>
-        <th />
-        <th v-for="d in dates" :key="d" :class="{ 'is-today': d === todayIso }">
-          {{ formatDay(d) }}<span v-if="d === todayIso" class="today-tag">{{ t.today }}</span>
-          <div v-if="lineOf(d)" class="day-line">
-            {{ lineOf(d) }}
-            <v-icon v-if="warnOf(d)" icon="mdi-alert-outline" size="x-small" color="warning" :title="warnOf(d)" :aria-label="warnOf(d)" />
-          </div>
-        </th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="s in SLOTS" :key="s.value">
-        <th class="text-left">{{ s.title }}</th>
-        <td v-for="d in dates" :key="d" class="align-top pa-1" :class="{ 'is-today': d === todayIso }">
-          <v-chip
-            v-for="e in plan.entriesFor(d, s.value)"
-            color="primary"
-            variant="tonal"
-            :key="e.id"
-            class="mb-1 d-flex"
-            style="height: auto; white-space: normal"
-            @click="openEdit(e)"
-          >
-            <span>
-              {{ label(e) }}<template v-if="e.cookUserId"> · {{ memberName[e.cookUserId] }}</template>
-              <span v-if="entryChip(e)" class="d-block text-caption text-medium-emphasis">{{ entryChip(e) }}</span>
-            </span>
-          </v-chip>
-          <v-btn icon="mdi-plus" size="x-small" variant="text" color="primary" :title="`${t.addEntryTitle}: ${formatDay(d)}, ${s.title}`" :aria-label="`${t.addEntryTitle}: ${formatDay(d)}, ${s.title}`" @click="openNew(d, s.value)" />
-        </td>
-      </tr>
-    </tbody>
-  </v-table>
+  <div v-if="mdAndUp" class="plan-scroll">
+    <table class="plan-table">
+      <thead>
+        <tr>
+          <th scope="col">{{ t.planDayColumn }}</th>
+          <th v-for="s in SLOTS" :key="s.value" scope="col">{{ s.title }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="d in dates" :key="d" :class="{ 'plan-row--today': d === todayIso }" :aria-current="d === todayIso ? 'date' : undefined">
+          <th scope="row" class="plan-day-head">
+            <div class="plan-day-name">{{ formatDay(d) }}<span v-if="d === todayIso" class="today-tag">{{ t.today }}</span></div>
+            <div v-if="lineOf(d)" class="day-line text-medium-emphasis">
+              <span class="mp-num">{{ lineOf(d) }}</span>
+              <v-icon v-if="warnOf(d)" icon="mdi-alert-outline" size="x-small" color="warning" :title="warnOf(d)" :aria-label="warnOf(d)" />
+            </div>
+          </th>
+          <td v-for="s in SLOTS" :key="s.value">
+            <button v-for="e in plan.entriesFor(d, s.value)" :key="e.id" type="button" class="plan-entry" @click="openEdit(e)">
+              <span class="plan-entry__title">{{ label(e) }}</span>
+              <span class="plan-entry__meta text-medium-emphasis">
+                <CookBadge v-if="cookName(e)" :name="cookName(e)" :color="color(e.cookUserId!)" />
+                {{ portions(e.servings) }}
+              </span>
+              <span v-if="entryChip(e)" class="plan-entry__note text-medium-emphasis">{{ entryChip(e) }}</span>
+            </button>
+            <v-btn
+              v-if="plan.entriesFor(d, s.value).length === 0"
+              variant="text"
+              size="small"
+              color="primary"
+              prepend-icon="mdi-plus"
+              :title="`${t.addEntryTitle}: ${formatDay(d)}, ${s.title}`"
+              :aria-label="`${t.addEntryTitle}: ${formatDay(d)}, ${s.title}`"
+              @click="openNew(d, s.value)"
+            >{{ t.addEntryTitle }}</v-btn>
+            <v-btn
+              v-else
+              icon="mdi-plus"
+              size="x-small"
+              variant="text"
+              color="primary"
+              :title="`${t.addEntryTitle}: ${formatDay(d)}, ${s.title}`"
+              :aria-label="`${t.addEntryTitle}: ${formatDay(d)}, ${s.title}`"
+              @click="openNew(d, s.value)"
+            />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <div v-else>
-    <v-card v-for="d in dates" :key="d" class="mb-3" :class="{ 'today-card': d === todayIso }">
-      <v-card-title class="text-subtitle-1 d-flex align-center ga-2">{{ formatDay(d) }}<span v-if="d === todayIso" class="today-tag">{{ t.today }}</span></v-card-title>
-      <v-card-subtitle v-if="lineOf(d)" class="text-wrap">
-        {{ lineOf(d) }}
-        <v-icon v-if="warnOf(d)" icon="mdi-alert-outline" size="small" color="warning" :title="warnOf(d)" :aria-label="warnOf(d)" />
-        <span v-if="warnOf(d)" class="d-block">{{ warnOf(d) }}</span>
-      </v-card-subtitle>
-      <v-list density="compact" bg-color="transparent">
-        <template v-for="s in SLOTS" :key="s.value">
-          <v-list-item
-            v-for="e in plan.entriesFor(d, s.value)"
-            :key="e.id"
-            :title="label(e)"
-            :subtitle="`${s.title} · ${portions(e.servings)}${e.cookUserId ? ' · ' + memberName[e.cookUserId] : ''}${entryChip(e) ? ' · ' + entryChip(e) : ''}`"
-            @click="openEdit(e)"
-          />
-        </template>
-      </v-list>
-      <v-card-actions>
-        <v-btn variant="text" prepend-icon="mdi-plus" @click="openNew(d, 'dinner')">{{ t.addEntryTitle }}</v-btn>
-      </v-card-actions>
-    </v-card>
+    <section v-for="d in dates" :key="d" class="plan-day" :class="{ 'plan-day--today': d === todayIso }" :aria-current="d === todayIso ? 'date' : undefined">
+      <header class="plan-day__head">
+        <div class="plan-day-name">{{ formatDay(d) }}<span v-if="d === todayIso" class="today-tag">{{ t.today }}</span></div>
+        <div v-if="lineOf(d)" class="day-line text-medium-emphasis">
+          <span class="mp-num">{{ lineOf(d) }}</span>
+          <v-icon v-if="warnOf(d)" icon="mdi-alert-outline" size="small" color="warning" :title="warnOf(d)" :aria-label="warnOf(d)" />
+          <span v-if="warnOf(d)" class="d-block">{{ warnOf(d) }}</span>
+        </div>
+      </header>
+      <template v-for="s in SLOTS" :key="s.value">
+        <NoteRow v-for="e in plan.entriesFor(d, s.value)" :key="e.id" :label="s.title" :highlighted="d === todayIso">
+          <button type="button" class="plan-entry" @click="openEdit(e)">
+            <span class="plan-entry__title">{{ label(e) }}</span>
+            <span class="plan-entry__meta text-medium-emphasis">
+              <CookBadge v-if="cookName(e)" :name="cookName(e)" :color="color(e.cookUserId!)" />
+              {{ portions(e.servings) }}
+            </span>
+            <span v-if="entryChip(e)" class="plan-entry__note text-medium-emphasis">{{ entryChip(e) }}</span>
+          </button>
+        </NoteRow>
+      </template>
+      <v-btn variant="text" color="primary" prepend-icon="mdi-plus" :aria-label="`${t.addEntryTitle}: ${formatDay(d)}`" @click="openNew(d, 'dinner')">{{ t.addEntryTitle }}</v-btn>
+    </section>
   </div>
   </template>
 
@@ -243,10 +265,21 @@ async function copyPrev() {
 </template>
 
 <style scoped>
-.plan-grid td { min-width: 120px; }
-.day-line { font-size: 12px; font-weight: 400; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); white-space: normal; }
-.plan-grid .is-today { background: rgba(var(--v-theme-primary), 0.06); }
-.today-card { border-color: rgb(var(--v-theme-primary)) !important; border-width: 2px !important; }
+.plan-scroll { overflow-x: auto; }
+.plan-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.plan-table th, .plan-table td { border-bottom: 1px solid var(--mp-line); padding: 8px 12px; text-align: left; vertical-align: top; }
+.plan-table thead th { border-bottom: 1px solid var(--mp-rule); font-size: 0.8125rem; font-weight: 600; }
+.plan-table th:first-child { width: 140px; }
+.plan-day-head { font-weight: 600; }
+.plan-row--today { background: rgb(var(--v-theme-surface-variant)); }
+.day-line { font-size: 12px; font-weight: 400; white-space: normal; }
+.plan-day { margin-bottom: 16px; border-top: 1px solid var(--mp-rule); }
+.plan-day--today { background: rgb(var(--v-theme-surface-variant)); }
+.plan-day__head { padding: 8px 12px 4px; font-weight: 600; }
+.plan-entry { display: block; width: 100%; padding: 0; margin-bottom: 4px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.plan-entry__title { display: block; text-decoration: underline; text-underline-offset: 2px; }
+.plan-entry__meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.8125rem; }
+.plan-entry__note { display: block; font-size: 0.75rem; }
 .today-tag {
   display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
   background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); vertical-align: middle;

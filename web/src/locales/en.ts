@@ -21,6 +21,7 @@ export const en: Messages = {
   inviteInvalid: 'This invitation is invalid, already used or expired.',
   navToday: 'Today',
   today: 'Today',
+  planDayColumn: 'Day',
   navPlan: 'Plan',
   navMembers: 'Members',
   members: 'Members',

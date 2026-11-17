@@ -20,6 +20,7 @@ export const pl = {
   inviteInvalid: 'To zaproszenie jest nieprawidłowe, zostało użyte lub wygasło.',
   navToday: 'Dziś',
   today: 'Dziś',
+  planDayColumn: 'Dzień',
   navPlan: 'Plan',
   navMembers: 'Domownicy',
   members: 'Domownicy',
