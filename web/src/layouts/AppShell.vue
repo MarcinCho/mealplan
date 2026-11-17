@@ -65,14 +65,13 @@ async function logout() {
           <span class="avatar-btn">{{ initial(session.me?.user.displayName ?? '') }}</span>
         </v-btn>
       </template>
-      <v-list min-width="240" rounded="xl" class="pa-2">
+      <v-list min-width="240" class="pa-2">
         <v-list-subheader>{{ t.palette }}</v-list-subheader>
         <v-list-item
           v-for="p in PALETTES"
           :key="p.id"
           :active="p.id === choice.palette"
           :title="t.paletteNames[p.id]"
-          rounded="lg"
           @click="pickPalette(p.id)"
         >
           <template #append>
@@ -82,12 +81,12 @@ async function logout() {
           </template>
         </v-list-item>
         <v-divider class="my-2" />
-        <v-list-item prepend-icon="mdi-theme-light-dark" :title="t.theme" rounded="lg" @click="toggleTheme" />
-        <v-list-item prepend-icon="mdi-account-cog-outline" :title="t.accountTitle" :to="{ name: 'account' }" rounded="lg" />
-        <v-list-item prepend-icon="mdi-food-apple-outline" :title="t.navProducts" :to="{ name: 'products' }" rounded="lg" />
-        <v-list-item prepend-icon="mdi-home-edit-outline" :title="t.householdSettings" :to="{ name: 'household' }" rounded="lg" />
-        <v-list-item prepend-icon="mdi-account-group-outline" :title="t.navMembers" :to="{ name: 'members' }" rounded="lg" />
-        <v-list-item prepend-icon="mdi-logout" :title="t.signOut" rounded="lg" @click="logout" />
+        <v-list-item prepend-icon="mdi-theme-light-dark" :title="t.theme" @click="toggleTheme" />
+        <v-list-item prepend-icon="mdi-account-cog-outline" :title="t.accountTitle" :to="{ name: 'account' }" />
+        <v-list-item prepend-icon="mdi-food-apple-outline" :title="t.navProducts" :to="{ name: 'products' }" />
+        <v-list-item prepend-icon="mdi-home-edit-outline" :title="t.householdSettings" :to="{ name: 'household' }" />
+        <v-list-item prepend-icon="mdi-account-group-outline" :title="t.navMembers" :to="{ name: 'members' }" />
+        <v-list-item prepend-icon="mdi-logout" :title="t.signOut" @click="logout" />
       </v-list>
     </v-menu>
   </v-app-bar>
@@ -125,7 +124,6 @@ async function logout() {
     v-model="notice.open"
     :timeout="4000"
     color="secondary"
-    rounded="pill"
     :location="mdAndUp ? 'bottom' : 'top'"
     :class="{ 'notice-phone': !mdAndUp }"
     role="status"

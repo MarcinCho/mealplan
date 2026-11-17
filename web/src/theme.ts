@@ -14,6 +14,9 @@ export interface Palette {
   dark: ThemeDefinition
 }
 
+export const FONT_TEXT = "'Red Hat Text', ui-sans-serif, system-ui, sans-serif"
+export const FONT_DISPLAY = "'Red Hat Display', 'Red Hat Text', ui-sans-serif, sans-serif"
+
 const STORAGE_KEY = 'mealplan.theme'
 
 const statusLight = { error: '#B3261E', info: '#1565C0', success: '#2E7D32', warning: '#9A5B00' }
@@ -33,7 +36,11 @@ function define(dark: boolean, colors: Record<string, string>): ThemeDefinition 
     },
     // Vuetify's light default (0.6) leaves secondary text and field labels near 3:1 on the tinted
     // backgrounds; these keep them at WCAG AA (4.5:1) in every palette.
-    variables: dark ? { 'medium-emphasis-opacity': 0.74 } : { 'medium-emphasis-opacity': 0.8 },
+    variables: {
+      'medium-emphasis-opacity': dark ? 0.74 : 0.8,
+      'font-text': FONT_TEXT,
+      'font-display': FONT_DISPLAY,
+    },
   }
 }
 

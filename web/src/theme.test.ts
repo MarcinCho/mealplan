@@ -180,3 +180,14 @@ describe('palettes', () => {
     for (const p of PALETTES) expect(p.swatch).toHaveLength(4)
   })
 })
+
+describe('fonts', () => {
+  it('uses Red Hat Text for body text and Red Hat Display for headings in every theme', () => {
+    for (const p of PALETTES) {
+      for (const def of [p.light, p.dark]) {
+        expect(String(def.variables?.['font-text'])).toMatch(/^'Red Hat Text',/)
+        expect(String(def.variables?.['font-display'])).toMatch(/^'Red Hat Display',/)
+      }
+    }
+  })
+})
