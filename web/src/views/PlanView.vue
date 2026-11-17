@@ -277,7 +277,7 @@ async function copyPrev() {
 .plan-day--today { background: rgb(var(--v-theme-surface-variant)); }
 .plan-day__head { padding: 8px 12px 4px; font-weight: 600; }
 .plan-entry { display: block; width: 100%; padding: 0; margin-bottom: 4px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.plan-entry__title { display: block; text-decoration: underline; text-underline-offset: 2px; }
+.plan-entry__title { display: block; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
 .plan-entry__meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.8125rem; }
 .plan-entry__note { display: block; font-size: 0.75rem; }
 .today-tag {

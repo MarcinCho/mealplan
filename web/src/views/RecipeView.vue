@@ -143,6 +143,7 @@ onMounted(async () => {
 <style scoped>
 .recipe-view { max-width: var(--mp-content-max); margin: 0 auto; }
 .title { overflow-wrap: anywhere; }
+.source { color: rgb(var(--v-theme-primary)); }
 .recipe-head { display: grid; gap: 8px; }
 .recipe-acts { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
 .recipe-view--columns .recipe-head { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
