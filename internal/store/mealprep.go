@@ -3,10 +3,55 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"strings"
 
 	"mealplan/internal/domain"
 )
+
+// lockPrepDish reads the dish's portions and written-off count inside the transaction and locks
+// the row on Postgres; SQLite's single-connection pool serializes transactions anyway.
+// ErrNotFound when the dish does not belong to the household.
+func (s *Store) lockPrepDish(ctx context.Context, tx *sql.Tx, householdID, id string) (portions, writtenOff int, err error) {
+	q := `SELECT portions, written_off FROM prep_dish WHERE id = ? AND household_id = ?`
+	if s.db.Driver == "postgres" {
+		q += ` FOR UPDATE`
+	}
+	if err := tx.QueryRowContext(ctx, s.db.Rebind(q), id, householdID).Scan(&portions, &writtenOff); err != nil {
+		return 0, 0, mapErr(err)
+	}
+	return portions, writtenOff, nil
+}
+
+// lockFreezerItem reads the item's portions and dish link inside the transaction (row locked on
+// Postgres). ErrNotFound when the item does not belong to the household.
+func (s *Store) lockFreezerItem(ctx context.Context, tx *sql.Tx, householdID, id string) (portions int, dishID string, err error) {
+	q := `SELECT portions, COALESCE(dish_id, '') FROM freezer_item WHERE id = ? AND household_id = ?`
+	if s.db.Driver == "postgres" {
+		q += ` FOR UPDATE`
+	}
+	if err := tx.QueryRowContext(ctx, s.db.Rebind(q), id, householdID).Scan(&portions, &dishID); err != nil {
+		return 0, "", mapErr(err)
+	}
+	return portions, dishID, nil
+}
+
+// dishSupply sums how many portions of the dish are already frozen and planned as prep entries.
+// Rows frozen or planned after this call see the dish row locked (Postgres) or the transaction
+// serialized (SQLite), so the sums stay valid until commit.
+func (s *Store) dishSupply(ctx context.Context, tx *sql.Tx, householdID, dishID string) (frozen, allocated int, err error) {
+	if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COALESCE(SUM(portions),0) FROM freezer_item WHERE household_id = ? AND dish_id = ?`), householdID, dishID).Scan(&frozen); err != nil {
+		return 0, 0, err
+	}
+	if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COALESCE(SUM(servings),0) FROM plan_entry WHERE household_id = ? AND kind = 'prep' AND prep_dish_id = ?`), householdID, dishID).Scan(&allocated); err != nil {
+		return 0, 0, err
+	}
+	return frozen, allocated, nil
+}
+
+// errPortionSupply marks a write that does not fit the supply still left of a dish.
+var errPortionSupply = fmt.Errorf("%w: portions exceed the remaining supply", domain.ErrInvalid)
 
 // requireOwned checks inside the transaction that row id of table belongs to the household
 // (FKs alone do not check that). An empty id is accepted. table is a package constant.
@@ -61,6 +106,47 @@ func (s *Store) UpdatePrepSession(ctx context.Context, p domain.PrepSession) err
 
 func (s *Store) DeletePrepSession(ctx context.Context, householdID, id string) error {
 	return affected(s.db.ExecContext(ctx, s.db.Rebind(`DELETE FROM prep_session WHERE id = ? AND household_id = ?`), id, householdID))
+}
+
+// DeletePrepSessionChecked refuses (ErrInUse) while any dish of the session is planned as a prep
+// entry; the check and the delete share one transaction, so a concurrent allocation cannot slip in
+// and be silently removed by the cascade.
+func (s *Store) DeletePrepSessionChecked(ctx context.Context, householdID, id string) error {
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		if err := s.lockSessionDishes(ctx, tx, householdID, id); err != nil {
+			return err
+		}
+		var n int
+		if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COUNT(*) FROM plan_entry e JOIN prep_dish d ON d.id = e.prep_dish_id WHERE e.household_id = ? AND e.kind = 'prep' AND d.session_id = ?`), householdID, id).Scan(&n); err != nil {
+			return err
+		}
+		if n > 0 {
+			return ErrInUse
+		}
+		return affected(tx.ExecContext(ctx, s.db.Rebind(`DELETE FROM prep_session WHERE id = ? AND household_id = ?`), id, householdID))
+	})
+}
+
+// lockSessionDishes locks the rows of the session's dishes (ErrNotFound when the session is not
+// the household's). Those are the rows a concurrent prep allocation locks, so Postgres
+// serializes the two against each other.
+func (s *Store) lockSessionDishes(ctx context.Context, tx *sql.Tx, householdID, sessionID string) error {
+	q := `SELECT id FROM prep_dish WHERE session_id = ? AND household_id = ?`
+	if s.db.Driver == "postgres" {
+		q += ` FOR UPDATE`
+	}
+	rows, err := tx.QueryContext(ctx, s.db.Rebind(q), sessionID, householdID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
 }
 
 func (s *Store) PrepSessionByID(ctx context.Context, householdID, id string) (domain.PrepSession, error) {
@@ -125,13 +211,46 @@ func (s *Store) InsertPrepDish(ctx context.Context, d domain.PrepDish) error {
 }
 
 // UpdatePrepDish changes portions and written_off; session, recipe and position are fixed.
+// Inside the transaction the dish is locked and re-checked against what is already frozen and
+// planned, so a concurrent freeze or allocation cannot be silently over-committed.
 func (s *Store) UpdatePrepDish(ctx context.Context, d domain.PrepDish) error {
-	return affected(s.db.ExecContext(ctx, s.db.Rebind(`UPDATE prep_dish SET portions = ?, written_off = ? WHERE id = ? AND household_id = ?`),
-		d.Portions, d.WrittenOff, d.ID, d.HouseholdID))
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		if _, _, err := s.lockPrepDish(ctx, tx, d.HouseholdID, d.ID); err != nil {
+			return err
+		}
+		frozen, allocated, err := s.dishSupply(ctx, tx, d.HouseholdID, d.ID)
+		if err != nil {
+			return err
+		}
+		if d.Portions < frozen+allocated {
+			return fmt.Errorf("%w: portions cannot be fewer than %d already planned, frozen or written off", domain.ErrInvalid, frozen+allocated)
+		}
+		return affected(tx.ExecContext(ctx, s.db.Rebind(`UPDATE prep_dish SET portions = ?, written_off = ? WHERE id = ? AND household_id = ?`),
+			d.Portions, d.WrittenOff, d.ID, d.HouseholdID))
+	})
 }
 
 func (s *Store) DeletePrepDish(ctx context.Context, householdID, id string) error {
 	return affected(s.db.ExecContext(ctx, s.db.Rebind(`DELETE FROM prep_dish WHERE id = ? AND household_id = ?`), id, householdID))
+}
+
+// DeletePrepDishChecked refuses (ErrInUse) while meals are planned from the dish; the check and
+// the delete share one transaction, so a concurrent allocation cannot slip in and be silently
+// removed by the cascade.
+func (s *Store) DeletePrepDishChecked(ctx context.Context, householdID, id string) error {
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		if _, _, err := s.lockPrepDish(ctx, tx, householdID, id); err != nil {
+			return err
+		}
+		var n int
+		if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COUNT(*) FROM plan_entry WHERE household_id = ? AND kind = 'prep' AND prep_dish_id = ?`), householdID, id).Scan(&n); err != nil {
+			return err
+		}
+		if n > 0 {
+			return ErrInUse
+		}
+		return affected(tx.ExecContext(ctx, s.db.Rebind(`DELETE FROM prep_dish WHERE id = ? AND household_id = ?`), id, householdID))
+	})
 }
 
 func (s *Store) PrepDishByID(ctx context.Context, householdID, id string) (domain.PrepDish, error) {
@@ -190,6 +309,21 @@ func (s *Store) InsertFreezerItem(ctx context.Context, f domain.FreezerItem) err
 		if err := s.checkFreezerRefs(ctx, tx, f); err != nil {
 			return err
 		}
+		if f.DishID != "" {
+			// Lock the dish and re-check the supply inside the transaction: the service-level
+			// check saw the sums before it, so only this re-check is authoritative.
+			portions, writtenOff, err := s.lockPrepDish(ctx, tx, f.HouseholdID, f.DishID)
+			if err != nil {
+				return err
+			}
+			frozen, allocated, err := s.dishSupply(ctx, tx, f.HouseholdID, f.DishID)
+			if err != nil {
+				return err
+			}
+			if f.Portions > portions-writtenOff-frozen-allocated {
+				return errPortionSupply
+			}
+		}
 		return s.exec(ctx, tx, `INSERT INTO freezer_item (`+freezerCols+`) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			f.ID, f.HouseholdID, nullable(f.DishID), nullable(f.RecipeID), f.Label, f.Portions, f.FrozenOn)
 	})
@@ -200,6 +334,40 @@ func (s *Store) UpdateFreezerItem(ctx context.Context, f domain.FreezerItem) err
 		if err := s.checkFreezerRefs(ctx, tx, f); err != nil {
 			return err
 		}
+		// Re-check a portions growth against the dish inside the transaction; the item itself is
+		// locked, so its old portions can be dropped from the dish's frozen sum.
+		_, oldDish, err := s.lockFreezerItem(ctx, tx, f.HouseholdID, f.ID)
+		if err != nil {
+			return err
+		}
+		if f.DishID != "" {
+			portions, writtenOff, err := s.lockPrepDish(ctx, tx, f.HouseholdID, f.DishID)
+			if err != nil {
+				return err
+			}
+			if oldDish != "" && oldDish != f.DishID { // keep the abandoned dish's row locked too
+				q := `SELECT id FROM prep_dish WHERE id = ? AND household_id = ?`
+				if s.db.Driver == "postgres" {
+					q += ` FOR UPDATE`
+				}
+				var id string
+				if err := tx.QueryRowContext(ctx, s.db.Rebind(q), oldDish, f.HouseholdID).Scan(&id); err != nil && !errors.Is(err, ErrNotFound) {
+					return mapErr(err)
+				}
+			}
+			// frozen parts of the dish other than this item, and the dish's planned portions
+			var other, allocated int
+			if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COALESCE(SUM(portions),0) FROM freezer_item WHERE household_id = ? AND dish_id = ? AND id <> ?`), f.HouseholdID, f.DishID, f.ID).Scan(&other); err != nil {
+				return err
+			}
+			if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COALESCE(SUM(servings),0) FROM plan_entry WHERE household_id = ? AND kind = 'prep' AND prep_dish_id = ?`), f.HouseholdID, f.DishID).Scan(&allocated); err != nil {
+				return err
+			}
+			// what stays frozen of the dish after this update must fit the supply
+			if other+f.Portions+allocated+writtenOff > portions {
+				return errPortionSupply
+			}
+		}
 		return affected(tx.ExecContext(ctx, s.db.Rebind(`UPDATE freezer_item SET dish_id = ?, recipe_id = ?, label = ?, portions = ?, frozen_on = ? WHERE id = ? AND household_id = ?`),
 			nullable(f.DishID), nullable(f.RecipeID), f.Label, f.Portions, f.FrozenOn, f.ID, f.HouseholdID))
 	})
@@ -207,6 +375,25 @@ func (s *Store) UpdateFreezerItem(ctx context.Context, f domain.FreezerItem) err
 
 func (s *Store) DeleteFreezerItem(ctx context.Context, householdID, id string) error {
 	return affected(s.db.ExecContext(ctx, s.db.Rebind(`DELETE FROM freezer_item WHERE id = ? AND household_id = ?`), id, householdID))
+}
+
+// DeleteFreezerItemChecked refuses (ErrInUse) while meals are planned from the item; the check
+// and the delete share one transaction, so a concurrent allocation cannot slip in and be
+// silently removed by the cascade.
+func (s *Store) DeleteFreezerItemChecked(ctx context.Context, householdID, id string) error {
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		if _, _, err := s.lockFreezerItem(ctx, tx, householdID, id); err != nil {
+			return err
+		}
+		var n int
+		if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COUNT(*) FROM plan_entry WHERE household_id = ? AND kind = 'prep' AND freezer_item_id = ?`), householdID, id).Scan(&n); err != nil {
+			return err
+		}
+		if n > 0 {
+			return ErrInUse
+		}
+		return affected(tx.ExecContext(ctx, s.db.Rebind(`DELETE FROM freezer_item WHERE id = ? AND household_id = ?`), id, householdID))
+	})
 }
 
 func (s *Store) FreezerItemByID(ctx context.Context, householdID, id string) (domain.FreezerItem, error) {

@@ -114,6 +114,13 @@ func parseMatch(raw string, qs []IngredientQuery, products []domain.Product) ([]
 		seen[it.Index] = true
 		s := &out[it.Index]
 		reason := clean(it.Reason, maxReason)
+		// "exact" is the local matcher's sentinel: the web editor auto-applies such
+		// suggestions without confirmation. Local exact matches never reach parseMatch
+		// (service.go answers them before calling the model), so a model-supplied
+		// reason must never be allowed to claim the sentinel.
+		if strings.EqualFold(strings.TrimSpace(reason), "exact") {
+			reason = "odpowiedź modelu"
+		}
 		switch it.Kind {
 		case KindExisting:
 			if it.ProductID == nil {

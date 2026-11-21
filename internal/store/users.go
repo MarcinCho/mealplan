@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 
 	"mealplan/internal/domain"
 )
@@ -18,6 +20,18 @@ func (s *Store) CountUsers(ctx context.Context) (int, error) {
 func (s *Store) CreateHouseholdWithAdmin(ctx context.Context, h domain.Household, u domain.User, onlyIfNoUsers bool) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		if onlyIfNoUsers {
+			// Sentinel row prevents a concurrent setup race on Postgres (READ COMMITTED):
+			// the UNIQUE constraint on setup_state.id makes the second INSERT fail,
+			// which aborts the transaction before the COUNT even runs.
+			// On SQLite the single-connection pool serializes transactions anyway.
+			// Only the setup path (onlyIfNoUsers) claims the sentinel: creating further
+			// households must keep working after setup.
+			if _, err := tx.ExecContext(ctx, `INSERT INTO setup_state (id) VALUES ('singleton')`); err != nil {
+				if errors.Is(mapErr(err), ErrConflict) {
+					return fmt.Errorf("setup already done: %w", ErrSetupDone)
+				}
+				return mapErr(err)
+			}
 			var n int
 			if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM app_user`).Scan(&n); err != nil {
 				return err

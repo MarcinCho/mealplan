@@ -31,16 +31,19 @@ type Repo interface {
 	InsertPrepSession(ctx context.Context, p domain.PrepSession) error
 	UpdatePrepSession(ctx context.Context, p domain.PrepSession) error
 	DeletePrepSession(ctx context.Context, householdID, id string) error
+	DeletePrepSessionChecked(ctx context.Context, householdID, id string) error
 	PrepSessionByID(ctx context.Context, householdID, id string) (domain.PrepSession, error)
 	PrepSessions(ctx context.Context, householdID string) ([]domain.PrepSession, error)
 	InsertPrepDish(ctx context.Context, d domain.PrepDish) error
 	UpdatePrepDish(ctx context.Context, d domain.PrepDish) error
 	DeletePrepDish(ctx context.Context, householdID, id string) error
+	DeletePrepDishChecked(ctx context.Context, householdID, id string) error
 	PrepDishByID(ctx context.Context, householdID, id string) (domain.PrepDish, error)
 	PrepDishes(ctx context.Context, householdID string, sessionIDs []string) ([]domain.PrepDish, error)
 	InsertFreezerItem(ctx context.Context, f domain.FreezerItem) error
 	UpdateFreezerItem(ctx context.Context, f domain.FreezerItem) error
 	DeleteFreezerItem(ctx context.Context, householdID, id string) error
+	DeleteFreezerItemChecked(ctx context.Context, householdID, id string) error
 	FreezerItemByID(ctx context.Context, householdID, id string) (domain.FreezerItem, error)
 	FreezerItems(ctx context.Context, householdID string) ([]domain.FreezerItem, error)
 	Allocations(ctx context.Context, householdID string) ([]domain.PlanEntry, error)
@@ -343,7 +346,8 @@ func (s *Service) DeleteSession(ctx context.Context, hh, id string) error {
 			return fmt.Errorf("%w: %w", ErrPantry, err)
 		}
 	}
-	return s.repo.DeletePrepSession(ctx, hh, id)
+	// the in-transaction re-check is authoritative; the ErrInUse above can be lost to a race
+	return s.repo.DeletePrepSessionChecked(ctx, hh, id)
 }
 
 func hasDish(allocs []domain.PlanEntry, dishID string) bool {
@@ -455,7 +459,8 @@ func (s *Service) DeleteDish(ctx context.Context, hh, id string) error {
 	if hasDish(allocs, id) {
 		return store.ErrInUse
 	}
-	if err := s.repo.DeletePrepDish(ctx, hh, id); err != nil {
+	// the in-transaction re-check is authoritative; the ErrInUse above can be lost to a race
+	if err := s.repo.DeletePrepDishChecked(ctx, hh, id); err != nil {
 		return err
 	}
 	return s.recook(ctx, hh, d.SessionID)
@@ -645,7 +650,8 @@ func (s *Service) DeleteFreezer(ctx context.Context, hh, id string) error {
 	if hasFreezer(allocs, id) {
 		return store.ErrInUse
 	}
-	return s.repo.DeleteFreezerItem(ctx, hh, id)
+	// the in-transaction re-check is authoritative; the ErrInUse above can be lost to a race
+	return s.repo.DeleteFreezerItemChecked(ctx, hh, id)
 }
 
 // Available reports the recipe, label and portions left of a dish or freezer item (exactly one id).

@@ -82,6 +82,15 @@ const approving = ref('')
 const creating = ref<{ name: string; suggestion: Suggestion } | null>(null)
 const creatingOpen = ref(false)
 
+// An "exact" assistant match is only auto-applied when the named product really exists locally
+// and its name/alias equals the ingredient name: server-trusted fields, verified locally too.
+function exactLocalMatch(productId: string, ingredientName: string): boolean {
+  const p = useProducts().catalog.find((x) => x.id === productId)
+  if (!p) return false
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+  return [p.name, ...(p.aliases ?? [])].some((n) => norm(n) === norm(ingredientName))
+}
+
 async function suggestProducts() {
   if (!fromImport.value) return
   try {
@@ -100,8 +109,9 @@ async function suggestProducts() {
       if (sg.kind === 'none') continue
       for (const ing of recipe.value.ingredients) {
         if (ing.name !== sg.name || ing.productId) continue
-        // An exact match is today's matcher, not a model decision, so it needs no confirmation.
-        if (sg.kind === 'existing' && sg.reason === 'exact' && sg.productId) ing.productId = sg.productId
+        // An exact match is today's matcher, not a model decision, so it needs no confirmation —
+        // but only if the product id and name/alias check out locally (defense-in-depth).
+        if (sg.kind === 'existing' && sg.reason === 'exact' && sg.productId && exactLocalMatch(sg.productId, ing.name)) ing.productId = sg.productId
         else suggestions.value[sg.name] = sg
       }
     }

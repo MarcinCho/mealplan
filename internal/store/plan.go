@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"mealplan/internal/domain"
@@ -68,9 +69,74 @@ func entryKind(e domain.PlanEntry) string {
 	return string(e.Kind)
 }
 
+// checkPrepSupply verifies, inside the transaction, that a prep entry's servings fit the supply
+// still left of its dish or freezer item; the source row is locked on Postgres (SQLite's
+// single-connection pool serializes transactions anyway), so this re-check is authoritative
+// against concurrent freezes and allocations. exceptID excludes the entry being edited.
+// A missing or foreign source is ErrNotFound; over-committing the supply is ErrConflict (409).
+func (s *Store) checkPrepSupply(ctx context.Context, tx *sql.Tx, householdID, dishID, freezerItemID string, servings int, exceptID string) error {
+	if dishID == "" && freezerItemID == "" {
+		return nil
+	}
+	left := 0
+	if dishID != "" {
+		q := `SELECT portions, written_off FROM prep_dish WHERE id = ? AND household_id = ?`
+		if s.db.Driver == "postgres" {
+			q += ` FOR UPDATE`
+		}
+		var portions, writtenOff, frozen, allocated int
+		if err := tx.QueryRowContext(ctx, s.db.Rebind(q), dishID, householdID).Scan(&portions, &writtenOff); err != nil {
+			return mapErr(err)
+		}
+		if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COALESCE(SUM(portions),0) FROM freezer_item WHERE household_id = ? AND dish_id = ?`), householdID, dishID).Scan(&frozen); err != nil {
+			return err
+		}
+		allocQ, allocArgs := prepAllocSum(`prep_dish_id`, householdID, dishID, exceptID)
+		if err := tx.QueryRowContext(ctx, s.db.Rebind(allocQ), allocArgs...).Scan(&allocated); err != nil {
+			return err
+		}
+		left = portions - writtenOff - frozen - allocated
+	} else {
+		q := `SELECT portions FROM freezer_item WHERE id = ? AND household_id = ?`
+		if s.db.Driver == "postgres" {
+			q += ` FOR UPDATE`
+		}
+		var portions, allocated int
+		if err := tx.QueryRowContext(ctx, s.db.Rebind(q), freezerItemID, householdID).Scan(&portions); err != nil {
+			return mapErr(err)
+		}
+		allocQ, allocArgs := prepAllocSum(`freezer_item_id`, householdID, freezerItemID, exceptID)
+		if err := tx.QueryRowContext(ctx, s.db.Rebind(allocQ), allocArgs...).Scan(&allocated); err != nil {
+			return err
+		}
+		left = portions - allocated
+	}
+	if servings > left {
+		return fmt.Errorf("%w: only %d portions left", ErrConflict, max(left, 0))
+	}
+	return nil
+}
+
+// prepAllocSum is the sum of servings planned from the dish or freezer item (column is a package
+// constant); exceptID drops the entry being edited from the sum.
+func prepAllocSum(column, householdID, sourceID, exceptID string) (string, []any) {
+	q := `SELECT COALESCE(SUM(servings),0) FROM plan_entry WHERE household_id = ? AND kind = 'prep' AND ` + column + ` = ?`
+	args := []any{householdID, sourceID}
+	if exceptID != "" {
+		q += ` AND id <> ?`
+		args = append(args, exceptID)
+	}
+	return q, args
+}
+
 func (s *Store) insertEntry(ctx context.Context, tx *sql.Tx, e domain.PlanEntry) error {
 	if err := s.checkRefs(ctx, tx, e); err != nil {
 		return err
+	}
+	if entryKind(e) == string(domain.EntryPrep) {
+		if err := s.checkPrepSupply(ctx, tx, e.HouseholdID, e.PrepDishID, e.FreezerItemID, e.Servings, ""); err != nil {
+			return err
+		}
 	}
 	return s.exec(ctx, tx, `INSERT INTO plan_entry (`+planCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		e.ID, e.HouseholdID, e.Date, string(e.Slot), nullable(e.RecipeID), e.FreeText, e.Servings, nullable(e.CookUserID), b2i(e.Done),
@@ -86,6 +152,12 @@ func (s *Store) UpdatePlanEntry(ctx context.Context, e domain.PlanEntry) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		if err := s.checkRefs(ctx, tx, e); err != nil {
 			return err
+		}
+		if entryKind(e) == string(domain.EntryPrep) {
+			// the entry itself is excluded from the planned sum, so keeping its servings passes
+			if err := s.checkPrepSupply(ctx, tx, e.HouseholdID, e.PrepDishID, e.FreezerItemID, e.Servings, e.ID); err != nil {
+				return err
+			}
 		}
 		res, err := tx.ExecContext(ctx, s.db.Rebind(
 			`UPDATE plan_entry SET date = ?, slot = ?, recipe_id = ?, free_text = ?, servings = ?, cook_user_id = ?, done = ?,
@@ -166,7 +238,32 @@ func (s *Store) CopyPlanEntries(ctx context.Context, householdID string, entries
 		}
 	}
 	lo, hi = weekBounds(lo, hi)
+	// Every Monday-anchored week the batch touches; weekBounds returns Monday for
+	// parsable dates, so stepping 7 days from lo covers the whole range.
+	var weeks []string
+	for w := lo; ; {
+		weeks = append(weeks, w)
+		d, err := time.Parse("2006-01-02", w)
+		if err != nil {
+			break
+		}
+		next := d.AddDate(0, 0, 7).Format("2006-01-02")
+		if next > hi {
+			break
+		}
+		w = next
+	}
 	return s.inTx(ctx, func(tx *sql.Tx) error {
+		// Sentinel rows serialize concurrent copies into the same week on Postgres
+		// (READ COMMITTED): the second INSERT blocks on the first transaction's row,
+		// so its COUNT below re-runs after the winner commits and still sees the
+		// copied entries. The rows are removed before commit, so copying into a week
+		// again after clearing it keeps working.
+		for _, w := range weeks {
+			if _, err := tx.ExecContext(ctx, s.db.Rebind(`INSERT INTO plan_week_state (household_id, week) VALUES (?, ?)`), householdID, w); err != nil {
+				return mapErr(err) // UNIQUE violation → ErrConflict
+			}
+		}
 		var n int
 		if err := tx.QueryRowContext(ctx, s.db.Rebind(`SELECT COUNT(*) FROM plan_entry WHERE household_id = ? AND date >= ? AND date <= ?`), householdID, lo, hi).Scan(&n); err != nil {
 			return err
@@ -177,6 +274,11 @@ func (s *Store) CopyPlanEntries(ctx context.Context, householdID string, entries
 		for _, e := range entries {
 			e.HouseholdID = householdID
 			if err := s.insertEntry(ctx, tx, e); err != nil {
+				return err
+			}
+		}
+		for _, w := range weeks {
+			if _, err := tx.ExecContext(ctx, s.db.Rebind(`DELETE FROM plan_week_state WHERE household_id = ? AND week = ?`), householdID, w); err != nil {
 				return err
 			}
 		}
