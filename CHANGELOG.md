@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Bezpieczeństwo
+
+- Porcje meal prepu, zamrażalki i planu są sprawdzane wewnątrz transakcji zapisu (blokada wiersza, na Postgresie `FOR UPDATE`), więc dwa równoczesne zapisy nie zarezerwują tych samych porcji ani nie zejdą poniżej zera. Sprawdzenie „w użyciu” przed usunięciem jest w tej samej transakcji co `DELETE`.
+- Asystent produktów nie przyjmuje od modelu powodu „exact”, który w edytorze oznacza automatyczne przypisanie produktu; dodatkowo sprawdza to przeglądarka.
+- Pierwsze zakładanie konta (`POST /auth/setup`) i kopiowanie tygodnia planu nie mogą się nałożyć przy dwóch równoczesnych żądaniach na Postgresie (zwracają `409`). Migracje `0010_setup_state` i `0011_plan_week_state` dodają do tego dwie tabele pomocnicze i nie zmieniają istniejących danych.
+
+### Zależności
+
+- `golang.org/x/crypto` v0.59.0; w CI `actions/setup-go` v7.
+- `.gitattributes` z `eol=lf`: repozytorium ma końce linii LF także na Windowsie z `core.autocrlf=true` (wcześniej padały tam `TestRoutesMatchOpenAPI` i `TestSkillExamplesImport`).
+
 ### Nowy wygląd
 
 - Czcionki Red Hat dołączone do aplikacji (bez zewnętrznych serwerów); prostokątne przyciski, karty bez ramek, liniowane wiersze.
