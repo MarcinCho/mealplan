@@ -1,0 +1,2 @@
+# Text files use LF everywhere, including Windows checkouts with core.autocrlf=true.
+* text=auto eol=lf
